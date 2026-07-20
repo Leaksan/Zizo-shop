@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Base de donnees et fichiers uploades (donnees locales)
+backend/shop.db
+backend/uploads/
+
+# Node
+node_modules/
+frontend/dist/
+whatsapp-bridge/node_modules/
+
+# Session WhatsApp (locale, secrete)
+whatsapp-bridge/.wwebjs_auth/
+whatsapp-bridge/.wwebjs_cache/
+
+# OS / editeurs
+Thumbs.db
+.DS_Store
+*.log
