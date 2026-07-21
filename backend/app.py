@@ -1148,6 +1148,16 @@ def create_app():
         db.session.commit()
         return jsonify({"ok": True})
 
+    frontend_dir = os.environ.get("FRONTEND_DIR")
+    if frontend_dir and os.path.isdir(frontend_dir):
+
+        @app.route("/")
+        @app.route("/<path:path>")
+        def serve_frontend(path=""):
+            if path and os.path.isfile(os.path.join(frontend_dir, path)):
+                return send_from_directory(frontend_dir, path)
+            return send_from_directory(frontend_dir, "index.html")
+
     with app.app_context():
         db.create_all()
         _migrate_schema()
