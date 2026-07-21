@@ -18,11 +18,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./
 COPY --from=frontend-builder /app/frontend/dist /app/frontend-dist
 
-RUN mkdir -p uploads
+RUN mkdir -p uploads && chmod +x entrypoint.sh
 
 ENV FRONTEND_DIR=/app/frontend-dist
 ENV SECRET_KEY=change-me-in-production
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--preload", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+ENTRYPOINT ["./entrypoint.sh"]
