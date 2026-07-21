@@ -25,4 +25,4 @@ ENV SECRET_KEY=change-me-in-production
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--preload", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
