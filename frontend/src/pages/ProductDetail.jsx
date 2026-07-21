@@ -181,9 +181,9 @@ export default function ProductDetail() {
 
           {variant && (
             <div className="card flex flex-col gap-4 p-4">
-              <div className="flex items-end justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex flex-wrap items-baseline gap-2">
                     <p className="text-2xl font-bold">{formatPrice(variant.price, currency)}</p>
                     {variant.old_price && (
                       <>
@@ -259,17 +259,17 @@ export default function ProductDetail() {
                   <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">
                     Cette variante est épuisée — demandez le réassort :
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                       type="tel"
                       value={requestPhone}
                       onChange={(e) => setRequestPhone(e.target.value)}
                       placeholder="Votre n° pour être alerté (optionnel)"
-                      className="input flex-1"
+                      className="input min-w-0 flex-1"
                     />
                     <button
                       type="submit"
-                      className="flex items-center gap-1.5 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+                      className="flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
                     >
                       <BellRing size={15} />
                       Demander

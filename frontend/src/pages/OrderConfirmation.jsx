@@ -45,15 +45,15 @@ export default function OrderConfirmation() {
           temps réel.
         </p>
       )}
-      <div className="mt-8 flex justify-center gap-3">
+      <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
         <Link
           to={`/suivi?ref=${reference}`}
-          className="btn-primary inline-flex items-center gap-2 px-6 py-2.5"
+          className="btn-primary inline-flex w-full items-center justify-center gap-2 px-6 py-2.5 sm:w-auto"
         >
           <MapPin size={17} />
           Suivre ma commande
         </Link>
-        <Link to="/boutique" className="btn-outline px-6 py-2.5 text-sm">
+        <Link to="/boutique" className="btn-outline w-full px-6 py-2.5 text-center text-sm sm:w-auto">
           Continuer mes achats
         </Link>
       </div>

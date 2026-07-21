@@ -55,7 +55,7 @@ export default function DealOfDay() {
             OFFRE DU JOUR
           </span>
           <h2 className="mt-2 text-2xl font-extrabold">{deal.name}</h2>
-          <div className="mt-1 flex items-baseline justify-center gap-2 sm:justify-start">
+          <div className="mt-1 flex flex-wrap items-baseline justify-center gap-2 sm:justify-start">
             <span className="text-3xl font-black">{formatPrice(variant.price, currency)}</span>
             {variant.old_price && (
               <span className="text-lg text-white/70 line-through">

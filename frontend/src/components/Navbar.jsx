@@ -19,9 +19,9 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-1 px-4 sm:gap-4">
         <Link to="/" className="shrink-0">
-          <Logo />
+          <Logo compactOnMobile />
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2">
           <NavLink to="/boutique" className={linkCls}>

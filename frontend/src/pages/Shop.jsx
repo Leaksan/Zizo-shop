@@ -136,7 +136,7 @@ export default function Shop() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Catalogue</h1>
         <div className="flex gap-2">
-          <div className="relative flex-1 sm:flex-none">
+          <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
             <input
               type="search"
@@ -175,7 +175,7 @@ export default function Shop() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="label">Prix (FCFA)</p>
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
                   <input
                     type="number"
                     min="0"
@@ -327,7 +327,7 @@ export default function Shop() {
       {noFilter && clearanceProducts.length > 0 && (
         <Reveal>
           <section className="rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 p-5 dark:border-orange-800 dark:bg-orange-950/40">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="flex items-center gap-2 text-xl font-bold text-orange-600 dark:text-orange-400">
                   <Flame size={22} className="fill-orange-400" />

@@ -47,7 +47,7 @@ export default function Landing() {
       {clearance.length > 0 && (
         <Reveal className="mb-10">
           <section className="rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 p-5 dark:border-orange-800 dark:bg-orange-950/40">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h2 className="flex items-center gap-2 text-xl font-bold text-orange-600 dark:text-orange-400">
                   <Flame size={22} className="fill-orange-400" />
@@ -77,7 +77,7 @@ export default function Landing() {
 
       <section className="mb-10">
         <Reveal>
-          <div className="mb-5 flex items-center justify-between">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-2xl font-bold">Les plus populaires</h2>
             <Link
               to="/boutique"

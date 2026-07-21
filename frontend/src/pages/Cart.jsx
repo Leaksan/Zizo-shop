@@ -52,7 +52,10 @@ export default function Cart() {
       </h1>
       <div className="flex flex-col gap-4">
         {items.map((item) => (
-          <div key={item.variant_id} className="card flex items-center gap-4 p-4">
+          <div
+            key={item.variant_id}
+            className="card grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-3 p-4 sm:flex sm:gap-4"
+          >
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
               <ProductVisual product={item} size="text-3xl" />
             </div>
@@ -63,7 +66,7 @@ export default function Cart() {
                 {formatPrice(item.unit_price, currency)} / unité
               </p>
             </div>
-            <div className="flex items-center rounded-lg border border-gray-300 dark:border-slate-600">
+            <div className="col-start-1 row-start-2 flex items-center justify-self-start rounded-lg border border-gray-300 sm:col-auto sm:row-auto dark:border-slate-600">
               <button
                 onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
                 className="px-3 py-1.5 font-bold text-gray-600 hover:text-indigo-600 dark:text-slate-300"
@@ -80,12 +83,12 @@ export default function Cart() {
                 +
               </button>
             </div>
-            <p className="w-24 text-right font-bold">
+            <p className="col-start-2 row-start-2 text-left font-bold sm:col-auto sm:row-auto sm:w-24 sm:text-right">
               {formatPrice(item.unit_price * item.quantity, currency)}
             </p>
             <button
               onClick={() => removeItem(item.variant_id)}
-              className="text-gray-400 transition hover:scale-110 hover:text-red-600"
+              className="col-start-3 row-start-1 text-gray-400 transition hover:scale-110 hover:text-red-600 sm:col-auto sm:row-auto"
               title="Retirer"
             >
               <X size={18} />
@@ -95,7 +98,7 @@ export default function Cart() {
       </div>
 
       <div className="card mt-6 flex flex-col gap-3 p-4">
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}

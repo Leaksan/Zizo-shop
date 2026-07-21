@@ -25,7 +25,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-gray-100">
+    <div className="min-h-screen overflow-x-clip bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-gray-100">
       <ScrollToTop />
       <Routes>
         <Route path="/admin/login" element={<AdminLogin />} />

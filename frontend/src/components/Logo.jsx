@@ -1,7 +1,7 @@
 import { ShoppingBag } from "lucide-react";
 import { useShop } from "../context/ShopContext";
 
-export default function Logo({ compact = false }) {
+export default function Logo({ compact = false, compactOnMobile = false }) {
   const { shopName } = useShop();
   const words = shopName.trim().split(/\s+/);
   const lastWord = words.length > 1 ? words.pop() : "";
@@ -11,7 +11,9 @@ export default function Logo({ compact = false }) {
         <ShoppingBag className="h-5 w-5 text-white" strokeWidth={2.2} />
       </span>
       {!compact && (
-        <span className="text-xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+        <span
+          className={`${compactOnMobile ? "hidden sm:inline" : ""} text-xl font-extrabold tracking-tight text-gray-900 dark:text-white`}
+        >
           {words.join(" ")}
           {words.length > 0 && " "}
           <span className="text-gradient">{lastWord || shopName}</span>
