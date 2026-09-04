@@ -9,6 +9,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Favorites from "./pages/Favorites";
+import Liquidation from "./pages/Liquidation";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import TrackOrder from "./pages/TrackOrder";
 import Courier from "./pages/Courier";
@@ -55,6 +56,7 @@ export default function App() {
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/favoris" element={<Favorites />} />
+                  <Route path="/liquidation" element={<Liquidation />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-confirmation/:reference" element={<OrderConfirmation />} />
                   <Route path="/suivi" element={<TrackOrder />} />

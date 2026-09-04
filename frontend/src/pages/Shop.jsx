@@ -1,29 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import {
-  ArrowDownNarrowWide,
-  ArrowUpNarrowWide,
-  BadgePercent,
-  Check,
-  Flame,
-  RotateCcw,
-  Search,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowDownNarrowWide, Check, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { api } from "../api";
 import ProductCard from "../components/ProductCard";
 import Reveal from "../components/Reveal";
 import { usePolling } from "../hooks";
 
 const SORTS = [
-  { value: "pop", label: "Populaire", icon: TrendingUp },
-  { value: "prix-asc", label: "Prix croissant", icon: ArrowUpNarrowWide },
-  { value: "prix-desc", label: "Prix décroissant", icon: ArrowDownNarrowWide },
-  { value: "promos", label: "Promotions", icon: BadgePercent },
-  { value: "nouveautes", label: "Nouveautés", icon: Sparkles },
+  { value: "pop", label: "Populaire" },
+  { value: "prix-asc", label: "Prix croissant" },
+  { value: "prix-desc", label: "Prix décroissant" },
+  { value: "promos", label: "Promotions" },
+  { value: "nouveautes", label: "Nouveautés" },
 ];
 
 const RATING_OPTIONS = [
@@ -46,8 +33,6 @@ export default function Shop() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [searchParams, setSearchParams] = useSearchParams();
-  const showClearance = searchParams.get("liquidation") === "1";
 
   useEffect(() => {
     api.get("/categories").then(setCategories).catch(() => {});
@@ -78,17 +63,21 @@ export default function Shop() {
   useEffect(load, [category, debouncedSearch]);
   usePolling(() => load(true), 30000, [category, debouncedSearch]);
 
-  const clearanceProducts = useMemo(() => products.filter((p) => p.clearance), [products]);
-
   const activeFilterCount =
+    (category ? 1 : 0) +
     (filters.minPrice !== "" ? 1 : 0) +
     (filters.maxPrice !== "" ? 1 : 0) +
     (filters.inStock ? 1 : 0) +
     (filters.promoOnly ? 1 : 0) +
     (filters.minRating > 0 ? 1 : 0);
 
+  const resetAll = () => {
+    setFilters(EMPTY_FILTERS);
+    setCategory(null);
+  };
+
   const displayed = useMemo(() => {
-    let list = showClearance ? products.filter((p) => p.clearance) : [...products];
+    let list = [...products];
 
     if (filters.inStock) list = list.filter((p) => p.total_stock > 0);
     if (filters.promoOnly) list = list.filter((p) => p.promo_percent > 0);
@@ -112,16 +101,36 @@ export default function Shop() {
         new Date(b.created_at) - new Date(a.created_at),
     };
     return list.sort(comparators[sort]);
-  }, [products, sort, showClearance, filters]);
+  }, [products, sort, filters]);
 
-  const noFilter = !showClearance && category === null && !search.trim() && activeFilterCount === 0;
-
-  const pillCls = (active) =>
-    `rounded-full px-4 py-1.5 text-sm font-medium transition ${
-      active
-        ? "bg-indigo-600 text-white"
-        : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-700"
-    }`;
+  // Puces récapitulatives des filtres actifs (faciles à retirer d'un clic)
+  const activeChips = [];
+  if (category) {
+    const c = categories.find((x) => x.id === category);
+    activeChips.push({ key: "cat", label: c?.name || "Catégorie", clear: () => setCategory(null) });
+  }
+  if (filters.minPrice !== "")
+    activeChips.push({
+      key: "min",
+      label: `≥ ${Number(filters.minPrice).toLocaleString("fr-FR")}`,
+      clear: () => setFilters((f) => ({ ...f, minPrice: "" })),
+    });
+  if (filters.maxPrice !== "")
+    activeChips.push({
+      key: "max",
+      label: `≤ ${Number(filters.maxPrice).toLocaleString("fr-FR")}`,
+      clear: () => setFilters((f) => ({ ...f, maxPrice: "" })),
+    });
+  if (filters.minRating > 0)
+    activeChips.push({
+      key: "rating",
+      label: `${filters.minRating.toString().replace(".", ",")}★ et +`,
+      clear: () => setFilters((f) => ({ ...f, minRating: 0 })),
+    });
+  if (filters.inStock)
+    activeChips.push({ key: "stock", label: "En stock", clear: () => setFilters((f) => ({ ...f, inStock: false })) });
+  if (filters.promoOnly)
+    activeChips.push({ key: "promo", label: "Promos", clear: () => setFilters((f) => ({ ...f, promoOnly: false })) });
 
   const toggleCls = (active) =>
     `flex cursor-pointer items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-sm font-medium transition ${
@@ -130,9 +139,16 @@ export default function Shop() {
         : "border-gray-200 text-gray-600 hover:border-gray-300 dark:border-slate-600 dark:text-slate-300"
     }`;
 
+  const catCls = (active) =>
+    `rounded-full px-4 py-1.5 text-sm font-medium transition ${
+      active
+        ? "bg-indigo-600 text-white"
+        : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-700"
+    }`;
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Catalogue</h1>
         <div className="flex gap-2">
           <div className="relative min-w-0 flex-1 sm:flex-none">
@@ -147,14 +163,15 @@ export default function Shop() {
           </div>
           <button
             onClick={() => setFiltersOpen((o) => !o)}
-            className={`relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+            aria-expanded={filtersOpen}
+            className={`relative flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
               filtersOpen || activeFilterCount > 0
                 ? "bg-indigo-600 text-white"
                 : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600"
             }`}
           >
             <SlidersHorizontal size={16} />
-            Filtres
+            <span className="hidden sm:inline">Filtres</span>
             {activeFilterCount > 0 && (
               <span className="animate-pop absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
                 {activeFilterCount}
@@ -164,13 +181,35 @@ export default function Shop() {
         </div>
       </div>
 
+      {/* Panneau de filtres : fermé par défaut, la page reste épurée tant que
+          le client ne demande pas à filtrer. */}
       <div
         className={`grid transition-all duration-300 ${
           filtersOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
       >
         <div className="overflow-hidden">
-          <div className="card mb-1 flex flex-col gap-4 p-5">
+          <div className="card mb-1 flex flex-col gap-5 p-5">
+            {categories.length > 0 && (
+              <div>
+                <p className="label">Catégories</p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setCategory(null)} className={catCls(category === null)}>
+                    Tout
+                  </button>
+                  {categories.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setCategory(c.id)}
+                      className={catCls(category === c.id)}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="label">Prix (FCFA)</p>
@@ -250,9 +289,10 @@ export default function Shop() {
                 </button>
               </div>
             </div>
+
             {activeFilterCount > 0 && (
               <button
-                onClick={() => setFilters(EMPTY_FILTERS)}
+                onClick={resetAll}
                 className="flex w-fit items-center gap-1.5 text-xs font-semibold text-red-600 hover:underline"
               >
                 <RotateCcw size={13} />
@@ -263,90 +303,48 @@ export default function Shop() {
         </div>
       </div>
 
-      <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {SORTS.map((s) => (
-          <button
-            key={s.value}
-            onClick={() => setSort(s.value)}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition ${
-              sort === s.value
-                ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-                : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-700"
-            }`}
+      {/* Récapitulatif compact hors du panneau : tri + filtres actifs */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            aria-label="Trier les produits"
+            className="cursor-pointer appearance-none rounded-full bg-white py-1.5 pr-8 pl-4 text-sm font-medium text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600"
           >
-            <s.icon size={15} />
-            {s.label}
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <ArrowDownNarrowWide
+            size={13}
+            className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400"
+          />
+        </div>
+        {activeChips.map((chip) => (
+          <button
+            key={chip.key}
+            onClick={chip.clear}
+            className="flex items-center gap-1.5 rounded-full bg-indigo-50 py-1.5 pr-2 pl-3.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900"
+          >
+            {chip.label}
+            <X size={14} className="rounded-full bg-indigo-600/15 p-0.5" />
           </button>
         ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => {
-            setCategory(null);
-            setSearchParams({});
-          }}
-          className={pillCls(category === null && !showClearance)}
-        >
-          Tout
-        </button>
-        {categories.map((c) => (
+        {activeChips.length > 1 && (
           <button
-            key={c.id}
-            onClick={() => {
-              setCategory(c.id);
-              setSearchParams({});
-            }}
-            className={pillCls(category === c.id && !showClearance)}
+            onClick={resetAll}
+            className="flex items-center gap-1 text-xs font-semibold text-red-600 hover:underline"
           >
-            {c.name} ({c.product_count})
+            <RotateCcw size={12} />
+            Tout effacer
           </button>
-        ))}
-        <button
-          onClick={() => setSearchParams(showClearance ? {} : { liquidation: "1" })}
-          className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${
-            showClearance
-              ? "bg-orange-500 text-white"
-              : "bg-white text-orange-600 ring-1 ring-orange-300 hover:bg-orange-50 dark:bg-slate-800 dark:text-orange-400 dark:ring-orange-800 dark:hover:bg-slate-700"
-          }`}
-        >
-          <Flame size={15} className={showClearance ? "fill-white" : "fill-orange-200"} />
-          Liquidation
-        </button>
+        )}
       </div>
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-
-      {noFilter && clearanceProducts.length > 0 && (
-        <Reveal>
-          <section className="rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 p-5 dark:border-orange-800 dark:bg-orange-950/40">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="flex items-center gap-2 text-xl font-bold text-orange-600 dark:text-orange-400">
-                  <Flame size={22} className="fill-orange-400" />
-                  Liquidation
-                </h2>
-                <p className="text-sm text-orange-500 dark:text-orange-300">
-                  Dernières pièces à petit prix — jusqu'à épuisement des stocks !
-                </p>
-              </div>
-              <button
-                onClick={() => setSearchParams({ liquidation: "1" })}
-                className="text-sm font-semibold text-orange-600 hover:underline dark:text-orange-400"
-              >
-                Tout voir →
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {clearanceProducts.slice(0, 4).map((p, i) => (
-                <Reveal key={p.id} delay={i * 80}>
-                  <ProductCard product={p} />
-                </Reveal>
-              ))}
-            </div>
-          </section>
-        </Reveal>
-      )}
 
       {loading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -360,14 +358,10 @@ export default function Shop() {
         </div>
       ) : displayed.length === 0 ? (
         <div className="py-16 text-center">
-          <p className="muted">
-            {showClearance
-              ? "Aucun produit en liquidation pour le moment."
-              : "Aucun produit ne correspond à vos filtres."}
-          </p>
+          <p className="muted">Aucun produit ne correspond à vos filtres.</p>
           {activeFilterCount > 0 && (
             <button
-              onClick={() => setFilters(EMPTY_FILTERS)}
+              onClick={resetAll}
               className="btn-outline mt-4 inline-flex items-center gap-1.5 text-sm"
             >
               <RotateCcw size={14} />

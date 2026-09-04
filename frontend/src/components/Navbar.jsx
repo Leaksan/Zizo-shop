@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Bike, Heart, Menu, Moon, Package, ShoppingCart, Store, Sun, X } from "lucide-react";
+import { Bike, Flame, Heart, Menu, Moon, Package, ShoppingCart, Store, Sun, X } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -10,6 +10,7 @@ import Logo from "./Logo";
 const LINKS = [
   { to: "/boutique", icon: Store, label: "Boutique" },
   { to: "/favoris", icon: Heart, label: "Mes favoris" },
+  { to: "/liquidation", icon: Flame, label: "Liquidation 🔥" },
   { to: "/suivi", icon: Package, label: "Suivi commande" },
   { to: "/livreur", icon: Bike, label: "Espace livreur" },
 ];

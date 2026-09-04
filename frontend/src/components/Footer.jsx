@@ -46,7 +46,7 @@ export default function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/boutique?liquidation=1" className="transition hover:text-orange-500">
+                  <Link to="/liquidation" className="transition hover:text-orange-500">
                     🔥 Liquidation
                   </Link>
                 </li>

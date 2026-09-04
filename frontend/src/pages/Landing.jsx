@@ -58,7 +58,7 @@ export default function Landing() {
                 </p>
               </div>
               <Link
-                to="/boutique?liquidation=1"
+                to="/liquidation"
                 className="flex items-center gap-1 text-sm font-semibold text-orange-600 hover:underline dark:text-orange-400"
               >
                 Tout voir <ArrowRight size={15} />
