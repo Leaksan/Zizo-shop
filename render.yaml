@@ -1,0 +1,31 @@
+# Blueprint Render — https://render.com/docs/blueprint-spec
+# Déploiement : Render > New > Blueprint > sélectionner ce dépôt.
+#
+# plan: starter (payant, ~7$/mois) car le disque persistant — qui garde
+# commandes, produits et images entre les déploiements — n'existe pas sur
+# l'offre gratuite. Pour tester gratuitement : remplacer plan par "free"
+# et supprimer le bloc "disk" (les données seront remises à zéro à chaque
+# déploiement).
+
+services:
+  - type: web
+    name: zizo-shop
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /api/settings/public
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SHOP_DB
+        value: /app/data/shop.db
+      - key: UPLOAD_DIR
+        value: /app/data/uploads
+      # Le pont WhatsApp (notifications) tourne en local ; sans lui les
+      # appels échouent silencieusement, l'app fonctionne normalement.
+      - key: WHATSAPP_BRIDGE_URL
+        value: http://localhost:3100/notify
+    disk:
+      name: zizo-shop-data
+      mountPath: /app/data
+      sizeGB: 1

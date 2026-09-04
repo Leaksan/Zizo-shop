@@ -91,11 +91,15 @@ def notify_whatsapp_order(order):
 def create_app():
     app = Flask(__name__)
     basedir = os.path.abspath(os.path.dirname(__file__))
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "shop.db")
+    # SHOP_DB / UPLOAD_DIR permettent de placer les données sur un disque
+    # persistant (ex: Render) au lieu de l'image éphémère du conteneur.
+    db_path = os.environ.get("SHOP_DB", os.path.join(basedir, "shop.db"))
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_path
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
-    upload_dir = os.path.join(basedir, "uploads")
+    upload_dir = os.environ.get("UPLOAD_DIR", os.path.join(basedir, "uploads"))
+    os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
     os.makedirs(upload_dir, exist_ok=True)
     CORS(app, supports_credentials=True)
 
