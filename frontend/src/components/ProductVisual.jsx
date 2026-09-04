@@ -4,6 +4,8 @@ export default function ProductVisual({ product, size = "text-4xl", className = 
       <img
         src={product.image_url}
         alt={product.name}
+        loading="lazy"
+        decoding="async"
         className={`h-full w-full object-cover ${className}`}
       />
     );

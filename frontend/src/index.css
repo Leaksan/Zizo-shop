@@ -104,3 +104,25 @@
     opacity: 0;
   }
 }
+
+/* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'achat fixe */
+body:has(.mobile-cta) .whatsapp-fab {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+/* Accessibilité : désactiver les animations quand l'utilisateur le demande */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-float,
+  .animate-float-slow,
+  .animate-blob,
+  .animate-blob-2,
+  .animate-gradient,
+  .animate-pop {
+    animation: none;
+  }
+}

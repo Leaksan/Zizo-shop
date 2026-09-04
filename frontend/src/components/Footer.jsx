@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ChevronDown, Heart, Info, MapPin, Package, Truck } from "lucide-react";
 import { useShop } from "../context/ShopContext";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
@@ -40,19 +41,19 @@ export default function Footer() {
               <h4 className="mb-3 text-sm font-bold">Boutique</h4>
               <ul className="space-y-1 text-sm text-gray-500 dark:text-slate-400">
                 <li>
-                  <a href="/boutique" className="transition hover:text-indigo-600">
+                  <Link to="/boutique" className="transition hover:text-indigo-600">
                     Tous les produits
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/boutique?liquidation=1" className="transition hover:text-orange-500">
+                  <Link to="/boutique?liquidation=1" className="transition hover:text-orange-500">
                     🔥 Liquidation
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="/boutique?favoris=1" className="transition hover:text-indigo-600">
+                  <Link to="/boutique?favoris=1" className="transition hover:text-indigo-600">
                     Mes favoris
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -61,15 +62,15 @@ export default function Footer() {
               <ul className="space-y-1 text-sm text-gray-500 dark:text-slate-400">
                 <li className="flex items-center gap-1.5">
                   <Package size={14} />
-                  <a href="/suivi" className="transition hover:text-indigo-600">
+                  <Link to="/suivi" className="transition hover:text-indigo-600">
                     Suivre ma commande
-                  </a>
+                  </Link>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Truck size={14} />
-                  <a href="/livreur" className="transition hover:text-indigo-600">
+                  <Link to="/livreur" className="transition hover:text-indigo-600">
                     Devenir livreur
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>

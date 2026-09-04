@@ -98,13 +98,17 @@ export default function ProductDetail() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl pb-20 md:pb-0">
       <Link to="/boutique" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">
         ← Retour à la boutique
       </Link>
       <div className="mt-4 grid gap-8 md:grid-cols-2">
         <div className="card overflow-hidden">
-          <ProductVisual product={product} size="text-8xl" className="aspect-square" />
+          <ProductVisual
+            product={product}
+            size="text-8xl"
+            className="aspect-[4/3] sm:aspect-square"
+          />
         </div>
 
         <div className="flex flex-col gap-4">
@@ -286,6 +290,36 @@ export default function ProductDetail() {
       </div>
 
       <ReviewsSection productId={product.id} />
+
+      {/* Barre d'achat fixe sur mobile : prix + ajout panier toujours accessibles */}
+      {variant && (
+        <div className="mobile-cta fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-gray-200 bg-white/95 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-800/95">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">{product.name}</p>
+            <p className="flex items-baseline gap-1.5">
+              <span className="text-lg font-extrabold">{formatPrice(variant.price, currency)}</span>
+              {variant.old_price && (
+                <span className="text-xs text-gray-400 line-through dark:text-slate-500">
+                  {formatPrice(variant.old_price, currency)}
+                </span>
+              )}
+            </p>
+          </div>
+          {variant.stock > 0 ? (
+            <button
+              onClick={handleAdd}
+              className="btn-primary flex shrink-0 items-center gap-2 px-5 py-3"
+            >
+              <ShoppingCart size={18} />
+              {added ? "Ajouté ✓" : "Ajouter"}
+            </button>
+          ) : (
+            <span className="shrink-0 rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 dark:bg-slate-700 dark:text-slate-400">
+              Épuisé
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

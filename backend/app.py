@@ -1,3 +1,4 @@
+import hmac
 import os
 import random
 import string
@@ -12,6 +13,7 @@ import json as _json_std
 from flask import Flask, jsonify, request, send_from_directory, session
 from flask_cors import CORS
 from PIL import Image
+from sqlalchemy import update as sa_update
 
 from models import (
     Category,
@@ -127,7 +129,16 @@ def create_app():
     # ---------------- Géocodage (Libreville) ----------------
 
     GEO_CACHE = {}
+    GEO_CACHE_MAX = 500
     LBV_BBOX = "9.28,0.18,9.80,0.72"
+
+    def _geo_cache(key, compute):
+        if key not in GEO_CACHE:
+            if len(GEO_CACHE) >= GEO_CACHE_MAX:
+                # Vider le plus ancien (les dict conservent l'ordre d'insertion)
+                GEO_CACHE.pop(next(iter(GEO_CACHE)))
+            GEO_CACHE[key] = compute()
+        return GEO_CACHE[key]
 
     def _http_json(url):
         req = Request(url, headers={"User-Agent": "MaBoutique-Libreville/1.0"})
@@ -139,48 +150,48 @@ def create_app():
         q = (request.args.get("q") or "").strip()
         if len(q) < 2:
             return jsonify([])
-        key = q.lower()
-        if key in GEO_CACHE:
-            return jsonify(GEO_CACHE[key])
-        results = []
-        try:
-            params = urlencode(
-                {
-                    "q": f"{q}, Libreville, Gabon",
-                    "limit": 6,
-                    "lat": 0.4162,
-                    "lon": 9.4673,
-                    "bbox": LBV_BBOX,
-                }
-            )
-            data = _http_json(f"https://photon.komoot.io/api/?{params}")
-            for f in data.get("features", []):
-                props = f.get("properties", {})
-                coords = f.get("geometry", {}).get("coordinates", [None, None])
-                if coords[0] is None:
-                    continue
-                seen = set()
-                parts = []
-                for p in [
-                    props.get("name"),
-                    props.get("district") or props.get("suburb"),
-                    props.get("city"),
-                ]:
-                    if p and p not in seen:
-                        seen.add(p)
-                        parts.append(p)
-                results.append(
+
+        def compute():
+            results = []
+            try:
+                params = urlencode(
                     {
-                        "name": ", ".join(parts) or props.get("name") or q,
-                        "lat": coords[1],
-                        "lng": coords[0],
-                        "zone": props.get("district") or props.get("suburb") or "",
+                        "q": f"{q}, Libreville, Gabon",
+                        "limit": 6,
+                        "lat": 0.4162,
+                        "lon": 9.4673,
+                        "bbox": LBV_BBOX,
                     }
                 )
-        except Exception:
-            results = []
-        GEO_CACHE[key] = results
-        return jsonify(results)
+                data = _http_json(f"https://photon.komoot.io/api/?{params}")
+                for f in data.get("features", []):
+                    props = f.get("properties", {})
+                    coords = f.get("geometry", {}).get("coordinates", [None, None])
+                    if coords[0] is None:
+                        continue
+                    seen = set()
+                    parts = []
+                    for p in [
+                        props.get("name"),
+                        props.get("district") or props.get("suburb"),
+                        props.get("city"),
+                    ]:
+                        if p and p not in seen:
+                            seen.add(p)
+                            parts.append(p)
+                    results.append(
+                        {
+                            "name": ", ".join(parts) or props.get("name") or q,
+                            "lat": coords[1],
+                            "lng": coords[0],
+                            "zone": props.get("district") or props.get("suburb") or "",
+                        }
+                    )
+            except Exception:
+                results = []
+            return results
+
+        return jsonify(_geo_cache(q.lower(), compute))
 
     @app.get("/api/geocode/reverse")
     def geocode_reverse():
@@ -189,33 +200,32 @@ def create_app():
             lng = float(request.args.get("lng", ""))
         except ValueError:
             return jsonify({"error": "Coordonnées invalides"}), 400
-        key = f"{lat:.4f},{lng:.4f}"
-        if key in GEO_CACHE:
-            return jsonify(GEO_CACHE[key])
-        try:
-            data = _http_json(
-                "https://nominatim.openstreetmap.org/reverse?"
-                + urlencode({"lat": lat, "lon": lng, "format": "jsonv2", "zoom": 16})
-            )
-            addr = data.get("address", {})
-            zone = (
-                addr.get("suburb")
-                or addr.get("neighbourhood")
-                or addr.get("city_district")
-                or addr.get("quarter")
-                or ""
-            )
-            seen = set()
-            parts = []
-            for p in [addr.get("road") or data.get("name"), zone]:
-                if p and p not in seen:
-                    seen.add(p)
-                    parts.append(p)
-            result = {"name": ", ".join(parts) or data.get("display_name", ""), "zone": zone}
-        except Exception:
-            result = {"name": "", "zone": ""}
-        GEO_CACHE[key] = result
-        return jsonify(result)
+
+        def compute():
+            try:
+                data = _http_json(
+                    "https://nominatim.openstreetmap.org/reverse?"
+                    + urlencode({"lat": lat, "lon": lng, "format": "jsonv2", "zoom": 16})
+                )
+                addr = data.get("address", {})
+                zone = (
+                    addr.get("suburb")
+                    or addr.get("neighbourhood")
+                    or addr.get("city_district")
+                    or addr.get("quarter")
+                    or ""
+                )
+                seen = set()
+                parts = []
+                for p in [addr.get("road") or data.get("name"), zone]:
+                    if p and p not in seen:
+                        seen.add(p)
+                        parts.append(p)
+                return {"name": ", ".join(parts) or data.get("display_name", ""), "zone": zone}
+            except Exception:
+                return {"name": "", "zone": ""}
+
+        return jsonify(_geo_cache(f"{lat:.4f},{lng:.4f}", compute))
 
     # ---------------- Public : catalogue ----------------
 
@@ -353,11 +363,17 @@ def create_app():
                 return jsonify({"error": "Variante introuvable"}), 400
             if qty <= 0:
                 return jsonify({"error": "Quantité invalide"}), 400
-            if variant.stock < qty:
+            # Décrément atomique : évite la survente si deux commandes arrivent en même temps
+            result = db.session.execute(
+                sa_update(Variant)
+                .where(Variant.id == variant.id, Variant.stock >= qty)
+                .values(stock=Variant.stock - qty)
+            )
+            if result.rowcount == 0:
                 return jsonify(
                     {"error": f"Stock insuffisant pour {variant.product.name} - {variant.name}"}
                 ), 400
-            variant.stock -= qty
+            db.session.refresh(variant)
             order.items.append(
                 OrderItem(
                     variant_id=variant.id,
@@ -693,7 +709,9 @@ def create_app():
     @app.post("/api/admin/login")
     def admin_login():
         data = request.get_json(force=True)
-        if data.get("password") == get_setting("admin_password"):
+        expected = get_setting("admin_password")
+        supplied = str(data.get("password") or "")
+        if hmac.compare_digest(supplied.encode(), expected.encode()):
             session["admin"] = True
             return jsonify({"ok": True})
         return jsonify({"error": "Mot de passe incorrect"}), 401

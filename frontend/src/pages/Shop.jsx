@@ -41,6 +41,7 @@ export default function Shop() {
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sort, setSort] = useState("pop");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -55,11 +56,17 @@ export default function Shop() {
     api.get("/categories").then(setCategories).catch(() => {});
   }, []);
 
+  // Éviter une requête API à chaque frappe : attendre 300 ms de pause
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const load = (silent = false) => {
     if (!silent) setLoading(true);
     const params = new URLSearchParams();
     if (category) params.set("category", category);
-    if (search) params.set("search", search);
+    if (debouncedSearch) params.set("search", debouncedSearch);
     api
       .get(`/products?${params}`)
       .then(setProducts)
@@ -71,8 +78,8 @@ export default function Shop() {
       });
   };
 
-  useEffect(load, [category, search]);
-  usePolling(() => load(true), 30000, [category, search]);
+  useEffect(load, [category, debouncedSearch]);
+  usePolling(() => load(true), 30000, [category, debouncedSearch]);
 
   const clearanceProducts = useMemo(() => products.filter((p) => p.clearance), [products]);
 
