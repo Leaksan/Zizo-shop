@@ -16,7 +16,6 @@ import {
 import { api } from "../api";
 import ProductCard from "../components/ProductCard";
 import Reveal from "../components/Reveal";
-import { useFavorites } from "../context/FavoritesContext";
 import { usePolling } from "../hooks";
 
 const SORTS = [
@@ -48,9 +47,7 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
-  const showFavs = searchParams.get("favoris") === "1";
   const showClearance = searchParams.get("liquidation") === "1";
-  const { favorites } = useFavorites();
 
   useEffect(() => {
     api.get("/categories").then(setCategories).catch(() => {});
@@ -91,11 +88,7 @@ export default function Shop() {
     (filters.minRating > 0 ? 1 : 0);
 
   const displayed = useMemo(() => {
-    let list = showFavs
-      ? products.filter((p) => favorites.includes(p.id))
-      : showClearance
-        ? products.filter((p) => p.clearance)
-        : [...products];
+    let list = showClearance ? products.filter((p) => p.clearance) : [...products];
 
     if (filters.inStock) list = list.filter((p) => p.total_stock > 0);
     if (filters.promoOnly) list = list.filter((p) => p.promo_percent > 0);
@@ -119,10 +112,9 @@ export default function Shop() {
         new Date(b.created_at) - new Date(a.created_at),
     };
     return list.sort(comparators[sort]);
-  }, [products, sort, showFavs, showClearance, favorites, filters]);
+  }, [products, sort, showClearance, filters]);
 
-  const noFilter =
-    !showFavs && !showClearance && category === null && !search.trim() && activeFilterCount === 0;
+  const noFilter = !showClearance && category === null && !search.trim() && activeFilterCount === 0;
 
   const pillCls = (active) =>
     `rounded-full px-4 py-1.5 text-sm font-medium transition ${
@@ -294,7 +286,7 @@ export default function Shop() {
             setCategory(null);
             setSearchParams({});
           }}
-          className={pillCls(category === null && !showFavs && !showClearance)}
+          className={pillCls(category === null && !showClearance)}
         >
           Tout
         </button>
@@ -305,7 +297,7 @@ export default function Shop() {
               setCategory(c.id);
               setSearchParams({});
             }}
-            className={pillCls(category === c.id && !showFavs && !showClearance)}
+            className={pillCls(category === c.id && !showClearance)}
           >
             {c.name} ({c.product_count})
           </button>
@@ -320,12 +312,6 @@ export default function Shop() {
         >
           <Flame size={15} className={showClearance ? "fill-white" : "fill-orange-200"} />
           Liquidation
-        </button>
-        <button
-          onClick={() => setSearchParams(showFavs ? {} : { favoris: "1" })}
-          className={pillCls(showFavs)}
-        >
-          ❤️ Mes favoris
         </button>
       </div>
 
@@ -375,11 +361,9 @@ export default function Shop() {
       ) : displayed.length === 0 ? (
         <div className="py-16 text-center">
           <p className="muted">
-            {showFavs
-              ? "Aucun favori pour le moment. Touchez le cœur d'un produit pour l'ajouter."
-              : showClearance
-                ? "Aucun produit en liquidation pour le moment."
-                : "Aucun produit ne correspond à vos filtres."}
+            {showClearance
+              ? "Aucun produit en liquidation pour le moment."
+              : "Aucun produit ne correspond à vos filtres."}
           </p>
           {activeFilterCount > 0 && (
             <button

@@ -8,6 +8,7 @@ import Logo from "./Logo";
 
 const LINKS = [
   { to: "/boutique", icon: Store, label: "Boutique" },
+  { to: "/favoris", icon: Heart, label: "Mes favoris" },
   { to: "/suivi", icon: Package, label: "Suivi commande" },
   { to: "/livreur", icon: Bike, label: "Espace livreur" },
 ];
@@ -64,12 +65,7 @@ export default function Navbar() {
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <Link
-            to="/?favoris=1"
-            title="Mes favoris"
-            aria-label="Mes favoris"
-            className={iconBtnCls}
-          >
+          <Link to="/favoris" title="Mes favoris" aria-label="Mes favoris" className={iconBtnCls}>
             <Heart size={20} />
             {favCount > 0 && (
               <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
@@ -99,7 +95,7 @@ export default function Navbar() {
       {menuOpen && (
         <div className="fixed inset-0 z-40 sm:hidden">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
           />
           <div className="absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-2xl dark:bg-slate-800">

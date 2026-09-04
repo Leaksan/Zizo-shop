@@ -8,6 +8,7 @@ import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import Favorites from "./pages/Favorites";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import TrackOrder from "./pages/TrackOrder";
 import Courier from "./pages/Courier";
@@ -53,6 +54,7 @@ export default function App() {
                   <Route path="/boutique" element={<Shop />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
+                  <Route path="/favoris" element={<Favorites />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-confirmation/:reference" element={<OrderConfirmation />} />
                   <Route path="/suivi" element={<TrackOrder />} />

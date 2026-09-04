@@ -21,10 +21,14 @@ export function FavoritesProvider({ children }) {
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
     );
 
+  const clearAll = () => setFavorites([]);
+
   const isFavorite = (productId) => favorites.includes(productId);
 
   return (
-    <FavoritesContext.Provider value={{ favorites, toggle, isFavorite, count: favorites.length }}>
+    <FavoritesContext.Provider
+      value={{ favorites, toggle, clearAll, isFavorite, count: favorites.length }}
+    >
       {children}
     </FavoritesContext.Provider>
   );

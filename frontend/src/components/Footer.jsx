@@ -51,7 +51,7 @@ export default function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/boutique?favoris=1" className="transition hover:text-indigo-600">
+                  <Link to="/favoris" className="transition hover:text-indigo-600">
                     Mes favoris
                   </Link>
                 </li>
