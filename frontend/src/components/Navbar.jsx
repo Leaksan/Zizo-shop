@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Bike, Heart, Menu, Moon, Package, ShoppingCart, Store, Sun, X } from "lucide-react";
 import { useCart } from "../context/CartContext";
@@ -42,11 +43,7 @@ export default function Navbar() {
     "relative rounded-xl p-3 text-gray-500 transition hover:bg-gray-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800";
 
   return (
-    <header
-      className={`sticky top-0 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80 ${
-        menuOpen ? "z-40" : "z-20"
-      }`}
-    >
+    <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-1 px-4 sm:gap-4">
         <Link to="/" className="shrink-0">
           <Logo compactOnMobile />
@@ -92,48 +89,53 @@ export default function Navbar() {
         </nav>
       </div>
 
-      {menuOpen && (
-        <div className="fixed inset-0 z-40 sm:hidden">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-2xl dark:bg-slate-800">
-            <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700">
-              <Logo compactOnMobile />
-              <button
-                onClick={() => setMenuOpen(false)}
-                aria-label="Fermer le menu"
-                className="rounded-lg p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
-              {LINKS.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
+      {/* Drawer rendu via portail : le backdrop-blur du header crée un bloc
+          conteneur qui emprisonnerait un descendant position:fixed (bug menu
+          de 64px de haut). Sur body, il couvre toujours tout l'écran. */}
+      {menuOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-50 sm:hidden">
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMenuOpen(false)}
+            />
+            <div className="absolute top-0 right-0 flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-2xl dark:bg-slate-800">
+              <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700">
+                <Logo compactOnMobile />
+                <button
                   onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition ${
-                      isActive
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-                        : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
-                    }`
-                  }
+                  aria-label="Fermer le menu"
+                  className="rounded-lg p-2.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700"
                 >
-                  <l.icon size={20} />
-                  {l.label}
-                </NavLink>
-              ))}
-            </nav>
-            <p className="border-t border-gray-200 p-4 text-center text-xs muted dark:border-slate-700">
-              Paiement à la livraison · Libreville 7j/7
-            </p>
-          </div>
-        </div>
-      )}
+                  <X size={20} />
+                </button>
+              </div>
+              <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+                {LINKS.map((l) => (
+                  <NavLink
+                    key={l.to}
+                    to={l.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition ${
+                        isActive
+                          ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                          : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                      }`
+                    }
+                  >
+                    <l.icon size={20} />
+                    {l.label}
+                  </NavLink>
+                ))}
+              </nav>
+              <p className="border-t border-gray-200 p-4 text-center text-xs muted dark:border-slate-700">
+                Paiement à la livraison · Libreville 7j/7
+              </p>
+            </div>
+          </div>,
+          document.body
+        )}
     </header>
   );
 }
