@@ -1455,7 +1455,7 @@ def create_app():
                 "title": f"{shop} — Livraison à Libreville",
                 "description": "Commandez en ligne et faites-vous livrer à Libreville. "
                 "Paiement à la livraison, suivi du livreur en temps réel.",
-                "image": request.url_root.rstrip("/") + "/icons/icon-512.png",
+                "image": request.url_root.rstrip("/") + "/og-image.png",
                 "type": "website",
             }
             match = re.fullmatch(r"products/(\d+)", path)

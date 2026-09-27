@@ -88,7 +88,12 @@ Admin : `/admin` (mot de passe démo `admin123`). Livreur démo : `0698765432` /
    « Nouveautés ».
 7. **Identité « 241 Shop »** : palette émeraude/ambre, couleurs harmonisées (plus d'orange ni
    de rouge « promo » en dur), « MaBoutique » retiré partout (onglet, manifeste, cache du service
-   worker, message de partage).
+   worker, message de partage). Logo « sac 241 » (sac émeraude marqué 241, étiquette ambre dans
+   le coin — surtout pas au-dessus du « 1 », sinon on lit « 24i ») : `Logo.jsx`,
+   `public/favicon.svg`, icônes `public/icons/icon-192.png` / `icon-512.png` (fond plein, sac dans
+   la zone sûre « maskable ») et image des aperçus de partage `public/og-image.png` (1200 × 630).
+   Les PNG ont été générés en rendant le SVG avec le Chrome de puppeteer
+   (`whatsapp-bridge/node_modules`) : à refaire si le logo change.
 
 ## À faire avant la mise en production
 
@@ -99,10 +104,6 @@ Admin : `/admin` (mot de passe démo `admin123`). Livreur démo : `0698765432` /
 
 ## Prochaines étapes (décisions du propriétaire en attente)
 
-- **Logo** : 3 propositions faites (A badge « 241 », B sac « 241 », C tricolore gabonais).
-  Une fois choisi : l'intégrer à `Logo.jsx`, régénérer `public/icons/icon-192.png`,
-  `icon-512.png` (et la version « maskable »), l'image des aperçus de partage, et supprimer
-  `public/favicon.svg` et `public/icons.svg` (restes du modèle Vite, référencés nulle part).
 - **Paiement mobile money** (Airtel Money / Moov Money) via un agrégateur gabonais
   (e-Billing, SingPay, PVit… à comparer) ; statut de paiement séparé du statut de livraison.
 - **Notifications en production** : API WhatsApp Business (Meta) à la place du pont local.
