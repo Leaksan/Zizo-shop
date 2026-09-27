@@ -52,7 +52,22 @@ client.on("disconnected", () => {
   console.log("WhatsApp deconnecte.");
 });
 
-client.initialize();
+// WhatsApp Web se recharge parfois pendant la connexion (mise à jour, session expirée) :
+// initialize() échoue alors et, sans ce rattrapage, tout le pont s'arrêtait. On réessaie.
+async function connect(attempt = 1) {
+  try {
+    await client.initialize();
+  } catch (e) {
+    ready = false;
+    console.error(`Connexion WhatsApp impossible (essai ${attempt}) :`, e?.message || e);
+    await client.destroy().catch(() => {});
+    const delay = Math.min(60, 10 * attempt);
+    console.log(`Nouvel essai dans ${delay} s...`);
+    setTimeout(() => connect(attempt + 1), delay * 1000);
+  }
+}
+
+connect();
 
 const app = express();
 app.use(express.json());
