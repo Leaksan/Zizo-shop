@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Timer, Zap } from "lucide-react";
+import { ChevronRight, Timer, Zap } from "lucide-react";
 import { api } from "../api";
 import { formatPrice } from "../format";
 import { useShop } from "../context/ShopContext";
@@ -39,53 +39,45 @@ export default function DealOfDay() {
   const variant = deal.variants.find((v) => v.old_price) || deal.variants[0];
   if (!variant) return null;
 
+  // Carte compacte et entièrement cliquable, placée haut sur l'accueil
   return (
-    <section className="relative mb-10 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-accent-600 p-6 text-white shadow-xl shadow-orange-500/20 sm:p-8">
-      <div className="animate-blob pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/15 blur-2xl" />
-      <div className="relative grid items-center gap-6 sm:grid-cols-[auto_1fr_auto]">
-        <Link
-          to={`/products/${deal.id}`}
-          className="mx-auto h-32 w-32 shrink-0 overflow-hidden rounded-2xl shadow-lg transition hover:scale-105"
-        >
-          <ProductVisual product={deal} size="text-5xl" width={320} />
-        </Link>
-        <div className="text-center sm:text-left">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">
-            <Zap size={13} className="fill-yellow-300 text-yellow-300" />
-            OFFRE DU JOUR
+    <Link
+      to={`/products/${deal.id}`}
+      className="group mb-8 flex items-center gap-3 rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-white p-3 shadow-sm transition hover:shadow-md sm:gap-5 sm:p-4 dark:border-accent-900 dark:from-accent-950/60 dark:to-slate-800"
+    >
+      <span className="h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-28">
+        <ProductVisual product={deal} size="text-4xl" width={240} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent-600 px-2 py-0.5 text-[11px] font-bold tracking-wide text-white uppercase">
+            <Zap size={12} className="fill-current" />
+            Offre du jour
           </span>
-          <h2 className="mt-2 text-2xl font-extrabold">{deal.name}</h2>
-          <div className="mt-1 flex flex-wrap items-baseline justify-center gap-2 sm:justify-start">
-            <span className="text-3xl font-black">{formatPrice(variant.price, currency)}</span>
-            {variant.old_price && (
-              <span className="text-lg text-white/70 line-through">
-                {formatPrice(variant.old_price, currency)}
-              </span>
-            )}
-            {deal.promo_percent > 0 && (
-              <span className="rounded-full bg-yellow-300 px-2 py-0.5 text-xs font-black text-orange-700">
-                -{deal.promo_percent} %
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-3">
-          <span className="flex items-center gap-1.5 text-sm font-semibold text-white/90">
-            <Timer size={16} />
-            Nouvelle offre dans
-          </span>
-          <span className="rounded-xl bg-white/15 px-4 py-2 font-mono text-2xl font-black tracking-wider backdrop-blur">
+          <span
+            className="flex items-center gap-1 font-mono text-xs font-semibold text-accent-700 dark:text-accent-300"
+            title="Nouvelle offre dans"
+          >
+            <Timer size={13} />
             {countdown}
           </span>
-          <Link
-            to={`/products/${deal.id}`}
-            className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-orange-600 shadow transition hover:scale-105"
-          >
-            <Flame size={15} className="fill-orange-500 text-orange-500" />
-            J'en profite
-          </Link>
-        </div>
-      </div>
-    </section>
+        </span>
+        <b className="mt-1.5 line-clamp-2 block text-base leading-snug text-gray-900 sm:text-lg dark:text-white">
+          {deal.name}
+        </b>
+        <span className="mt-1 flex flex-wrap items-baseline gap-x-2">
+          <span className="text-lg font-extrabold text-gray-900 dark:text-white">
+            {formatPrice(variant.price, currency)}
+          </span>
+          {variant.old_price && (
+            <span className="text-xs text-gray-400 line-through">{formatPrice(variant.old_price, currency)}</span>
+          )}
+          {deal.promo_percent > 0 && (
+            <span className="text-xs font-bold text-accent-700 dark:text-accent-300">-{deal.promo_percent} %</span>
+          )}
+        </span>
+      </span>
+      <ChevronRight size={20} className="shrink-0 text-gray-400 transition group-hover:translate-x-0.5" />
+    </Link>
   );
 }

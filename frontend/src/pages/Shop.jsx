@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDownNarrowWide, Check, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { api } from "../api";
 import ProductCard from "../components/ProductCard";
-import Reveal from "../components/Reveal";
 import { usePolling } from "../hooks";
 
 const SORTS = [
@@ -26,11 +25,24 @@ const EMPTY_FILTERS = { minPrice: "", maxPrice: "", inStock: false, promoOnly: f
 export default function Shop() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [searchParams] = useSearchParams();
-  const [category, setCategory] = useState(() => Number(searchParams.get("cat")) || null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Le rayon vit dans l'adresse (?cat=) : le menu ☰, les puces et le bouton
+  // retour restent synchronisés, même quand on change de rayon depuis cette page.
+  const category = Number(searchParams.get("cat")) || null;
+  const setCategory = (id) => {
+    const next = new URLSearchParams(searchParams);
+    if (id) next.set("cat", id);
+    else next.delete("cat");
+    next.delete("focus");
+    setSearchParams(next, { replace: true });
+  };
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get("q") || "");
-  const [sort, setSort] = useState("pop");
+  const [sort, setSort] = useState(() =>
+    SORTS.some((s) => s.value === searchParams.get("tri")) ? searchParams.get("tri") : "pop"
+  );
+  const searchInput = useRef(null);
+  const wantsFocus = searchParams.get("focus") === "1";
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -39,6 +51,14 @@ export default function Shop() {
   useEffect(() => {
     api.get("/categories").then(setCategories).catch(() => {});
   }, []);
+
+  // Loupe de l'en-tête (?focus=1) : placer le curseur dans la recherche, même si on
+  // était déjà sur cette page
+  useEffect(() => {
+    if (wantsFocus) searchInput.current?.focus();
+  }, [wantsFocus]);
+
+  const currentCategory = categories.find((c) => c.id === category);
 
   // Éviter une requête API à chaque frappe : attendre 300 ms de pause
   useEffect(() => {
@@ -147,16 +167,16 @@ export default function Shop() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Catalogue</h1>
+        <h1 className="text-2xl font-bold">{currentCategory ? currentCategory.name : "Boutique"}</h1>
         <div className="flex gap-2">
           <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
             <input
+              ref={searchInput}
               type="search"
-              placeholder="Rechercher…"
+              placeholder="Rechercher un produit…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              autoFocus={searchParams.get("focus") === "1"}
               aria-label="Rechercher un produit"
               className="input w-full pl-9 sm:max-w-xs"
             />
@@ -369,10 +389,8 @@ export default function Shop() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {displayed.map((p, i) => (
-            <Reveal key={p.id} delay={Math.min(i, 7) * 60}>
-              <ProductCard product={p} />
-            </Reveal>
+          {displayed.map((p) => (
+            <ProductCard key={p.id} product={p} />
           ))}
         </div>
       )}

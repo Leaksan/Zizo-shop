@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Flame, Store } from "lucide-react";
 import { api } from "../api";
 import ProductCard from "../components/ProductCard";
-import Reveal from "../components/Reveal";
 
 export default function Liquidation() {
   const [products, setProducts] = useState([]);
@@ -70,10 +69,8 @@ export default function Liquidation() {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {items.map((p, i) => (
-            <Reveal key={p.id} delay={Math.min(i, 7) * 60}>
-              <ProductCard product={p} />
-            </Reveal>
+          {items.map((p) => (
+            <ProductCard key={p.id} product={p} />
           ))}
         </div>
       )}
