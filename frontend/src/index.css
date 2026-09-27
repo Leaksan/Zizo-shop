@@ -161,6 +161,13 @@ body {
   }
 }
 
+/* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'onglets */
+@media (max-width: 767px) {
+  body:has(.bottom-nav) .whatsapp-fab {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+
 /* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'achat fixe */
 body:has(.mobile-cta) .whatsapp-fab {
   bottom: calc(5.5rem + env(safe-area-inset-bottom));

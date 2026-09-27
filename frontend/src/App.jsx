@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import FloatingWhatsApp from "./components/FloatingWhatsApp";
+import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
 import Landing from "./pages/Landing";
 import Shop from "./pages/Shop";
@@ -76,6 +77,7 @@ export default function App() {
               </main>
               <Footer />
               <FloatingWhatsApp />
+              <BottomNav />
             </div>
           }
         />

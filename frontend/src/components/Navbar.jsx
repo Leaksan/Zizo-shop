@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Bike, Flame, Heart, Menu, Moon, Package, ShoppingCart, Store, Sun, X } from "lucide-react";
+import { Bike, Flame, Heart, Menu, Moon, Package, Search, ShoppingCart, Store, Sun, X } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -46,8 +46,8 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-1 px-4 sm:gap-4">
-        <Link to="/" className="shrink-0">
-          <Logo compactOnMobile />
+        <Link to="/" className="min-w-0 shrink" aria-label="Accueil">
+          <Logo />
         </Link>
         <nav className="flex items-center gap-0.5 sm:gap-2">
           {LINKS.map((l) => (
@@ -55,15 +55,23 @@ export default function Navbar() {
               <l.icon size={16} /> {l.label}
             </NavLink>
           ))}
+          <Link
+            to="/boutique?focus=1"
+            title="Rechercher"
+            aria-label="Rechercher un produit"
+            className={`${iconBtnCls} sm:hidden`}
+          >
+            <Search size={21} />
+          </Link>
           <button
             onClick={toggle}
             title="Changer de thème"
             aria-label="Changer de thème"
-            className={iconBtnCls}
+            className={`${iconBtnCls} hidden sm:block`}
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <Link to="/favoris" title="Mes favoris" aria-label="Mes favoris" className={iconBtnCls}>
+          <Link to="/favoris" title="Mes favoris" aria-label="Mes favoris" className={`${iconBtnCls} hidden sm:block`}>
             <Heart size={20} />
             {favCount > 0 && (
               <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
@@ -71,7 +79,7 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-          <Link to="/cart" title="Mon panier" aria-label="Mon panier" className={iconBtnCls}>
+          <Link to="/cart" title="Mon panier" aria-label="Mon panier" className={`${iconBtnCls} hidden sm:block`}>
             <ShoppingCart size={20} />
             {count > 0 && (
               <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
@@ -129,6 +137,13 @@ export default function Navbar() {
                     {l.label}
                   </NavLink>
                 ))}
+                <button
+                  onClick={toggle}
+                  className="flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium text-gray-600 transition hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
+                  {theme === "dark" ? "Mode clair" : "Mode sombre"}
+                </button>
               </nav>
               <p className="border-t border-gray-200 p-4 text-center text-xs muted dark:border-slate-700">
                 Paiement à la livraison · Libreville 7j/7

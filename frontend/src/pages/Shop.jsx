@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ArrowDownNarrowWide, Check, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { api } from "../api";
 import ProductCard from "../components/ProductCard";
@@ -25,9 +26,10 @@ const EMPTY_FILTERS = { minPrice: "", maxPrice: "", inStock: false, promoOnly: f
 export default function Shop() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [category, setCategory] = useState(null);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [category, setCategory] = useState(() => Number(searchParams.get("cat")) || null);
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get("q") || "");
   const [sort, setSort] = useState("pop");
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -63,8 +65,8 @@ export default function Shop() {
   useEffect(load, [category, debouncedSearch]);
   usePolling(() => load(true), 30000, [category, debouncedSearch]);
 
+  // (la catégorie a sa propre rangée toujours visible : pas comptée ici)
   const activeFilterCount =
-    (category ? 1 : 0) +
     (filters.minPrice !== "" ? 1 : 0) +
     (filters.maxPrice !== "" ? 1 : 0) +
     (filters.inStock ? 1 : 0) +
@@ -105,10 +107,6 @@ export default function Shop() {
 
   // Puces récapitulatives des filtres actifs (faciles à retirer d'un clic)
   const activeChips = [];
-  if (category) {
-    const c = categories.find((x) => x.id === category);
-    activeChips.push({ key: "cat", label: c?.name || "Catégorie", clear: () => setCategory(null) });
-  }
   if (filters.minPrice !== "")
     activeChips.push({
       key: "min",
@@ -158,6 +156,8 @@ export default function Shop() {
               placeholder="Rechercher…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              autoFocus={searchParams.get("focus") === "1"}
+              aria-label="Rechercher un produit"
               className="input w-full pl-9 sm:max-w-xs"
             />
           </div>
@@ -181,35 +181,33 @@ export default function Shop() {
         </div>
       </div>
 
+      {/* Catégories toujours visibles, défilables au doigt sur mobile */}
+      {categories.length > 0 && (
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+          <button onClick={() => setCategory(null)} className={`shrink-0 ${catCls(category === null)}`}>
+            Tout
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setCategory(category === c.id ? null : c.id)}
+              className={`shrink-0 ${catCls(category === c.id)}`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Panneau de filtres : fermé par défaut, la page reste épurée tant que
           le client ne demande pas à filtrer. */}
       <div
         className={`grid transition-all duration-300 ${
-          filtersOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+          filtersOpen ? "grid-rows-[1fr] opacity-100" : "-mt-5 grid-rows-[0fr] opacity-0"
         }`}
       >
         <div className="overflow-hidden">
           <div className="card mb-1 flex flex-col gap-5 p-5">
-            {categories.length > 0 && (
-              <div>
-                <p className="label">Catégories</p>
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={() => setCategory(null)} className={catCls(category === null)}>
-                    Tout
-                  </button>
-                  {categories.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => setCategory(c.id)}
-                      className={catCls(category === c.id)}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="label">Prix (FCFA)</p>
