@@ -27,6 +27,7 @@ from models import (
     StockRequest,
     Variant,
     db,
+    get_number,
     get_setting,
     get_zones,
     set_setting,
@@ -36,7 +37,9 @@ from models import (
 
 ORDER_STATUSES = ["pending", "delivering", "delivered", "cancelled"]
 PROMO_TYPES = ["percent", "freeship"]
-PAYMENT_METHODS = ["livraison", "carte"]
+# "carte" reste lisible sur les anciennes commandes, mais aucun paiement en ligne
+# n'est branché : on n'accepte plus que le paiement à la livraison / au retrait.
+PAYMENT_METHODS = ["livraison"]
 DELIVERY_METHODS = ["delivery", "pickup"]
 
 BRIDGE_URL = os.environ.get("WHATSAPP_BRIDGE_URL", "http://localhost:3100/notify")
@@ -76,7 +79,7 @@ def notify_whatsapp_order(order):
                     else "💵 À payer à la livraison"
                 )
             else:
-                lines.append("💳 Payé par carte")
+                lines.append("💳 Carte bancaire — NON encaissé, à faire payer")
             if order.note:
                 lines.append(f"📝 Note : {order.note}")
             payload = _json_std.dumps({"token": BRIDGE_TOKEN, "text": "\n".join(lines)}).encode()
@@ -96,12 +99,25 @@ def create_app():
     db_path = os.environ.get("SHOP_DB", os.path.join(basedir, "shop.db"))
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + db_path
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    # Plusieurs threads gunicorn : attendre un verrou SQLite plutôt qu'échouer
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"connect_args": {"timeout": 15}}
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
     upload_dir = os.environ.get("UPLOAD_DIR", os.path.join(basedir, "uploads"))
     os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
     os.makedirs(upload_dir, exist_ok=True)
-    CORS(app, supports_credentials=True)
+    # En production le frontend est servi par Flask (même origine) : CORS n'est
+    # utile qu'en développement. CORS_ORIGINS = liste séparée par des virgules.
+    cors_origins = [
+        o.strip()
+        for o in os.environ.get(
+            "CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+        ).split(",")
+        if o.strip()
+    ]
+    CORS(app, supports_credentials=True, origins=cors_origins)
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE") == "1"
 
     db.init_app(app)
 
@@ -124,6 +140,16 @@ def create_app():
 
         return wrapper
 
+    # Tentatives ratées de code de livraison, par commande (anti-devinette).
+    CODE_FAILS = {}
+    MAX_CODE_FAILS = 5
+
+    def courier_order_dict(order):
+        """Commande vue par un livreur : jamais le code de livraison."""
+        data = order.to_dict()
+        data.pop("delivery_code", None)
+        return data
+
     def generate_reference():
         while True:
             ref = "CMD-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -136,13 +162,19 @@ def create_app():
     GEO_CACHE_MAX = 500
     LBV_BBOX = "9.28,0.18,9.80,0.72"
 
+    GEO_LOCK = threading.Lock()
+
     def _geo_cache(key, compute):
-        if key not in GEO_CACHE:
-            if len(GEO_CACHE) >= GEO_CACHE_MAX:
+        with GEO_LOCK:
+            if key in GEO_CACHE:
+                return GEO_CACHE[key]
+        value = compute()  # appel réseau hors du verrou
+        with GEO_LOCK:
+            while len(GEO_CACHE) >= GEO_CACHE_MAX:
                 # Vider le plus ancien (les dict conservent l'ordre d'insertion)
                 GEO_CACHE.pop(next(iter(GEO_CACHE)))
-            GEO_CACHE[key] = compute()
-        return GEO_CACHE[key]
+            GEO_CACHE[key] = value
+        return value
 
     def _http_json(url):
         req = Request(url, headers={"User-Agent": "MaBoutique-Libreville/1.0"})
@@ -275,9 +307,9 @@ def create_app():
                 "shop_phone": get_setting("shop_phone"),
                 "pickup_address": get_setting("pickup_address"),
                 "currency": get_setting("currency"),
-                "low_stock_threshold": int(get_setting("low_stock_threshold", "5")),
-                "delivery_fee": float(get_setting("delivery_fee", "0")),
-                "free_shipping_threshold": float(get_setting("free_shipping_threshold", "0")),
+                "low_stock_threshold": int(get_number("low_stock_threshold", 5)),
+                "delivery_fee": get_number("delivery_fee"),
+                "free_shipping_threshold": get_number("free_shipping_threshold"),
                 "zones": get_zones(),
             }
         )
@@ -360,11 +392,17 @@ def create_app():
             promo_code=promo.code if promo else None,
         )
         subtotal = 0.0
+        if not isinstance(items, list):
+            return jsonify({"error": "Panier invalide"}), 400
         for item in items:
-            variant = db.session.get(Variant, item.get("variant_id"))
-            qty = int(item.get("quantity", 0))
-            if not variant:
-                return jsonify({"error": "Variante introuvable"}), 400
+            try:
+                variant_id = int(item.get("variant_id"))
+                qty = int(item.get("quantity", 0))
+            except (AttributeError, TypeError, ValueError):
+                return jsonify({"error": "Article invalide"}), 400
+            variant = db.session.get(Variant, variant_id)
+            if not variant or not variant.product.active:
+                return jsonify({"error": "Un article n'est plus disponible"}), 400
             if qty <= 0:
                 return jsonify({"error": "Quantité invalide"}), 400
             # Décrément atomique : évite la survente si deux commandes arrivent en même temps
@@ -397,8 +435,8 @@ def create_app():
             elif promo.type == "freeship":
                 free_ship = True
         base = subtotal - discount
-        threshold = float(get_setting("free_shipping_threshold", "0"))
-        fee = float(get_setting("delivery_fee", "0"))
+        threshold = get_number("free_shipping_threshold")
+        fee = get_number("delivery_fee")
         delivery_fee = (
             0.0
             if delivery_method == "pickup"
@@ -471,7 +509,14 @@ def create_app():
         product = db.session.get(Product, product_id)
         if not product:
             return jsonify({"error": "Produit introuvable"}), 404
-        if not any(i.product_name == product.name for i in order.items):
+        ordered_ids = {
+            v.product_id
+            for v in (db.session.get(Variant, i.variant_id) for i in order.items if i.variant_id)
+            if v
+        }
+        if product.id not in ordered_ids and not any(
+            i.product_name == product.name for i in order.items
+        ):
             return jsonify({"error": "Ce produit ne fait pas partie de la commande"}), 400
         if Review.query.filter_by(order_id=order.id, product_id=product_id).first():
             return jsonify({"error": "Avis déjà laissé pour ce produit"}), 400
@@ -606,11 +651,17 @@ def create_app():
     @app.get("/api/courier/deliveries")
     @courier_required
     def courier_deliveries(courier):
-        available = (
-            Order.query.filter_by(status="pending", courier_id=None, delivery_method="delivery")
-            .order_by(Order.created_at.desc())
-            .all()
-        )
+        # Un livreur non vérifié ou hors ligne ne voit pas les commandes (données clients).
+        if courier.verified and courier.available:
+            available = (
+                Order.query.filter_by(
+                    status="pending", courier_id=None, delivery_method="delivery"
+                )
+                .order_by(Order.created_at.desc())
+                .all()
+            )
+        else:
+            available = []
         available.sort(key=lambda o: (o.zone != courier.zone, -o.created_at.timestamp()))
         in_progress = (
             Order.query.filter_by(status="delivering", courier_id=courier.id)
@@ -623,19 +674,29 @@ def create_app():
             .limit(30)
             .all()
         )
-        commission = float(get_setting("delivery_commission", "0"))
-        rated = [o.courier_rating for o in delivered if o.courier_rating]
+        commission = get_number("delivery_commission")
+        # Gains et note sur TOUTES les livraisons, pas seulement les 30 affichées
+        delivered_count = Order.query.filter_by(status="delivered", courier_id=courier.id).count()
+        rated = [
+            r
+            for (r,) in db.session.query(Order.courier_rating).filter(
+                Order.courier_id == courier.id,
+                Order.status == "delivered",
+                Order.courier_rating.isnot(None),
+            )
+        ]
         rating_avg = round(sum(rated) / len(rated), 1) if rated else None
         return jsonify(
             {
-                "available": [o.to_dict() for o in available],
-                "in_progress": [o.to_dict() for o in in_progress],
-                "delivered": [o.to_dict() for o in delivered],
+                "available": [courier_order_dict(o) for o in available],
+                "in_progress": [courier_order_dict(o) for o in in_progress],
+                "delivered": [courier_order_dict(o) for o in delivered],
                 "commission": commission,
                 "bonus_total": courier.bonus_total,
                 "rating_avg": rating_avg,
                 "rating_count": len(rated),
-                "earnings": round(len(delivered) * commission + courier.bonus_total, 2),
+                "delivered_count": delivered_count,
+                "earnings": round(delivered_count * commission + courier.bonus_total, 2),
             }
         )
 
@@ -648,14 +709,25 @@ def create_app():
             ), 403
         if not courier.available:
             return jsonify({"error": "Passez en ligne pour accepter une course"}), 400
-        order = db.session.get(Order, order_id)
-        if not order or order.status != "pending" or order.courier_id:
+        result = db.session.execute(
+            sa_update(Order)
+            .where(
+                Order.id == order_id,
+                Order.status == "pending",
+                Order.courier_id.is_(None),
+                Order.delivery_method == "delivery",
+            )
+            .values(
+                courier_id=courier.id,
+                status="delivering",
+                accepted_at=datetime.now(timezone.utc),
+            )
+        )
+        if result.rowcount == 0:
+            db.session.rollback()
             return jsonify({"error": "Cette course n'est plus disponible"}), 400
-        order.courier_id = courier.id
-        order.status = "delivering"
-        order.accepted_at = datetime.now(timezone.utc)
         db.session.commit()
-        return jsonify(order.to_dict())
+        return jsonify(courier_order_dict(db.session.get(Order, order_id)))
 
     @app.post("/api/courier/deliveries/<int:order_id>/complete")
     @courier_required
@@ -663,16 +735,25 @@ def create_app():
         order = db.session.get(Order, order_id)
         if not order or order.courier_id != courier.id or order.status != "delivering":
             return jsonify({"error": "Livraison introuvable"}), 400
-        data = request.get_json(force=True) if request.data else {}
-        code = (data.get("code") or "").strip()
-        if code != order.delivery_code:
+        if CODE_FAILS.get(order.id, 0) >= MAX_CODE_FAILS:
+            return jsonify(
+                {"error": "Trop de codes incorrects. Contactez la boutique pour valider la livraison."}
+            ), 429
+        data = (request.get_json(silent=True) or {}) if request.data else {}
+        code = str(data.get("code") or "").strip()
+        # Les anciennes commandes (avant l'ajout du code) n'en ont pas : pas de vérification.
+        if order.delivery_code and not hmac.compare_digest(
+            code.encode(), order.delivery_code.encode()
+        ):
+            CODE_FAILS[order.id] = CODE_FAILS.get(order.id, 0) + 1
             return jsonify(
                 {"error": "Code de livraison incorrect. Demandez le code au client."}
             ), 400
+        CODE_FAILS.pop(order.id, None)
         order.status = "delivered"
         order.delivered_at = datetime.now(timezone.utc)
         db.session.commit()
-        return jsonify(order.to_dict())
+        return jsonify(courier_order_dict(order))
 
     # ---------------- Fichiers (images) ----------------
 
@@ -736,7 +817,7 @@ def create_app():
     def admin_stats():
         orders = Order.query.all()
         revenue = sum(o.total for o in orders if o.status != "cancelled")
-        threshold = int(get_setting("low_stock_threshold", "5"))
+        threshold = int(get_number("low_stock_threshold", 5))
         low_stock = Variant.query.filter(Variant.stock <= threshold).count()
         recent = Order.query.order_by(Order.created_at.desc()).limit(5).all()
         return jsonify(
@@ -998,7 +1079,7 @@ def create_app():
     @app.get("/api/admin/couriers")
     @admin_required
     def admin_list_couriers():
-        commission = float(get_setting("delivery_commission", "0"))
+        commission = get_number("delivery_commission")
         result = []
         for c in DeliveryPerson.query.order_by(DeliveryPerson.name).all():
             delivered = Order.query.filter_by(courier_id=c.id, status="delivered").all()
@@ -1063,6 +1144,8 @@ def create_app():
         requests = StockRequest.query.order_by(StockRequest.created_at.desc()).all()
         grouped = {}
         for r in requests:
+            if not r.variant or not r.variant.product:
+                continue
             key = r.variant_id
             if key not in grouped:
                 grouped[key] = {
@@ -1124,6 +1207,30 @@ def create_app():
         status = data.get("status")
         if status not in ORDER_STATUSES:
             return jsonify({"error": "Statut invalide"}), 400
+        if status == "cancelled" and order.status != "cancelled":
+            # Remettre en stock les articles de la commande annulée
+            for item in order.items:
+                if item.variant_id:
+                    db.session.execute(
+                        sa_update(Variant)
+                        .where(Variant.id == item.variant_id)
+                        .values(stock=Variant.stock + item.quantity)
+                    )
+        elif order.status == "cancelled" and status != "cancelled":
+            # Réactivation : reprendre le stock, si disponible
+            for item in order.items:
+                if not item.variant_id:
+                    continue
+                result = db.session.execute(
+                    sa_update(Variant)
+                    .where(Variant.id == item.variant_id, Variant.stock >= item.quantity)
+                    .values(stock=Variant.stock - item.quantity)
+                )
+                if result.rowcount == 0:
+                    db.session.rollback()
+                    return jsonify(
+                        {"error": f"Stock insuffisant pour réactiver : {item.product_name} - {item.variant_name}"}
+                    ), 400
         order.status = status
         now = datetime.now(timezone.utc)
         if status == "delivering" and not order.accepted_at:
@@ -1146,6 +1253,13 @@ def create_app():
         "delivery_commission",
     ]
 
+    NUMERIC_SETTINGS = [
+        "low_stock_threshold",
+        "delivery_fee",
+        "free_shipping_threshold",
+        "delivery_commission",
+    ]
+
     @app.get("/api/admin/settings")
     @admin_required
     def admin_get_settings():
@@ -1159,6 +1273,15 @@ def create_app():
         import json as _json
 
         data = request.get_json(force=True)
+        for key in NUMERIC_SETTINGS:
+            if key in data:
+                try:
+                    value = float(data[key])
+                except (TypeError, ValueError):
+                    return jsonify({"error": f"Valeur numérique invalide pour « {key} »"}), 400
+                if value < 0:
+                    return jsonify({"error": f"« {key} » ne peut pas être négatif"}), 400
+                data[key] = int(value) if key == "low_stock_threshold" else value
         for key in SETTINGS_KEYS:
             if key in data:
                 set_setting(key, data[key])
@@ -1191,6 +1314,8 @@ def create_app():
             import json as _json
 
             set_setting("zones", _json.dumps(LIBREVILLE_ZONES, ensure_ascii=False))
+        if get_setting("currency") == "XOF":
+            set_setting("currency", "XAF")
         db.session.commit()
 
     return app

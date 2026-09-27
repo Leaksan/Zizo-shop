@@ -21,6 +21,9 @@ services:
         value: /app/data/shop.db
       - key: UPLOAD_DIR
         value: /app/data/uploads
+      # Cookies de session envoyés uniquement en HTTPS
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
       # Le pont WhatsApp (notifications) tourne en local ; sans lui les
       # appels échouent silencieusement, l'app fonctionne normalement.
       - key: WHATSAPP_BRIDGE_URL

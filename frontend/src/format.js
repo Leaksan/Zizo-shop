@@ -1,4 +1,4 @@
-export function formatPrice(value, currency = "EUR") {
+export function formatPrice(value, currency = "XAF") {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(value ?? 0);
 }
 

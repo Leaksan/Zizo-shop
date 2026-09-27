@@ -2,9 +2,22 @@ const express = require("express");
 const qrcode = require("qrcode-terminal");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 
+// Configuration locale (non versionnée) : whatsapp-bridge/.env — voir .env.example
+try {
+  if (typeof process.loadEnvFile === "function") process.loadEnvFile(".env");
+} catch {
+  // pas de fichier .env : on utilise les variables d'environnement
+}
+
 const PORT = process.env.BRIDGE_PORT || 3100;
 const TOKEN = process.env.BRIDGE_TOKEN || "ma-boutique-secret";
-const GROUP_INVITE = process.env.GROUP_INVITE || "DVduTj41tTU5FcHjsvf9Rt";
+// Code d'invitation du groupe (la fin du lien https://chat.whatsapp.com/XXXX).
+// Il ne doit jamais être dans le code : toute personne qui l'a peut rejoindre le groupe.
+const GROUP_INVITE = process.env.GROUP_INVITE;
+if (!GROUP_INVITE) {
+  console.error("GROUP_INVITE manquant : créez whatsapp-bridge/.env à partir de .env.example");
+  process.exit(1);
+}
 
 const client = new Client({
   authStrategy: new LocalAuth(),
@@ -65,4 +78,5 @@ app.post("/notify", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`Pont WhatsApp pret sur http://localhost:${PORT}`));
+// Écoute uniquement en local : personne d'autre sur le réseau ne peut envoyer de messages
+app.listen(PORT, "127.0.0.1", () => console.log(`Pont WhatsApp pret sur http://localhost:${PORT}`));

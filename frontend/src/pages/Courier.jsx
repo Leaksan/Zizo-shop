@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Banknote,
   Bike,
@@ -195,14 +195,20 @@ function CourierDashboard({ courier, onLogout }) {
 
   const inProgressCount = data?.in_progress?.length || 0;
 
+  const myPosRef = useRef(null);
+  myPosRef.current = myPos;
+  const hasPos = myPos !== null;
+
   useEffect(() => {
-    if (!myPos || inProgressCount === 0) return;
-    const send = () =>
-      api.put("/courier/position", { lat: myPos[0], lng: myPos[1] }).catch(() => {});
+    if (!hasPos || inProgressCount === 0) return;
+    const send = () => {
+      const p = myPosRef.current;
+      if (p) api.put("/courier/position", { lat: p[0], lng: p[1] }).catch(() => {});
+    };
     send();
     const timer = setInterval(send, 30000);
     return () => clearInterval(timer);
-  }, [myPos, inProgressCount]);
+  }, [hasPos, inProgressCount]);
 
   const toggleAvailability = async () => {
     setMe(await api.put("/courier/availability", { available: !me.available }));
@@ -236,7 +242,7 @@ function CourierDashboard({ courier, onLogout }) {
     ? [
         { id: "dispos", icon: PackageOpen, value: data.available.length, label: "Courses disponibles" },
         { id: "encours", icon: Bike, value: data.in_progress.length, label: "Livraisons en cours" },
-        { id: "historique", icon: CheckCircle2, value: data.delivered.length, label: "Courses livrées" },
+        { id: "historique", icon: CheckCircle2, value: data.delivered_count ?? data.delivered.length, label: "Courses livrées" },
         { id: null, icon: Banknote, value: formatPrice(data.earnings, currency), label: "Gains cumulés" },
       ]
     : [];
@@ -549,17 +555,11 @@ function DeliveryCard({ order, myZone, currency, children }) {
           📝 « {order.note} »
         </p>
       )}
-      {order.payment_method === "livraison" ? (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          <Banknote size={14} />
-          À encaisser auprès du client : {formatPrice(order.total, currency)}
-        </p>
-      ) : (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-green-100 px-3 py-2 text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300">
-          <CheckCircle2 size={14} />
-          Déjà payé par carte — rien à encaisser
-        </p>
-      )}
+      {/* Aucun paiement en ligne n'existe : toute commande est à encaisser. */}
+      <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+        <Banknote size={14} />
+        À encaisser auprès du client : {formatPrice(order.total, currency)}
+      </p>
       <div className="flex gap-2">{children}</div>
     </div>
   );

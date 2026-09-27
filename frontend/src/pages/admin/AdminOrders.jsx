@@ -158,7 +158,7 @@ export default function AdminOrders() {
                           ? o.delivery_method === "pickup"
                             ? "Paiement au retrait"
                             : "Paiement à la livraison"
-                          : "Payé par carte"}
+                          : "Carte — NON encaissé, à faire payer"}
                       </p>
                     </div>
                     <label className="block max-w-xs">

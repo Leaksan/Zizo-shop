@@ -26,6 +26,36 @@ export function CartProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
+  // Le panier est conservé dans le navigateur : au chargement, on reprend les prix
+  // et stocks actuels (le serveur facture toujours le prix du jour) et on retire
+  // les articles qui ne sont plus en vente.
+  useEffect(() => {
+    if (items.length === 0) return;
+    api
+      .get("/products")
+      .then((products) => {
+        const variants = new Map();
+        for (const p of products) for (const v of p.variants) variants.set(v.id, { p, v });
+        setItems((prev) =>
+          prev
+            .filter((i) => variants.has(i.variant_id))
+            .map((i) => {
+              const { p, v } = variants.get(i.variant_id);
+              return {
+                ...i,
+                product_name: p.name,
+                variant_name: v.name,
+                unit_price: v.price,
+                image_url: p.image_url,
+                stock: v.stock,
+              };
+            })
+        );
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (promo) localStorage.setItem(PROMO_KEY, JSON.stringify(promo));
     else localStorage.removeItem(PROMO_KEY);

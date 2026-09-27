@@ -333,7 +333,7 @@ DEFAULT_SETTINGS = {
     "shop_name": "MaBoutique",
     "shop_phone": "074756768",
     "pickup_address": "Centre-ville, Libreville (près du Marché Mont-Bouët)",
-    "currency": "XOF",
+    "currency": "XAF",
     "admin_password": "admin123",
     "low_stock_threshold": "5",
     "delivery_fee": "2000",
@@ -348,6 +348,14 @@ def get_setting(key, default=""):
     if s is not None:
         return s.value
     return DEFAULT_SETTINGS.get(key, default)
+
+
+def get_number(key, default=0.0):
+    """Paramètre numérique ; une valeur corrompue ne doit pas faire planter le site."""
+    try:
+        return float(get_setting(key, default))
+    except (TypeError, ValueError):
+        return float(default)
 
 
 def get_zones():

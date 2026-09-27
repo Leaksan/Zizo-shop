@@ -15,6 +15,7 @@ whatsapp-bridge/node_modules/
 # Session WhatsApp (locale, secrete)
 whatsapp-bridge/.wwebjs_auth/
 whatsapp-bridge/.wwebjs_cache/
+whatsapp-bridge/.env
 
 # OS / editeurs
 Thumbs.db

@@ -44,8 +44,8 @@ export default function Checkout() {
   // Les zones arrivent de façon asynchrone : sélectionner la première par défaut
   // si le client n'en a pas déjà une d'enregistrée, sinon la valeur soumise est vide.
   useEffect(() => {
-    if (zones.length > 0 && !form.zone) {
-      setForm((f) => ({ ...f, zone: f.zone || zones[0] }));
+    if (zones.length > 0 && !zones.includes(form.zone)) {
+      setForm((f) => ({ ...f, zone: zones.includes(f.zone) ? f.zone : zones[0] }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zones.length]);
@@ -335,7 +335,7 @@ export default function Checkout() {
                   label:
                     deliveryMethod === "pickup" ? "💵 Au retrait en boutique" : "💵 À la livraison",
                 },
-                { value: "carte", label: "💳 Carte bancaire" },
+                // Pas encore de paiement en ligne branché : pas d'option carte.
               ].map((p) => (
                 <label
                   key={p.value}

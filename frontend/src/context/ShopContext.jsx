@@ -6,7 +6,7 @@ const ShopContext = createContext(null);
 const DEFAULTS = {
   shop_name: "MaBoutique",
   shop_phone: "",
-  currency: "EUR",
+  currency: "XAF",
   delivery_fee: 0,
   free_shipping_threshold: 0,
   zones: [],
@@ -28,7 +28,7 @@ export function ShopProvider({ children }) {
     shopName: settings.shop_name,
     shopPhone: settings.shop_phone || "",
     pickupAddress: settings.pickup_address || "",
-    currency: settings.currency || "EUR",
+    currency: settings.currency || "XAF",
     deliveryFee: Number(settings.delivery_fee) || 0,
     freeShippingThreshold: Number(settings.free_shipping_threshold) || 0,
     zones: settings.zones || [],

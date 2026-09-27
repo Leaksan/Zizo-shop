@@ -307,7 +307,7 @@ function OrderTracking({ order, currency, onRefresh }) {
           <span className="flex items-center gap-1.5 muted">
             <User size={14} /> Paiement
           </span>
-          <span>{order.payment_method === "livraison" ? "À la livraison" : "Carte bancaire"}</span>
+          <span>{order.payment_method === "livraison" ? (isPickup ? "Au retrait" : "À la livraison") : "Carte bancaire (à régler)"}</span>
         </div>
         {order.discount > 0 && (
           <div className="flex justify-between gap-3 text-green-600">

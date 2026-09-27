@@ -32,7 +32,7 @@ export default function Hero({ products }) {
           <Reveal delay={200}>
             <p className="mt-5 max-w-xl text-lg text-gray-600 dark:text-slate-300">
               Commandez en quelques clics parmi notre sélection de produits de qualité. Paiement à
-              la livraison ou par carte, et suivez votre livreur en temps réel sur la carte.
+              la livraison, et suivez votre livreur en temps réel sur la carte.
             </p>
           </Reveal>
           <Reveal delay={300}>
@@ -134,7 +134,7 @@ function Stat({ icon, value, label }) {
 export function TrustBar() {
   const items = [
     { icon: <Truck size={22} />, title: "Livraison rapide", sub: "Partout à Libreville, 7j/7" },
-    { icon: <ShieldCheck size={22} />, title: "Paiement sécurisé", sub: "Carte ou à la livraison" },
+    { icon: <ShieldCheck size={22} />, title: "Paiement à la livraison", sub: "Vous payez à la réception" },
     { icon: <Package size={22} />, title: "Suivi en temps réel", sub: "Position du livreur en direct" },
     { icon: <Bike size={22} />, title: "Livreurs locaux", sub: "De votre quartier" },
   ];
