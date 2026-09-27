@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Gift, ShoppingCart, Tag, X } from "lucide-react";
 import { formatPrice } from "../format";
-import { computeTotals } from "../cartMath";
+import { computeTotals, feeRange } from "../cartMath";
 import { useCart } from "../context/CartContext";
 import { useShop } from "../context/ShopContext";
 import ProductVisual from "../components/ProductVisual";
@@ -15,7 +15,14 @@ export default function Cart() {
   const [promoMsg, setPromoMsg] = useState(null);
   const [checking, setChecking] = useState(false);
 
-  const totals = computeTotals(subtotal, promo, shop);
+  // La zone n'est connue qu'à la commande : on calcule avec le plus petit tarif
+  // et on l'indique (« dès … ») quand les tarifs varient selon le quartier.
+  const range = feeRange(shop);
+  const feeVaries = range.min !== range.max;
+  const totals = computeTotals(subtotal, promo, { ...shop, deliveryFee: range.min });
+  // Offerte quel que soit le quartier (seuil atteint ou code « livraison offerte »)
+  const freeForAll =
+    computeTotals(subtotal, promo, { ...shop, deliveryFee: range.max }).deliveryFee === 0;
 
   const handleApply = async () => {
     if (!code.trim()) return;
@@ -125,6 +132,11 @@ export default function Cart() {
             <span>Sous-total</span>
             <span>{formatPrice(totals.subtotal, currency)}</span>
           </div>
+          {totals.promoBlocked && (
+            <p className="text-xs text-amber-600">
+              Code {promo.code} : valable dès {formatPrice(promo.min_order, currency)} d'achat.
+            </p>
+          )}
           {totals.discount > 0 && (
             <div className="flex justify-between font-semibold text-green-600">
               <span>Remise ({promo.code})</span>
@@ -133,16 +145,18 @@ export default function Cart() {
           )}
           <div className="flex justify-between muted">
             <span>Livraison</span>
-            <span className={totals.deliveryFee === 0 ? "flex items-center gap-1 font-semibold text-green-600" : ""}>
-              {totals.deliveryFee === 0 ? (
+            <span className={freeForAll ? "flex items-center gap-1 font-semibold text-green-600" : ""}>
+              {freeForAll ? (
                 <><Gift size={14} /> Offerte</>
+              ) : feeVaries ? (
+                `Dès ${formatPrice(range.min, currency)}`
               ) : (
                 formatPrice(totals.deliveryFee, currency)
               )}
             </span>
           </div>
           <div className="flex justify-between border-t border-dashed border-gray-300 pt-2 text-lg font-bold dark:border-slate-600">
-            <span>Total</span>
+            <span>{feeVaries && !freeForAll ? "Total estimé" : "Total"}</span>
             <span>{formatPrice(totals.total, currency)}</span>
           </div>
         </div>

@@ -291,6 +291,7 @@ function OrderTracking({ order, currency, onRefresh }) {
                   order.customer_address
                 )}{" "}
                 ({order.zone})
+                {order.landmark && <span className="block text-xs muted">🧭 {order.landmark}</span>}
               </>
             )}
           </span>

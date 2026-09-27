@@ -10,6 +10,7 @@ const DEFAULTS = {
   delivery_fee: 0,
   free_shipping_threshold: 0,
   zones: [],
+  zone_fees: {},
 };
 
 export function ShopProvider({ children }) {
@@ -32,6 +33,7 @@ export function ShopProvider({ children }) {
     deliveryFee: Number(settings.delivery_fee) || 0,
     freeShippingThreshold: Number(settings.free_shipping_threshold) || 0,
     zones: settings.zones || [],
+    zoneFees: settings.zone_fees || {},
     reload,
   };
 

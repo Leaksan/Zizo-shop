@@ -1,7 +1,17 @@
 import { useEffect, useState } from "react";
 import { api } from "../../api";
 
-const EMPTY = { code: "", type: "percent", value: 10, label: "", active: true };
+const EMPTY = {
+  code: "",
+  type: "percent",
+  value: 10,
+  label: "",
+  active: true,
+  expires_on: "",
+  max_uses: "",
+  min_order: "",
+  once_per_customer: false,
+};
 
 export default function AdminPromos() {
   const [promos, setPromos] = useState([]);
@@ -35,7 +45,17 @@ export default function AdminPromos() {
 
   const edit = (p) => {
     setEditingId(p.id);
-    setForm({ code: p.code, type: p.type, value: p.value, label: p.label, active: p.active });
+    setForm({
+      code: p.code,
+      type: p.type,
+      value: p.value,
+      label: p.label,
+      active: p.active,
+      expires_on: p.expires_on || "",
+      max_uses: p.max_uses ?? "",
+      min_order: p.min_order || "",
+      once_per_customer: p.once_per_customer,
+    });
   };
 
   const toggle = async (p) => {
@@ -103,6 +123,48 @@ export default function AdminPromos() {
             />
           </label>
         </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <label className="block">
+            <span className="label">Valable jusqu'au</span>
+            <input
+              type="date"
+              value={form.expires_on}
+              onChange={(e) => setForm({ ...form, expires_on: e.target.value })}
+              className="input"
+            />
+          </label>
+          <label className="block">
+            <span className="label">Utilisations max</span>
+            <input
+              type="number"
+              min="1"
+              value={form.max_uses}
+              onChange={(e) => setForm({ ...form, max_uses: e.target.value })}
+              className="input"
+              placeholder="Illimité"
+            />
+          </label>
+          <label className="block">
+            <span className="label">Achat minimum</span>
+            <input
+              type="number"
+              min="0"
+              value={form.min_order}
+              onChange={(e) => setForm({ ...form, min_order: e.target.value })}
+              className="input"
+              placeholder="Aucun"
+            />
+          </label>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.once_per_customer}
+            onChange={(e) => setForm({ ...form, once_per_customer: e.target.checked })}
+            className="accent-indigo-600"
+          />
+          Une seule utilisation par client (même numéro de téléphone)
+        </label>
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         <div className="flex gap-2">
           <button type="submit" className="btn-primary">
@@ -141,6 +203,13 @@ export default function AdminPromos() {
                 {p.type === "percent" ? `-${p.value} %` : "Livraison offerte"}
               </span>
               <span className="text-sm muted">{p.label}</span>
+              <span className="w-full text-xs muted sm:w-auto">
+                {p.uses} utilisation{p.uses > 1 ? "s" : ""}
+                {p.max_uses ? ` / ${p.max_uses}` : ""}
+                {p.expires_on ? ` · jusqu'au ${new Date(p.expires_on).toLocaleDateString("fr-FR")}` : ""}
+                {p.min_order ? ` · dès ${p.min_order.toLocaleString("fr-FR")}` : ""}
+                {p.once_per_customer ? " · 1 fois / client" : ""}
+              </span>
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => toggle(p)}

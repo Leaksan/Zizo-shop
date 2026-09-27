@@ -103,7 +103,8 @@ export function CartProvider({ children }) {
   };
 
   const applyPromo = async (code) => {
-    const result = await api.post("/promo/validate", { code });
+    const subtotalNow = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+    const result = await api.post("/promo/validate", { code, subtotal: subtotalNow });
     setPromo(result);
     return result;
   };

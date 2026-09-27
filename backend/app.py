@@ -4,7 +4,7 @@ import random
 import string
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from functools import wraps
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -29,6 +29,8 @@ from models import (
     db,
     get_number,
     get_setting,
+    get_zone_fees,
+    zone_delivery_fee,
     get_zones,
     set_setting,
     DEFAULT_SETTINGS,
@@ -61,6 +63,8 @@ def notify_whatsapp_order(order):
                 lines.append("🛍️ *RETRAIT EN BOUTIQUE*")
             else:
                 lines.append(f"📍 {order.customer_address} ({order.zone})")
+                if order.landmark:
+                    lines.append(f"🧭 Repère : {order.landmark}")
             lines.append(
                 "🧾 "
                 + " · ".join(f"{i.product_name} ({i.variant_name}) ×{i.quantity}" for i in order.items)
@@ -311,6 +315,7 @@ def create_app():
                 "delivery_fee": get_number("delivery_fee"),
                 "free_shipping_threshold": get_number("free_shipping_threshold"),
                 "zones": get_zones(),
+                "zone_fees": get_zone_fees(),
             }
         )
 
@@ -323,6 +328,13 @@ def create_app():
         promo = PromoCode.query.filter_by(code=code, active=True).first()
         if not promo:
             return jsonify({"error": "Code invalide ou expiré"}), 404
+        try:
+            subtotal = float(data["subtotal"]) if data.get("subtotal") is not None else None
+        except (TypeError, ValueError):
+            subtotal = None
+        error = promo.check(subtotal=subtotal, phone=(data.get("phone") or "").strip() or None)
+        if error:
+            return jsonify({"error": error}), 400
         return jsonify(promo.to_dict())
 
     # ---------------- Public : commandes ----------------
@@ -334,6 +346,7 @@ def create_app():
         phone = (data.get("customer_phone") or "").strip()
         email = (data.get("customer_email") or "").strip()
         address = (data.get("customer_address") or "").strip()
+        landmark = (data.get("landmark") or "").strip()[:300]
         zone = (data.get("zone") or "").strip()
         note = (data.get("note") or "").strip()
         payment = data.get("payment_method") or "livraison"
@@ -362,6 +375,7 @@ def create_app():
                 return jsonify({"error": "Zone de livraison invalide"}), 400
         else:
             address = ""
+            landmark = ""
             zone = ""
             latitude = None
             longitude = None
@@ -382,6 +396,7 @@ def create_app():
             customer_email=email,
             customer_phone=phone,
             customer_address=address,
+            landmark=landmark,
             zone=zone,
             note=note,
             latitude=latitude,
@@ -430,13 +445,17 @@ def create_app():
         discount = 0.0
         free_ship = False
         if promo:
+            error = promo.check(subtotal=subtotal, phone=phone)
+            if error:
+                db.session.rollback()
+                return jsonify({"error": error}), 400
             if promo.type == "percent":
                 discount = subtotal * promo.value / 100
             elif promo.type == "freeship":
                 free_ship = True
         base = subtotal - discount
         threshold = get_number("free_shipping_threshold")
-        fee = get_number("delivery_fee")
+        fee = zone_delivery_fee(zone)
         delivery_fee = (
             0.0
             if delivery_method == "pickup"
@@ -1009,7 +1028,9 @@ def create_app():
     @app.get("/api/admin/promos")
     @admin_required
     def admin_list_promos():
-        return jsonify([p.to_dict() for p in PromoCode.query.order_by(PromoCode.code).all()])
+        return jsonify(
+            [p.to_dict(admin=True) for p in PromoCode.query.order_by(PromoCode.code).all()]
+        )
 
     @app.post("/api/admin/promos")
     @admin_required
@@ -1030,11 +1051,14 @@ def create_app():
             label=data.get("label", ""),
             active=bool(data.get("active", True)),
         )
+        error = _apply_promo_rules(promo, data)
+        if error:
+            return jsonify({"error": error}), 400
         if promo.type == "percent" and not (0 < promo.value <= 100):
             return jsonify({"error": "Pourcentage invalide (1-100)"}), 400
         db.session.add(promo)
         db.session.commit()
-        return jsonify(promo.to_dict()), 201
+        return jsonify(promo.to_dict(admin=True)), 201
 
     @app.put("/api/admin/promos/<int:promo_id>")
     @admin_required
@@ -1059,10 +1083,43 @@ def create_app():
             promo.label = data["label"]
         if "active" in data:
             promo.active = bool(data["active"])
+        error = _apply_promo_rules(promo, data)
+        if error:
+            db.session.rollback()
+            return jsonify({"error": error}), 400
         if promo.type == "percent" and not (0 < promo.value <= 100):
+            db.session.rollback()
             return jsonify({"error": "Pourcentage invalide (1-100)"}), 400
         db.session.commit()
-        return jsonify(promo.to_dict())
+        return jsonify(promo.to_dict(admin=True))
+
+    def _apply_promo_rules(promo, data):
+        """Expiration, limite d'utilisations, minimum d'achat, 1 fois par client."""
+        if "expires_on" in data:
+            raw = (data["expires_on"] or "").strip()
+            try:
+                promo.expires_on = date.fromisoformat(raw) if raw else None
+            except ValueError:
+                return "Date d'expiration invalide"
+        if "max_uses" in data:
+            raw = data["max_uses"]
+            if raw in (None, ""):
+                promo.max_uses = None
+            else:
+                try:
+                    promo.max_uses = int(raw)
+                except (TypeError, ValueError):
+                    return "Nombre d'utilisations invalide"
+                if promo.max_uses < 1:
+                    return "Le nombre d'utilisations doit être d'au moins 1"
+        if "min_order" in data:
+            try:
+                promo.min_order = max(0.0, float(data["min_order"] or 0))
+            except (TypeError, ValueError):
+                return "Montant minimum invalide"
+        if "once_per_customer" in data:
+            promo.once_per_customer = bool(data["once_per_customer"])
+        return None
 
     @app.delete("/api/admin/promos/<int:promo_id>")
     @admin_required
@@ -1265,6 +1322,7 @@ def create_app():
     def admin_get_settings():
         data = {k: get_setting(k) for k in SETTINGS_KEYS}
         data["zones"] = get_zones()
+        data["zone_fees"] = get_zone_fees()
         return jsonify(data)
 
     @app.put("/api/admin/settings")
@@ -1285,9 +1343,32 @@ def create_app():
         for key in SETTINGS_KEYS:
             if key in data:
                 set_setting(key, data[key])
+        if "zone_fees" in data:
+            fees = {}
+            for zone_name, value in (data["zone_fees"] or {}).items():
+                if value in (None, ""):
+                    continue  # pas de tarif propre : frais par défaut
+                try:
+                    amount = float(value)
+                except (TypeError, ValueError):
+                    return jsonify({"error": f"Frais invalides pour « {zone_name} »"}), 400
+                if amount < 0:
+                    return jsonify({"error": f"Frais négatifs pour « {zone_name} »"}), 400
+                fees[str(zone_name).strip()] = amount
+        else:
+            fees = None
         if "zones" in data:
-            zones = [z.strip() for z in (data["zones"] or []) if str(z).strip()]
+            zones = [str(z).strip() for z in (data["zones"] or []) if str(z).strip()]
             set_setting("zones", _json.dumps(zones, ensure_ascii=False))
+        else:
+            zones = get_zones()
+        if fees is not None or "zones" in data:
+            # Ne garder que les tarifs des zones qui existent encore
+            current = fees if fees is not None else get_zone_fees()
+            set_setting(
+                "zone_fees",
+                _json.dumps({z: f for z, f in current.items() if z in zones}, ensure_ascii=False),
+            )
         if data.get("new_password"):
             set_setting("admin_password", data["new_password"])
         db.session.commit()
@@ -1325,6 +1406,11 @@ def _migrate_schema():
     additions = [
         ("products", "clearance", "clearance BOOLEAN NOT NULL DEFAULT 0"),
         ("orders", "latitude", "latitude FLOAT"),
+        ("orders", "landmark", "landmark TEXT"),
+        ("promo_codes", "expires_on", "expires_on DATE"),
+        ("promo_codes", "max_uses", "max_uses INTEGER"),
+        ("promo_codes", "min_order", "min_order FLOAT NOT NULL DEFAULT 0"),
+        ("promo_codes", "once_per_customer", "once_per_customer BOOLEAN NOT NULL DEFAULT 0"),
         ("orders", "longitude", "longitude FLOAT"),
         ("orders", "delivery_method", "delivery_method VARCHAR(20) NOT NULL DEFAULT 'delivery'"),
         ("orders", "delivery_code", "delivery_code VARCHAR(6) NOT NULL DEFAULT ''"),

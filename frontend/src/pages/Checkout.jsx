@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Bike, CheckCircle2, Package, Store } from "lucide-react";
 import { api } from "../api";
 import { formatPrice } from "../format";
-import { computeTotals } from "../cartMath";
+import { computeTotals, feeForZone } from "../cartMath";
 import { useCart } from "../context/CartContext";
 import { useShop } from "../context/ShopContext";
 import AddressInput from "../components/AddressInput";
@@ -32,6 +32,7 @@ export default function Checkout() {
       customer_phone: saved.customer_phone || "",
       customer_email: saved.customer_email || "",
       customer_address: saved.customer_address || "",
+      landmark: saved.landmark || "",
       zone: saved.zone || zones[0] || "",
       note: "",
       payment_method: "livraison",
@@ -75,7 +76,9 @@ export default function Checkout() {
   const totals = computeTotals(
     subtotal,
     promo,
-    deliveryMethod === "pickup" ? { deliveryFee: 0, freeShippingThreshold: 0 } : shop
+    deliveryMethod === "pickup"
+      ? { deliveryFee: 0, freeShippingThreshold: 0 }
+      : { ...shop, deliveryFee: feeForZone(shop, form.zone) }
   );
 
   if (items.length === 0) {
@@ -145,6 +148,7 @@ export default function Checkout() {
           customer_phone: form.customer_phone,
           customer_email: form.customer_email,
           customer_address: form.customer_address,
+          landmark: form.landmark,
           zone: form.zone,
         })
       );
@@ -310,10 +314,23 @@ export default function Checkout() {
                   {zones.length === 0 && <option value="">—</option>}
                   {zones.map((z) => (
                     <option key={z} value={z}>
-                      {z}
+                      {z} — {formatPrice(feeForZone(shop, z), currency)}
                     </option>
                   ))}
                 </select>
+              </label>
+              <label className="block">
+                <span className="label">Point de repère (conseillé)</span>
+                <input
+                  value={form.landmark}
+                  onChange={set("landmark")}
+                  maxLength={300}
+                  className="input"
+                  placeholder="Ex. Derrière la pharmacie X, portail bleu, après le carrefour Y"
+                />
+                <span className="mt-1 block text-xs muted">
+                  Aide le livreur à vous trouver rapidement.
+                </span>
               </label>
             </>
           )}
@@ -384,6 +401,11 @@ export default function Checkout() {
             <span>Sous-total</span>
             <span>{formatPrice(totals.subtotal, currency)}</span>
           </div>
+          {totals.promoBlocked && (
+            <p className="text-xs text-amber-600">
+              Code {promo.code} : valable dès {formatPrice(promo.min_order, currency)} d'achat.
+            </p>
+          )}
           {totals.discount > 0 && (
             <div className="flex justify-between font-semibold text-green-600">
               <span>Remise ({promo.code})</span>

@@ -142,6 +142,9 @@ export default function AdminOrders() {
                           <p className="whitespace-pre-line text-gray-600 dark:text-slate-300">
                             {o.customer_address} ({o.zone})
                           </p>
+                          {o.landmark && (
+                            <p className="text-sm text-gray-600 dark:text-slate-300">🧭 Repère : {o.landmark}</p>
+                          )}
                           {o.courier_name && (
                             <p className="mt-1 text-xs muted">🛵 Livreur : {o.courier_name}</p>
                           )}

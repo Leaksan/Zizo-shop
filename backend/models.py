@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -107,16 +107,51 @@ class PromoCode(db.Model):
     value = db.Column(db.Float, default=0)
     label = db.Column(db.String(200), default="")
     active = db.Column(db.Boolean, default=True, nullable=False)
+    expires_on = db.Column(db.Date, nullable=True)  # dernier jour de validité (inclus)
+    max_uses = db.Column(db.Integer, nullable=True)  # None = illimité
+    min_order = db.Column(db.Float, default=0, nullable=False)  # montant minimum d'achat
+    once_per_customer = db.Column(db.Boolean, default=False, nullable=False)
 
-    def to_dict(self):
-        return {
+    def uses(self):
+        return Order.query.filter(
+            Order.promo_code == self.code, Order.status != "cancelled"
+        ).count()
+
+    def check(self, subtotal=None, phone=None):
+        """Message d'erreur si le code n'est pas utilisable, sinon None."""
+        if not self.active:
+            return "Code invalide ou expiré"
+        if self.expires_on and gabon_today() > self.expires_on:
+            return "Ce code a expiré"
+        if self.max_uses is not None and self.uses() >= self.max_uses:
+            return "Ce code a atteint son nombre maximum d'utilisations"
+        if subtotal is not None and self.min_order and subtotal < self.min_order:
+            return f"Ce code est valable dès {int(self.min_order):,} FCFA d'achat".replace(",", " ")
+        if self.once_per_customer and phone:
+            digits = normalize_phone(phone)
+            for (p,) in db.session.query(Order.customer_phone).filter(
+                Order.promo_code == self.code, Order.status != "cancelled"
+            ):
+                if normalize_phone(p) == digits:
+                    return "Vous avez déjà utilisé ce code"
+        return None
+
+    def to_dict(self, admin=False):
+        data = {
             "id": self.id,
             "code": self.code,
             "type": self.type,
             "value": self.value,
             "label": self.label,
             "active": self.active,
+            "expires_on": self.expires_on.isoformat() if self.expires_on else None,
+            "min_order": self.min_order or 0,
+            "once_per_customer": self.once_per_customer,
         }
+        if admin:
+            data["max_uses"] = self.max_uses
+            data["uses"] = self.uses()
+        return data
 
 
 class Review(db.Model):
@@ -210,6 +245,7 @@ class Order(db.Model):
     customer_email = db.Column(db.String(200), default="")
     customer_phone = db.Column(db.String(40), nullable=False)
     customer_address = db.Column(db.Text, default="")
+    landmark = db.Column(db.Text, default="")  # point de repère (« derrière la pharmacie… »)
     zone = db.Column(db.String(120), default="")
     note = db.Column(db.Text, default="")
     latitude = db.Column(db.Float, nullable=True)
@@ -240,6 +276,7 @@ class Order(db.Model):
             "customer_email": self.customer_email,
             "customer_phone": self.customer_phone,
             "customer_address": self.customer_address,
+            "landmark": self.landmark or "",
             "zone": self.zone,
             "note": self.note,
             "latitude": self.latitude,
@@ -340,7 +377,25 @@ DEFAULT_SETTINGS = {
     "free_shipping_threshold": "30000",
     "delivery_commission": "2000",
     "zones": json.dumps(LIBREVILLE_ZONES, ensure_ascii=False),
+    # Frais par zone ({"Owendo": 3000, ...}) ; une zone absente = delivery_fee
+    "zone_fees": "{}",
 }
+
+GABON_TZ = timezone(timedelta(hours=1))  # heure de Libreville (UTC+1, sans heure d'été)
+
+
+def gabon_today():
+    return datetime.now(GABON_TZ).date()
+
+
+def normalize_phone(phone):
+    """077 12 34 56, +241 77123456… -> mêmes chiffres, pour comparer deux numéros."""
+    digits = "".join(c for c in (phone or "") if c.isdigit())
+    if digits.startswith("00241"):
+        digits = digits[5:]
+    elif digits.startswith("241") and len(digits) > 9:
+        digits = digits[3:]
+    return digits.lstrip("0")
 
 
 def get_setting(key, default=""):
@@ -356,6 +411,19 @@ def get_number(key, default=0.0):
         return float(get_setting(key, default))
     except (TypeError, ValueError):
         return float(default)
+
+
+def get_zone_fees():
+    try:
+        fees = json.loads(get_setting("zone_fees", "{}"))
+        return {str(k): float(v) for k, v in fees.items()} if isinstance(fees, dict) else {}
+    except (json.JSONDecodeError, TypeError, ValueError, AttributeError):
+        return {}
+
+
+def zone_delivery_fee(zone):
+    """Frais de livraison d'une zone (frais par défaut si la zone n'a pas de tarif)."""
+    return get_zone_fees().get(zone, get_number("delivery_fee"))
 
 
 def get_zones():

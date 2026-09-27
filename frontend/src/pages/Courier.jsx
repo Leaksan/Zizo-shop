@@ -545,6 +545,11 @@ function DeliveryCard({ order, myZone, currency, children }) {
             {order.customer_address} ↗
           </a>
         </span>
+        {order.landmark && (
+          <span className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-slate-200">
+            🧭 {order.landmark}
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           <Clock size={14} />
           Commandée {formatDate(order.created_at)}
