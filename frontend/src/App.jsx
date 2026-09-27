@@ -18,6 +18,7 @@ const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Courier = lazy(() => import("./pages/Courier"));
 const Liquidation = lazy(() => import("./pages/Liquidation"));
 const Favorites = lazy(() => import("./pages/Favorites"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -72,6 +73,7 @@ export default function App() {
                   <Route path="/order-confirmation/:reference" element={<OrderConfirmation />} />
                   <Route path="/suivi" element={<TrackOrder />} />
                   <Route path="/livreur" element={<Courier />} />
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
                 </Suspense>
               </main>

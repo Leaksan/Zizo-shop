@@ -9,6 +9,7 @@ import { useShop } from "../context/ShopContext";
 import AddressInput from "../components/AddressInput";
 import DeliveryMap from "../components/DeliveryMap";
 import { normalize } from "../libreville";
+import { rememberOrder } from "../myOrders";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 
 const STORAGE_KEY = "shop_client";
@@ -154,6 +155,7 @@ export default function Checkout() {
           zone: form.zone,
         })
       );
+      rememberOrder(order);
       clearCart();
       navigate(`/order-confirmation/${order.reference}`);
     } catch (e2) {

@@ -34,6 +34,7 @@ export function ShopProvider({ children }) {
     freeShippingThreshold: Number(settings.free_shipping_threshold) || 0,
     zones: settings.zones || [],
     zoneFees: settings.zone_fees || {},
+    clearanceCount: Number(settings.clearance_count) || 0,
     reload,
   };
 

@@ -18,7 +18,7 @@ export default function BottomNav() {
     { to: "/boutique", icon: Store, label: "Boutique" },
     { to: "/favoris", icon: Heart, label: "Favoris", badge: favCount },
     { to: "/cart", icon: ShoppingCart, label: "Panier", badge: count },
-    { to: "/suivi", icon: Package, label: "Suivi" },
+    { to: "/suivi", icon: Package, label: "Commandes" },
   ];
 
   return (

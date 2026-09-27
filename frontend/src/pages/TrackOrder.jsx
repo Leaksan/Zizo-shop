@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Bike, Clock, KeyRound, MapPin, MessageSquarePlus, Package, Phone, Search, Store, User, XCircle } from "lucide-react";
+import { Bike, ChevronLeft, ChevronRight, Clock, KeyRound, MapPin, MessageSquarePlus, Package, Phone, Search, Store, User, XCircle } from "lucide-react";
 import { api } from "../api";
 import { formatDate, formatPrice } from "../format";
+import { getMyOrders, rememberOrder } from "../myOrders";
 import { useShop } from "../context/ShopContext";
 import TrackingMap from "../components/TrackingMap";
 import { CourierRatingForm, ProductReviewForm } from "../components/ReviewForms";
@@ -56,12 +57,23 @@ const PICKUP_STATUS_INFO = {
   cancelled: STATUS_INFO.cancelled,
 };
 
+// Statut en un mot, pour la liste « Mes commandes »
+const STATUS_CHIP = {
+  pending: { delivery: "En attente", pickup: "En préparation", cls: STATUS_INFO.pending.cls },
+  delivering: { delivery: "En route", pickup: "Prête", cls: STATUS_INFO.delivering.cls },
+  delivered: { delivery: "Livrée", pickup: "Récupérée", cls: STATUS_INFO.delivered.cls },
+  cancelled: { delivery: "Annulée", pickup: "Annulée", cls: STATUS_INFO.cancelled.cls },
+};
+
 export default function TrackOrder() {
-  const [searchParams] = useSearchParams();
-  const [ref, setRef] = useState(searchParams.get("ref") || "");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const refParam = (searchParams.get("ref") || "").trim().toUpperCase();
+  const [ref, setRef] = useState(refParam);
   const [order, setOrder] = useState(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  // Ouvert avec ?ref= : afficher le chargement tout de suite, sans montrer la liste un instant
+  const [loading, setLoading] = useState(() => Boolean(refParam));
+  const [myOrders] = useState(getMyOrders);
   const { currency } = useShop();
 
   const search = useCallback(
@@ -74,8 +86,12 @@ export default function TrackOrder() {
         setOrder(null);
       }
       try {
-        setOrder(await api.get(`/orders/track/${value}`));
-        if (!silent) setRef(value);
+        const found = await api.get(`/orders/track/${value}`);
+        setOrder(found);
+        if (!silent) {
+          setRef(value);
+          rememberOrder(found);
+        }
       } catch (e) {
         if (!silent) setError(e.message);
       } finally {
@@ -85,10 +101,18 @@ export default function TrackOrder() {
     [ref]
   );
 
+  // L'adresse (?ref=) décide de ce qui est affiché : le bouton retour du
+  // téléphone ramène de la commande ouverte à la liste « Mes commandes ».
   useEffect(() => {
-    if (searchParams.get("ref")) search(searchParams.get("ref"));
+    if (refParam) {
+      search(refParam);
+    } else {
+      setOrder(null);
+      setError("");
+      setRef("");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refParam]);
 
   useEffect(() => {
     if (!order) return;
@@ -100,21 +124,57 @@ export default function TrackOrder() {
     return () => clearInterval(timer);
   }, [order, search]);
 
+  const open = (reference) => {
+    const value = reference.trim().toUpperCase();
+    if (!value) return;
+    if (value === refParam) search(value);
+    else setSearchParams({ ref: value });
+  };
+
+  if (refParam && (order || loading)) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <button
+          onClick={() => setSearchParams({})}
+          className="mb-4 flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
+        >
+          <ChevronLeft size={18} />
+          {myOrders.length > 0 ? "Mes commandes" : "Suivre une autre commande"}
+        </button>
+        {loading ? (
+          <div className="skeleton h-64" />
+        ) : (
+          <OrderTracking order={order} currency={currency} onRefresh={() => search(order.reference, true)} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <h1 className="flex items-center justify-center gap-2 text-2xl font-bold">
           <Package size={24} className="text-brand-600 dark:text-brand-400" />
-          Suivre ma commande
+          {myOrders.length > 0 ? "Mes commandes" : "Suivre ma commande"}
         </h1>
         <p className="mt-1 text-sm muted">
-          Entrez votre numéro de commande (ex. CMD-AB12CD) pour connaître son statut.
+          {myOrders.length > 0
+            ? "Vos commandes passées sur ce téléphone. Touchez-en une pour la suivre."
+            : "Entrez votre numéro de commande (ex. CMD-AB12CD) pour connaître son statut."}
         </p>
       </div>
+
+      <MyOrdersList orders={myOrders} currency={currency} onOpen={open} />
+
+      {myOrders.length > 0 && (
+        <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-slate-300">
+          Un autre numéro de commande ?
+        </p>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          search();
+          open(ref);
         }}
         className="mb-8 flex gap-2"
       >
@@ -123,12 +183,13 @@ export default function TrackOrder() {
           <input
             value={ref}
             onChange={(e) => setRef(e.target.value.toUpperCase())}
-            placeholder="NUMÉRO DE COMMANDE"
+            placeholder="CMD-AB12CD"
+            aria-label="Numéro de commande"
             className="input w-full pl-9 font-semibold uppercase"
           />
         </div>
         <button type="submit" disabled={loading} className="btn-primary">
-          {loading ? "…" : "Rechercher"}
+          {loading ? "…" : "Suivre"}
         </button>
       </form>
 
@@ -139,9 +200,63 @@ export default function TrackOrder() {
           <p className="mt-1 text-sm muted">Vérifiez le numéro saisi (ex. CMD-AB12CD).</p>
         </div>
       )}
-
-      {order && <OrderTracking order={order} currency={currency} onRefresh={() => search(order.reference, true)} />}
     </div>
+  );
+}
+
+function shortDate(iso) {
+  return iso ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(iso)) : "";
+}
+
+function MyOrdersList({ orders, currency, onOpen }) {
+  const [statuses, setStatuses] = useState({});
+
+  // Statut à jour de chaque commande (quelques petites requêtes, en parallèle)
+  useEffect(() => {
+    orders.forEach((o) =>
+      api
+        .get(`/orders/track/${o.reference}`)
+        .then((full) => setStatuses((s) => ({ ...s, [o.reference]: full.status })))
+        .catch(() => {})
+    );
+  }, [orders]);
+
+  if (orders.length === 0) return null;
+
+  return (
+    <ul className="mb-8 flex flex-col gap-2">
+      {orders.map((o) => {
+        const chip = STATUS_CHIP[statuses[o.reference]];
+        const method = o.delivery_method === "pickup" ? "pickup" : "delivery";
+        return (
+          <li key={o.reference}>
+            <button
+              onClick={() => onOpen(o.reference)}
+              className="card flex w-full items-center gap-3 p-3 text-left transition hover:border-brand-300 dark:hover:border-brand-700"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
+                {method === "pickup" ? <Store size={20} /> : <Package size={20} />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <b className="block text-sm tracking-wide">{o.reference}</b>
+                <small className="block truncate text-xs muted">
+                  {shortDate(o.created_at)} · {o.items_count} article{o.items_count > 1 ? "s" : ""}
+                </small>
+              </span>
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                {chip && (
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${chip.cls}`}>
+                    {chip[method]}
+                  </span>
+                )}
+                <b className="text-sm">{formatPrice(o.total, currency)}</b>
+              </span>
+              <ChevronRight size={18} className="shrink-0 text-gray-400" />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

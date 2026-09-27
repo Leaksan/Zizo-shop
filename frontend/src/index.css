@@ -161,23 +161,12 @@ body {
   }
 }
 
-/* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'onglets */
+/* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'onglets
+   (il est masqué sur les pages à barre d'achat fixe : voir FloatingWhatsApp) */
 @media (max-width: 767px) {
   body:has(.bottom-nav) .whatsapp-fab {
     bottom: calc(4.75rem + env(safe-area-inset-bottom));
   }
-}
-
-/* Panier sur mobile : la barre « Commander » prend la place du bouton WhatsApp */
-@media (max-width: 767px) {
-  body:has(.cart-cta) .whatsapp-fab {
-    display: none;
-  }
-}
-
-/* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'achat fixe */
-body:has(.mobile-cta) .whatsapp-fab {
-  bottom: calc(5.5rem + env(safe-area-inset-bottom));
 }
 
 /* Accessibilité : désactiver les animations quand l'utilisateur le demande */

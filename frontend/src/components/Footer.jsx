@@ -6,7 +6,7 @@ import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import Logo from "./Logo";
 
 export default function Footer() {
-  const { shopName, shopPhone, freeShippingThreshold, currency } = useShop();
+  const { shopName, shopPhone, freeShippingThreshold, currency, clearanceCount } = useShop();
   const [open, setOpen] = useState(false);
 
   return (
@@ -45,11 +45,13 @@ export default function Footer() {
                     Tous les produits
                   </Link>
                 </li>
-                <li>
-                  <Link to="/liquidation" className="transition hover:text-orange-500">
-                    🔥 Liquidation
-                  </Link>
-                </li>
+                {clearanceCount > 0 && (
+                  <li>
+                    <Link to="/liquidation" className="transition hover:text-orange-500">
+                      🔥 Liquidation
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link to="/favoris" className="transition hover:text-brand-600">
                     Mes favoris
@@ -63,7 +65,7 @@ export default function Footer() {
                 <li className="flex items-center gap-1.5">
                   <Package size={14} />
                   <Link to="/suivi" className="transition hover:text-brand-600">
-                    Suivre ma commande
+                    Mes commandes
                   </Link>
                 </li>
                 <li className="flex items-center gap-1.5">

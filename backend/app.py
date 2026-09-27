@@ -319,12 +319,25 @@ def create_app():
     @app.get("/api/categories")
     def list_categories():
         cats = Category.query.order_by(Category.name).all()
+        # Un seul passage sur les produits actifs : nombre par rayon et emoji du
+        # premier produit, qui sert d'icône au rayon (menu mobile, accueil).
+        counts, emojis = {}, {}
+        rows = (
+            db.session.query(Product.category_id, Product.emoji)
+            .filter(Product.active.is_(True))
+            .order_by(Product.id)
+        )
+        for cat_id, emoji in rows:
+            counts[cat_id] = counts.get(cat_id, 0) + 1
+            if emoji and cat_id not in emojis:
+                emojis[cat_id] = emoji
         return jsonify(
             [
                 {
                     "id": c.id,
                     "name": c.name,
-                    "product_count": Product.query.filter_by(category_id=c.id, active=True).count(),
+                    "product_count": counts.get(c.id, 0),
+                    "emoji": emojis.get(c.id, ""),
                 }
                 for c in cats
             ]
@@ -343,6 +356,8 @@ def create_app():
                 "free_shipping_threshold": get_number("free_shipping_threshold"),
                 "zones": get_zones(),
                 "zone_fees": get_zone_fees(),
+                # Le lien « Liquidation » n'est affiché que s'il y a quelque chose à voir
+                "clearance_count": Product.query.filter_by(active=True, clearance=True).count(),
             }
         )
 
