@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 // Largeurs de miniatures fournies par le serveur (backend/app.py, serve_thumb)
 const THUMB_WIDTHS = [160, 320, 640];
 
@@ -16,7 +18,9 @@ function sizedUrl(url, width) {
 
 // width : largeur d'affichage approximative (px CSS). Sans width, image d'origine.
 export default function ProductVisual({ product, size = "text-4xl", className = "", width }) {
-  if (product.image_url) {
+  // Photo qui ne charge pas (réseau faible, lien mort) : visuel de secours
+  const [failed, setFailed] = useState(false);
+  if (product.image_url && !failed) {
     const src = width ? sizedUrl(product.image_url, width) : product.image_url;
     const src2x = width ? sizedUrl(product.image_url, width * 2) : null;
     return (
@@ -24,6 +28,7 @@ export default function ProductVisual({ product, size = "text-4xl", className = 
         src={src}
         srcSet={src2x && src2x !== src ? `${src} 1x, ${src2x} 2x` : undefined}
         alt={product.name}
+        onError={() => setFailed(true)}
         loading="lazy"
         decoding="async"
         className={`h-full w-full object-cover ${className}`}
@@ -34,7 +39,7 @@ export default function ProductVisual({ product, size = "text-4xl", className = 
     <div
       className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-700 dark:to-slate-600 ${className}`}
     >
-      <span className={size}>{product.emoji || product.name.charAt(0)}</span>
+      <span className={size}>{product.emoji || (product.name || product.product_name || "?").charAt(0)}</span>
     </div>
   );
 }
