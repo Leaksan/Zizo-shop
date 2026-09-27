@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Gift, ShoppingCart, Tag, X } from "lucide-react";
+import { Gift, ShoppingCart, Tag, Truck, X } from "lucide-react";
 import { formatPrice } from "../format";
 import { computeTotals, feeRange } from "../cartMath";
 import { useCart } from "../context/CartContext";
@@ -23,6 +23,12 @@ export default function Cart() {
   // Offerte quel que soit le quartier (seuil atteint ou code « livraison offerte »)
   const freeForAll =
     computeTotals(subtotal, promo, { ...shop, deliveryFee: range.max }).deliveryFee === 0;
+
+  // Progression vers la livraison offerte (montant après remise, comme le serveur)
+  const threshold = shop.freeShippingThreshold;
+  const afterDiscount = totals.subtotal - totals.discount;
+  const missing = threshold > 0 ? Math.max(0, threshold - afterDiscount) : 0;
+  const progress = threshold > 0 ? Math.min(100, (afterDiscount / threshold) * 100) : 0;
 
   const handleApply = async () => {
     if (!code.trim()) return;
@@ -52,11 +58,37 @@ export default function Cart() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl pb-20 md:pb-0">
       <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold">
         <ShoppingCart size={24} className="text-brand-600 dark:text-brand-400" />
         Mon panier
       </h1>
+      {threshold > 0 && (
+        <div className="card mb-4 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            {missing > 0 ? (
+              <>
+                <Truck size={17} className="text-brand-600 dark:text-brand-400" />
+                <span>
+                  Plus que <b className="text-brand-600 dark:text-brand-400">{formatPrice(missing, currency)}</b>{" "}
+                  pour la livraison offerte
+                </span>
+              </>
+            ) : (
+              <>
+                <Gift size={17} className="text-green-600" />
+                <span className="text-green-700 dark:text-green-400">Livraison offerte 🎉</span>
+              </>
+            )}
+          </p>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-slate-700">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${missing > 0 ? "bg-brand-500" : "bg-green-500"}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-4">
         {items.map((item) => (
           <div
@@ -73,7 +105,7 @@ export default function Cart() {
                 {formatPrice(item.unit_price, currency)} / unité
               </p>
             </div>
-            <div className="col-start-1 row-start-2 flex items-center justify-self-start rounded-lg border border-gray-300 sm:col-auto sm:row-auto dark:border-slate-600">
+            <div className="col-span-2 col-start-1 row-start-2 flex items-center justify-self-start rounded-lg border border-gray-300 sm:col-auto sm:row-auto dark:border-slate-600">
               <button
                 onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
                 className="px-3 py-1.5 font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
@@ -90,7 +122,7 @@ export default function Cart() {
                 +
               </button>
             </div>
-            <p className="col-start-2 row-start-2 text-left font-bold sm:col-auto sm:row-auto sm:w-24 sm:text-right">
+            <p className="col-span-2 col-start-2 row-start-2 justify-self-end font-bold sm:col-auto sm:row-auto sm:w-24 sm:justify-self-auto sm:text-right">
               {formatPrice(item.unit_price * item.quantity, currency)}
             </p>
             <button
@@ -162,6 +194,17 @@ export default function Cart() {
         </div>
         <Link to="/checkout" className="btn-primary mt-2 py-3 text-center">
           Passer la commande →
+        </Link>
+      </div>
+
+      {/* Mobile : total et bouton de commande toujours visibles, au-dessus des onglets */}
+      <div className="cart-cta fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-3 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs muted">{feeVaries && !freeForAll ? "Total estimé" : "Total"}</p>
+          <p className="text-lg leading-tight font-extrabold">{formatPrice(totals.total, currency)}</p>
+        </div>
+        <Link to="/checkout" className="btn-primary shrink-0 px-6 py-3 text-base">
+          Commander
         </Link>
       </div>
     </div>

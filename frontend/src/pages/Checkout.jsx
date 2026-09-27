@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bike, CheckCircle2, Package, Store } from "lucide-react";
+import { Banknote, Bike, CheckCircle2, ChevronDown, Package, Store } from "lucide-react";
 import { api } from "../api";
 import { formatPrice } from "../format";
 import { computeTotals, feeForZone } from "../cartMath";
@@ -41,6 +41,8 @@ export default function Checkout() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [coordText, setCoordText] = useState({ lat: "", lng: "" });
+  // Récapitulatif replié sur mobile (le total reste visible), ouvert sur grand écran
+  const [wide] = useState(() => window.matchMedia("(min-width: 768px)").matches);
 
   // Les zones arrivent de façon asynchrone : sélectionner la première par défaut
   // si le client n'en a pas déjà une d'enregistrée, sinon la valeur soumise est vide.
@@ -168,39 +170,21 @@ export default function Checkout() {
           <Package size={24} className="text-brand-600 dark:text-brand-400" />
           Finaliser ma commande
         </h1>
-        <p className="mb-2 text-sm muted">Remplissez vos informations de livraison.</p>
-        {shopPhone && (
-          <a
-            href={whatsappUrl(shopPhone, "Bonjour, je souhaite passer une commande 🛒")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-6 flex items-center gap-3 rounded-lg bg-[#25D366]/10 px-4 py-3 text-sm font-semibold text-green-700 transition hover:bg-[#25D366]/20 dark:bg-[#25D366]/15 dark:text-green-300"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white">
-              <WhatsAppIcon size={18} />
-            </span>
-            <span>
-              Commandez directement sur WhatsApp au <b>{shopPhone}</b>
-              <span className="block text-xs font-normal opacity-80">
-                Discussions et appels WhatsApp privilégiés — réponse rapide
-              </span>
-            </span>
-          </a>
-        )}
+        <p className="mb-5 text-sm muted">Remplissez vos informations de livraison.</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="label">Nom complet *</span>
-              <input required value={form.customer_name} onChange={set("customer_name")} className="input" placeholder="Ex. Marie Dupont" />
+              <input required autoComplete="name" value={form.customer_name} onChange={set("customer_name")} className="input" placeholder="Ex. Awa Mba" />
             </label>
             <label className="block">
               <span className="label">Téléphone *</span>
-              <input required type="tel" value={form.customer_phone} onChange={set("customer_phone")} className="input" placeholder="Ex. 06 12 34 56 78" />
+              <input required type="tel" inputMode="tel" autoComplete="tel" value={form.customer_phone} onChange={set("customer_phone")} className="input" placeholder="Ex. 077 12 34 56" />
             </label>
           </div>
           <label className="block">
             <span className="label">Email (optionnel)</span>
-            <input type="email" value={form.customer_email} onChange={set("customer_email")} className="input" placeholder="Pour recevoir un récapitulatif" />
+            <input type="email" inputMode="email" autoComplete="email" value={form.customer_email} onChange={set("customer_email")} className="input" placeholder="Pour recevoir un récapitulatif" />
           </label>
           <div>
             <span className="label">Comment souhaitez-vous récupérer votre commande ? *</span>
@@ -381,12 +365,37 @@ export default function Checkout() {
             <CheckCircle2 size={18} />
             {submitting ? "Envoi…" : `Confirmer la commande — ${formatPrice(totals.total, currency)}`}
           </button>
+          <p className="-mt-1 flex items-center justify-center gap-1.5 text-xs muted">
+            <Banknote size={14} /> Aucun paiement maintenant : vous payez à la réception.
+          </p>
         </form>
+        {shopPhone && (
+          <a
+            href={whatsappUrl(shopPhone, "Bonjour, j'ai besoin d'aide pour ma commande 🛒")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold text-green-700 hover:underline dark:text-green-400"
+          >
+            <WhatsAppIcon size={18} /> Besoin d'aide ? Écrivez-nous sur WhatsApp
+          </a>
+        )}
       </div>
 
-      <div className="card h-fit p-4">
-        <h2 className="mb-3 font-semibold">Récapitulatif</h2>
-        <ul className="flex flex-col gap-2 text-sm">
+      <details open={wide} className="card group order-first h-fit p-4 md:order-none">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+          <span>
+            Récapitulatif{" "}
+            <span className="font-normal muted">
+              ({items.reduce((n, i) => n + i.quantity, 0)} article
+              {items.reduce((n, i) => n + i.quantity, 0) > 1 ? "s" : ""})
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            {formatPrice(totals.total, currency)}
+            <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
+          </span>
+        </summary>
+        <ul className="mt-3 flex flex-col gap-2 text-sm">
           {items.map((i) => (
             <li key={i.variant_id} className="flex justify-between gap-2">
               <span className="text-gray-600 dark:text-slate-300">
@@ -423,7 +432,7 @@ export default function Checkout() {
             <span>{formatPrice(totals.total, currency)}</span>
           </div>
         </div>
-      </div>
+      </details>
     </div>
   );
 }

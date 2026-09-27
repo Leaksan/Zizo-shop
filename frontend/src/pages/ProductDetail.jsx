@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { BellRing, CheckCircle2, Flame, Heart, ShoppingCart, XCircle, Zap } from "lucide-react";
+import { Banknote, BellRing, CheckCircle2, ChevronRight, Flame, Heart, MapPin, ShoppingCart, Truck, XCircle, Zap } from "lucide-react";
+import { feeRange } from "../cartMath";
+import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import { api } from "../api";
 import { formatPrice } from "../format";
 import { useCart } from "../context/CartContext";
@@ -16,7 +18,8 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addItem } = useCart();
-  const { currency } = useShop();
+  const shop = useShop();
+  const { currency } = shop;
   const { isFavorite, toggle } = useFavorites();
   const [product, setProduct] = useState(null);
   const [variant, setVariant] = useState(null);
@@ -99,9 +102,22 @@ export default function ProductDetail() {
 
   return (
     <div className="mx-auto max-w-5xl pb-20 md:pb-0">
-      <Link to="/boutique" className="text-sm text-brand-600 hover:underline dark:text-brand-400">
-        ← Retour à la boutique
-      </Link>
+      <nav aria-label="Fil d'Ariane" className="flex items-center gap-1 text-sm text-gray-500 dark:text-slate-400">
+        <Link to="/boutique" className="text-brand-600 hover:underline dark:text-brand-400">
+          Boutique
+        </Link>
+        {product.category && (
+          <>
+            <ChevronRight size={14} />
+            <Link
+              to={`/boutique?cat=${product.category_id}`}
+              className="text-brand-600 hover:underline dark:text-brand-400"
+            >
+              {product.category}
+            </Link>
+          </>
+        )}
+      </nav>
       <div className="mt-4 grid gap-8 md:grid-cols-2">
         <div className="card overflow-hidden">
           <ProductVisual
@@ -112,11 +128,6 @@ export default function ProductDetail() {
         </div>
 
         <div className="flex flex-col gap-4">
-          {product.category && (
-            <span className="text-xs font-medium uppercase tracking-wide text-brand-500">
-              {product.category}
-            </span>
-          )}
           <div className="flex items-start justify-between gap-3">
             <h1 className="text-3xl font-bold">{product.name}</h1>
             <button
@@ -285,6 +296,8 @@ export default function ProductDetail() {
             </div>
           )}
 
+          <Guarantees shop={shop} product={product} />
+
           <ShareButtons product={product} />
         </div>
       </div>
@@ -319,6 +332,48 @@ export default function ProductDetail() {
             </span>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Rassurer au moment de décider : paiement, livraison, suivi, contact
+function Guarantees({ shop, product }) {
+  const { min } = feeRange(shop);
+  const { currency, freeShippingThreshold, shopPhone } = shop;
+  const rows = [
+    { icon: Banknote, title: "Paiement à la livraison", sub: "Vous payez à la réception du colis" },
+    {
+      icon: Truck,
+      title: `Livraison à Libreville dès ${formatPrice(min, currency)}`,
+      sub:
+        freeShippingThreshold > 0
+          ? `Offerte dès ${formatPrice(freeShippingThreshold, currency)} d'achat · retrait en boutique gratuit`
+          : "Retrait en boutique gratuit",
+    },
+    { icon: MapPin, title: "Suivi en temps réel", sub: "Suivez votre livreur sur la carte" },
+  ];
+  return (
+    <div className="card divide-y divide-gray-100 dark:divide-slate-700">
+      {rows.map((r) => (
+        <div key={r.title} className="flex items-center gap-3 p-3">
+          <r.icon size={20} className="shrink-0 text-brand-600 dark:text-brand-400" />
+          <span>
+            <b className="block text-sm">{r.title}</b>
+            <small className="text-xs muted">{r.sub}</small>
+          </span>
+        </div>
+      ))}
+      {shopPhone && (
+        <a
+          href={whatsappUrl(shopPhone, `Bonjour, j'ai une question sur « ${product.name} »`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 p-3 text-sm font-semibold text-green-700 transition hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/40"
+        >
+          <WhatsAppIcon size={20} />
+          Une question sur ce produit ? Écrivez-nous
+        </a>
       )}
     </div>
   );
