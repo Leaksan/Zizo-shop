@@ -4,7 +4,7 @@ import { api } from "../api";
 const ShopContext = createContext(null);
 
 const DEFAULTS = {
-  shop_name: "MaBoutique",
+  shop_name: "241 Shop",
   shop_phone: "",
   currency: "XAF",
   delivery_fee: 0,

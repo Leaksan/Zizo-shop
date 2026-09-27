@@ -83,7 +83,7 @@ function CourierAuth({ onLogin }) {
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-6 text-center">
-        <span className="animate-gradient mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 via-accent-500 to-accent-500 shadow-lg shadow-brand-500/30">
+        <span className="animate-gradient mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-lg shadow-brand-500/30">
           <Bike size={32} className="text-white" />
         </span>
         <h1 className="text-2xl font-bold">Espace livreur</h1>
@@ -249,7 +249,7 @@ function CourierDashboard({ courier, onLogout }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-gradient-to-br from-brand-600 to-accent-600 p-6 text-white shadow-xl shadow-brand-500/20">
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-6 text-white shadow-xl shadow-brand-500/20">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
           <Bike size={32} />
         </span>

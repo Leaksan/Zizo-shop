@@ -26,17 +26,17 @@ export default function Liquidation() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 p-6 dark:border-orange-800 dark:bg-orange-950/40">
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-orange-600 dark:text-orange-400">
-          <Flame size={26} className="fill-orange-400" />
+      <div className="rounded-2xl border-2 border-dashed border-accent-300 bg-accent-50 p-6 dark:border-accent-800 dark:bg-accent-950/40">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-accent-700 dark:text-accent-400">
+          <Flame size={26} className="fill-accent-400" />
           Liquidation
           {items.length > 0 && (
-            <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-sm font-bold text-white">
+            <span className="rounded-full bg-accent-400 px-2.5 py-0.5 text-sm font-bold text-gray-950">
               {items.length}
             </span>
           )}
         </h1>
-        <p className="mt-1 text-sm text-orange-500 dark:text-orange-300">
+        <p className="mt-1 text-sm text-accent-800 dark:text-accent-300">
           Dernières pièces à petit prix — jusqu'à épuisement des stocks !
         </p>
       </div>
@@ -53,8 +53,8 @@ export default function Liquidation() {
         </div>
       ) : items.length === 0 ? (
         <div className="card flex flex-col items-center gap-4 p-12 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-950/50">
-            <Flame size={30} className="text-orange-400" />
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-50 dark:bg-accent-950/50">
+            <Flame size={30} className="text-accent-500" />
           </span>
           <div>
             <p className="text-lg font-semibold">Aucun produit en liquidation</p>

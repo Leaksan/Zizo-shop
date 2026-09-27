@@ -208,7 +208,7 @@ def create_app():
         return value
 
     def _http_json(url):
-        req = Request(url, headers={"User-Agent": "MaBoutique-Libreville/1.0"})
+        req = Request(url, headers={"User-Agent": "241Shop-Libreville/1.0"})
         with urlopen(req, timeout=6) as resp:
             return _json_std.loads(resp.read().decode("utf-8"))
 

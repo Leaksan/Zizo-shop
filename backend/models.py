@@ -367,7 +367,7 @@ LIBREVILLE_ZONES = [
 ]
 
 DEFAULT_SETTINGS = {
-    "shop_name": "MaBoutique",
+    "shop_name": "241 Shop",
     "shop_phone": "074756768",
     "pickup_address": "Centre-ville, Libreville (près du Marché Mont-Bouët)",
     "currency": "XAF",

@@ -108,7 +108,7 @@ export default function Navbar() {
           <Link to="/favoris" title="Mes favoris" aria-label="Mes favoris" className={`${iconBtnCls} hidden sm:block`}>
             <Heart size={20} />
             {favCount > 0 && (
-              <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+              <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-gray-950">
                 {favCount}
               </span>
             )}
@@ -219,11 +219,11 @@ function MobileMenu({ onClose }) {
           </Link>
           {clearanceCount > 0 && (
             <Link to="/liquidation" onClick={onClose} className={itemCls(pathname === "/liquidation")}>
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center text-orange-500">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center text-accent-500">
                 <Flame size={20} />
               </span>
               <span className="flex-1">Liquidation</span>
-              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+              <span className="rounded-full bg-accent-100 px-2 py-0.5 text-xs font-bold text-accent-800 dark:bg-accent-950 dark:text-accent-300">
                 {clearanceCount}
               </span>
             </Link>

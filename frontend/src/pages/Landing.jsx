@@ -73,20 +73,20 @@ export default function Landing() {
       <ProductSection title="Les plus populaires" to="/boutique" products={popular} loading={loading} />
 
       {clearance.length > 0 && (
-        <section className="mb-8 rounded-2xl border-2 border-dashed border-orange-300 bg-orange-50 p-4 sm:p-5 dark:border-orange-800 dark:bg-orange-950/40">
+        <section className="mb-8 rounded-2xl border-2 border-dashed border-accent-300 bg-accent-50 p-4 sm:p-5 dark:border-accent-800 dark:bg-accent-950/40">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
-              <h2 className="flex items-center gap-2 text-lg font-bold text-orange-600 sm:text-xl dark:text-orange-400">
-                <Flame size={20} className="fill-orange-400" />
+              <h2 className="flex items-center gap-2 text-lg font-bold text-accent-700 sm:text-xl dark:text-accent-400">
+                <Flame size={20} className="fill-accent-400" />
                 Liquidation
               </h2>
-              <p className="text-sm text-orange-500 dark:text-orange-300">
+              <p className="text-sm text-accent-800 dark:text-accent-300">
                 Dernières pièces à petit prix, jusqu'à épuisement des stocks !
               </p>
             </div>
             <Link
               to="/liquidation"
-              className="flex shrink-0 items-center gap-1 text-sm font-semibold text-orange-600 hover:underline dark:text-orange-400"
+              className="flex shrink-0 items-center gap-1 text-sm font-semibold text-accent-700 hover:underline dark:text-accent-400"
             >
               Tout voir <ArrowRight size={15} />
             </Link>

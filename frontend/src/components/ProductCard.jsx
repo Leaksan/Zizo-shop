@@ -62,15 +62,13 @@ export default function ProductCard({ product }) {
           />
           {badgeLabel && (
             <span
-              className={`absolute top-2 left-2 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold text-white ${
-                product.clearance
-                  ? "bg-orange-500"
-                  : product.badge === "Promo"
-                    ? "bg-red-600"
-                    : "bg-brand-600"
+              className={`absolute top-2 left-2 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${
+                product.clearance || product.badge === "Promo"
+                  ? "bg-accent-400 text-gray-950"
+                  : "bg-brand-600 text-white"
               }`}
             >
-              {product.clearance && <Flame size={12} className="fill-white" />}
+              {product.clearance && <Flame size={12} className="fill-current" />}
               {badgeLabel}
             </span>
           )}
@@ -106,7 +104,7 @@ export default function ProductCard({ product }) {
               </p>
             )}
             {lowStock && (
-              <p className="mt-0.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
+              <p className="mt-0.5 text-xs font-semibold text-accent-700 dark:text-accent-400">
                 Plus que {product.total_stock} en stock
               </p>
             )}

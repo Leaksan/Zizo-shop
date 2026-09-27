@@ -42,7 +42,7 @@ export default function BottomNav() {
             <span className="relative">
               <t.icon size={22} strokeWidth={2} />
               {t.badge > 0 && (
-                <span className="animate-pop absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold text-white">
+                <span className="animate-pop absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-gray-950">
                   {t.badge}
                 </span>
               )}

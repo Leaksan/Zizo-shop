@@ -1,4 +1,4 @@
-const CACHE = "maboutique-v2";
+const CACHE = "241shop-v3";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (e) => {

@@ -25,7 +25,7 @@ export default function Hero({ products }) {
           <h1 className="mt-3 text-2xl leading-[1.15] font-extrabold tracking-tight text-gray-900 sm:mt-4 sm:text-5xl sm:leading-[1.1] dark:text-white">
             Vos produits préférés,
             <br />
-            livrés <span className="text-gradient animate-gradient bg-gradient-to-r from-brand-500 via-accent-500 to-accent-500">chez vous</span>.
+            livrés <span className="text-gradient animate-gradient">chez vous</span>.
           </h1>
           <p className="mt-5 hidden max-w-xl text-lg text-gray-600 sm:block dark:text-slate-300">
             Commandez en quelques clics parmi notre sélection de produits de qualité. Paiement à la

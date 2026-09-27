@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Check, Link2, Share2 } from "lucide-react";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import { formatPrice } from "../format";
+import { useShop } from "../context/ShopContext";
 
 export default function ShareButtons({ product }) {
   const [copied, setCopied] = useState(false);
+  const { shopName, currency } = useShop();
   const url = window.location.href;
-  const text = `${product.name} — dès ${formatPrice(product.price_min)} chez MaBoutique 👉 ${url}`;
+  const text = `${product.name} — dès ${formatPrice(product.price_min, currency)} chez ${shopName} 👉 ${url}`;
 
   const copy = async () => {
     try {

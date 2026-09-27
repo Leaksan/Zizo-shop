@@ -152,8 +152,8 @@ export default function ProductDetail() {
           )}
           {product.badge && (
             <span
-              className={`w-fit rounded-full px-3 py-1 text-xs font-bold text-white ${
-                product.badge === "Promo" ? "bg-red-600" : "bg-brand-600"
+              className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
+                product.badge === "Promo" ? "bg-accent-400 text-gray-950" : "bg-brand-600 text-white"
               }`}
             >
               {product.badge === "Promo" && product.promo_percent
@@ -205,7 +205,7 @@ export default function ProductDetail() {
                         <p className="text-sm text-gray-400 line-through dark:text-slate-500">
                           {formatPrice(variant.old_price, currency)}
                         </p>
-                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
+                        <span className="rounded-full bg-accent-400 px-2 py-0.5 text-xs font-bold text-gray-950">
                           -{promo} %
                         </span>
                       </>
@@ -216,7 +216,7 @@ export default function ProductDetail() {
                       variant.stock > 5
                         ? "text-green-600 dark:text-green-400"
                         : variant.stock > 0
-                          ? "text-orange-600 dark:text-orange-400"
+                          ? "text-accent-700 dark:text-accent-400"
                           : "text-red-600"
                     }`}
                   >
@@ -258,9 +258,9 @@ export default function ProductDetail() {
                   </button>
                   <button
                     onClick={handleBuyNow}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-600 hover:shadow-lg hover:shadow-orange-500/30 active:scale-95"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-accent-400 py-2.5 text-sm font-semibold text-gray-950 transition hover:bg-accent-500 hover:shadow-lg hover:shadow-accent-500/30 active:scale-95"
                   >
-                    <Zap size={17} className="fill-white" />
+                    <Zap size={17} className="fill-current" />
                     Commander maintenant
                   </button>
                 </div>
@@ -284,7 +284,7 @@ export default function ProductDetail() {
                     />
                     <button
                       type="submit"
-                      className="flex items-center justify-center gap-1.5 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+                      className="flex items-center justify-center gap-1.5 rounded-lg bg-accent-400 px-4 py-2 text-sm font-semibold text-gray-950 transition hover:bg-accent-500"
                     >
                       <BellRing size={15} />
                       Demander

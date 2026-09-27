@@ -3,36 +3,40 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================
-   IDENTITÉ VISUELLE — tout se règle ici.
-   brand  : couleur principale (boutons, liens, sélection)
-   accent : couleur secondaire (dégradés, touches de couleur)
+   IDENTITÉ VISUELLE « 241 Shop » — tout se règle ici.
+   brand  : émeraude — boutons, liens, onglet actif, sélection
+   accent : ambre — promos, liquidation, offre du jour, compteurs,
+            « Commander maintenant »
+   Sur un fond ambre (accent-300 à 500), écrire en foncé (text-gray-950) :
+   le blanc y est trop peu lisible. Le rouge reste réservé aux erreurs,
+   aux actions « retirer » et au cœur des favoris.
    Pour changer d'identité, remplacer les nuances ci-dessous
-   (ex. var(--color-emerald-600) ou une valeur oklch/hex).
+   (ex. var(--color-sky-600) ou une valeur oklch/hex).
    ============================================================ */
 @theme {
-  --color-brand-50: var(--color-indigo-50);
-  --color-brand-100: var(--color-indigo-100);
-  --color-brand-200: var(--color-indigo-200);
-  --color-brand-300: var(--color-indigo-300);
-  --color-brand-400: var(--color-indigo-400);
-  --color-brand-500: var(--color-indigo-500);
-  --color-brand-600: var(--color-indigo-600);
-  --color-brand-700: var(--color-indigo-700);
-  --color-brand-800: var(--color-indigo-800);
-  --color-brand-900: var(--color-indigo-900);
-  --color-brand-950: var(--color-indigo-950);
+  --color-brand-50: var(--color-emerald-50);
+  --color-brand-100: var(--color-emerald-100);
+  --color-brand-200: var(--color-emerald-200);
+  --color-brand-300: var(--color-emerald-300);
+  --color-brand-400: var(--color-emerald-400);
+  --color-brand-500: var(--color-emerald-500);
+  --color-brand-600: var(--color-emerald-600);
+  --color-brand-700: var(--color-emerald-700);
+  --color-brand-800: var(--color-emerald-800);
+  --color-brand-900: var(--color-emerald-900);
+  --color-brand-950: var(--color-emerald-950);
 
-  --color-accent-50: var(--color-fuchsia-50);
-  --color-accent-100: var(--color-fuchsia-100);
-  --color-accent-200: var(--color-fuchsia-200);
-  --color-accent-300: var(--color-fuchsia-300);
-  --color-accent-400: var(--color-fuchsia-400);
-  --color-accent-500: var(--color-fuchsia-500);
-  --color-accent-600: var(--color-fuchsia-600);
-  --color-accent-700: var(--color-fuchsia-700);
-  --color-accent-800: var(--color-fuchsia-800);
-  --color-accent-900: var(--color-fuchsia-900);
-  --color-accent-950: var(--color-fuchsia-950);
+  --color-accent-50: var(--color-amber-50);
+  --color-accent-100: var(--color-amber-100);
+  --color-accent-200: var(--color-amber-200);
+  --color-accent-300: var(--color-amber-300);
+  --color-accent-400: var(--color-amber-400);
+  --color-accent-500: var(--color-amber-500);
+  --color-accent-600: var(--color-amber-600);
+  --color-accent-700: var(--color-amber-700);
+  --color-accent-800: var(--color-amber-800);
+  --color-accent-900: var(--color-amber-900);
+  --color-accent-950: var(--color-amber-950);
 }
 
 /* Anti-bande blanche sur mobile : le fond suit le thème et aucun
@@ -81,7 +85,7 @@ body {
     @apply mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300;
   }
   .text-gradient {
-    @apply bg-gradient-to-r from-brand-500 via-accent-500 to-accent-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-brand-600 via-brand-500 to-accent-600 bg-clip-text text-transparent;
   }
   .skeleton {
     @apply animate-pulse rounded-xl bg-gray-200 dark:bg-slate-700;

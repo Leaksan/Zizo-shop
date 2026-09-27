@@ -50,7 +50,7 @@ export default function DealOfDay() {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <span className="inline-flex items-center gap-1 rounded-full bg-accent-600 px-2 py-0.5 text-[11px] font-bold tracking-wide text-white uppercase">
+          <span className="inline-flex items-center gap-1 rounded-full bg-accent-400 px-2 py-0.5 text-[11px] font-bold tracking-wide text-gray-950 uppercase">
             <Zap size={12} className="fill-current" />
             Offre du jour
           </span>

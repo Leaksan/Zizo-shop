@@ -47,7 +47,7 @@ export default function Footer() {
                 </li>
                 {clearanceCount > 0 && (
                   <li>
-                    <Link to="/liquidation" className="transition hover:text-orange-500">
+                    <Link to="/liquidation" className="transition hover:text-accent-600">
                       🔥 Liquidation
                     </Link>
                   </li>
