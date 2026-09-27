@@ -59,7 +59,7 @@ export default function ProductDetail() {
     return (
       <div className="py-16 text-center">
         <p className="text-red-600">{error}</p>
-        <Link to="/boutique" className="mt-4 inline-block text-indigo-600 hover:underline">
+        <Link to="/boutique" className="mt-4 inline-block text-brand-600 hover:underline">
           ← Retour à la boutique
         </Link>
       </div>
@@ -99,7 +99,7 @@ export default function ProductDetail() {
 
   return (
     <div className="mx-auto max-w-5xl pb-20 md:pb-0">
-      <Link to="/boutique" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">
+      <Link to="/boutique" className="text-sm text-brand-600 hover:underline dark:text-brand-400">
         ← Retour à la boutique
       </Link>
       <div className="mt-4 grid gap-8 md:grid-cols-2">
@@ -113,7 +113,7 @@ export default function ProductDetail() {
 
         <div className="flex flex-col gap-4">
           {product.category && (
-            <span className="text-xs font-medium uppercase tracking-wide text-indigo-500">
+            <span className="text-xs font-medium uppercase tracking-wide text-brand-500">
               {product.category}
             </span>
           )}
@@ -142,7 +142,7 @@ export default function ProductDetail() {
           {product.badge && (
             <span
               className={`w-fit rounded-full px-3 py-1 text-xs font-bold text-white ${
-                product.badge === "Promo" ? "bg-red-600" : "bg-indigo-600"
+                product.badge === "Promo" ? "bg-red-600" : "bg-brand-600"
               }`}
             >
               {product.badge === "Promo" && product.promo_percent
@@ -170,10 +170,10 @@ export default function ProductDetail() {
                     }}
                     className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
                       selected
-                        ? "border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                        ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
                         : disabled
                           ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400 line-through dark:border-slate-700 dark:bg-slate-800 dark:text-slate-600"
-                          : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-brand-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
                     }`}
                   >
                     {v.name} — {formatPrice(v.price, currency)}
@@ -222,14 +222,14 @@ export default function ProductDetail() {
                   <div className="flex items-center rounded-lg border border-gray-300 dark:border-slate-600">
                     <button
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="px-3 py-2 text-lg font-bold text-gray-600 hover:text-indigo-600 dark:text-slate-300"
+                      className="px-3 py-2 text-lg font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
                     >
                       −
                     </button>
                     <span className="w-10 text-center font-semibold">{quantity}</span>
                     <button
                       onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
-                      className="px-3 py-2 text-lg font-bold text-gray-600 hover:text-indigo-600 dark:text-slate-300"
+                      className="px-3 py-2 text-lg font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
                     >
                       +
                     </button>

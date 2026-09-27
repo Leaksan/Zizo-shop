@@ -83,7 +83,7 @@ export default function AddressInput({ value, onChange, onPick, required = true 
                 onMouseEnter={() => setHighlight(i)}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
                   i === highlight
-                    ? "bg-indigo-50 dark:bg-slate-700"
+                    ? "bg-brand-50 dark:bg-slate-700"
                     : "hover:bg-gray-50 dark:hover:bg-slate-700"
                 }`}
               >

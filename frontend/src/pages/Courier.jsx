@@ -76,14 +76,14 @@ function CourierAuth({ onLogin }) {
   const tabCls = (active) =>
     `flex-1 rounded-lg py-2 text-sm font-bold transition ${
       active
-        ? "bg-white text-indigo-600 shadow dark:bg-slate-700"
+        ? "bg-white text-brand-600 shadow dark:bg-slate-700"
         : "text-gray-500 dark:text-slate-400"
     }`;
 
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-6 text-center">
-        <span className="animate-gradient mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-indigo-500/30">
+        <span className="animate-gradient mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 via-accent-500 to-accent-500 shadow-lg shadow-brand-500/30">
           <Bike size={32} className="text-white" />
         </span>
         <h1 className="text-2xl font-bold">Espace livreur</h1>
@@ -249,7 +249,7 @@ function CourierDashboard({ courier, onLogout }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 p-6 text-white shadow-xl shadow-indigo-500/20">
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-gradient-to-br from-brand-600 to-accent-600 p-6 text-white shadow-xl shadow-brand-500/20">
         <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20">
           <Bike size={32} />
         </span>
@@ -310,7 +310,7 @@ function CourierDashboard({ courier, onLogout }) {
       {data && inProgressCount > 0 && (
         <section className="card p-5">
           <h2 className="mb-4 flex items-center gap-2 font-bold">
-            <Map size={20} className="text-indigo-600 dark:text-indigo-400" />
+            <Map size={20} className="text-brand-600 dark:text-brand-400" />
             Carte des livraisons en cours
             {myPos && (
               <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300">
@@ -335,14 +335,14 @@ function CourierDashboard({ courier, onLogout }) {
               const active = activeTab === s.id;
               const cls = `card p-4 text-left transition ${
                 isTab ? "hover:-translate-y-0.5 hover:shadow-md" : ""
-              } ${active ? "ring-2 ring-indigo-500 lg:ring-0" : ""}`;
+              } ${active ? "ring-2 ring-brand-500 lg:ring-0" : ""}`;
               const inner = (
                 <>
                   <span
                     className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                       active
-                        ? "bg-indigo-600 text-white"
-                        : "bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400"
+                        ? "bg-brand-600 text-white"
+                        : "bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400"
                     }`}
                   >
                     <s.icon size={20} />
@@ -368,9 +368,9 @@ function CourierDashboard({ courier, onLogout }) {
               className={`card p-4 sm:p-5 ${activeTab === "dispos" ? "block" : "hidden"} lg:block`}
             >
               <h2 className="mb-4 flex items-center gap-2 font-bold">
-                <PackageOpen size={20} className="text-indigo-600 dark:text-indigo-400" />
+                <PackageOpen size={20} className="text-brand-600 dark:text-brand-400" />
                 Courses disponibles
-                <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                   {data.available.length}
                 </span>
               </h2>
@@ -399,9 +399,9 @@ function CourierDashboard({ courier, onLogout }) {
               className={`card p-4 sm:p-5 ${activeTab === "encours" ? "block" : "hidden"} lg:block`}
             >
               <h2 className="mb-4 flex items-center gap-2 font-bold">
-                <Bike size={20} className="text-indigo-600 dark:text-indigo-400" />
+                <Bike size={20} className="text-brand-600 dark:text-brand-400" />
                 Mes livraisons en cours
-                <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                   {data.in_progress.length}
                 </span>
               </h2>
@@ -421,9 +421,9 @@ function CourierDashboard({ courier, onLogout }) {
             className={`card p-4 sm:p-5 ${activeTab === "historique" ? "block" : "hidden"} lg:block`}
           >
             <h2 className="mb-4 flex items-center gap-2 font-bold">
-              <ScrollText size={20} className="text-indigo-600 dark:text-indigo-400" />
+              <ScrollText size={20} className="text-brand-600 dark:text-brand-400" />
               Historique de mes livraisons
-              <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+              <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                 {data.delivered.length}
               </span>
             </h2>
@@ -504,7 +504,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
         encodeURIComponent(`${order.customer_address} ${order.zone}, Libreville, Gabon`);
 
   return (
-    <div className="mb-3 rounded-xl border border-gray-200 p-4 transition hover:border-indigo-400 dark:border-slate-700">
+    <div className="mb-3 rounded-xl border border-gray-200 p-4 transition hover:border-brand-400 dark:border-slate-700">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="font-bold">{order.reference}</span>
         <span
@@ -525,7 +525,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
           <b className="text-gray-800 dark:text-gray-200">{order.customer_name}</b> ·{" "}
           <a
             href={`tel:${order.customer_phone.replace(/\s/g, "")}`}
-            className="font-semibold text-indigo-600 dark:text-indigo-400"
+            className="font-semibold text-brand-600 dark:text-brand-400"
           >
             {order.customer_phone}
           </a>
@@ -540,7 +540,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-indigo-600 dark:text-indigo-400"
+            className="font-semibold text-brand-600 dark:text-brand-400"
           >
             {order.customer_address} ↗
           </a>
@@ -556,7 +556,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
         </span>
       </div>
       {order.note && (
-        <p className="mb-3 rounded-lg border-l-2 border-indigo-500 bg-gray-50 px-3 py-2 text-xs text-gray-500 italic dark:bg-slate-900 dark:text-slate-400">
+        <p className="mb-3 rounded-lg border-l-2 border-brand-500 bg-gray-50 px-3 py-2 text-xs text-gray-500 italic dark:bg-slate-900 dark:text-slate-400">
           📝 « {order.note} »
         </p>
       )}

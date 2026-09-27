@@ -40,7 +40,7 @@ export default function DealOfDay() {
   if (!variant) return null;
 
   return (
-    <section className="relative mb-10 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-pink-600 p-6 text-white shadow-xl shadow-orange-500/20 sm:p-8">
+    <section className="relative mb-10 overflow-hidden rounded-2xl bg-gradient-to-br from-orange-500 to-accent-600 p-6 text-white shadow-xl shadow-orange-500/20 sm:p-8">
       <div className="animate-blob pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full bg-white/15 blur-2xl" />
       <div className="relative grid items-center gap-6 sm:grid-cols-[auto_1fr_auto]">
         <Link

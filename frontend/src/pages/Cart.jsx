@@ -54,7 +54,7 @@ export default function Cart() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold">
-        <ShoppingCart size={24} className="text-indigo-600 dark:text-indigo-400" />
+        <ShoppingCart size={24} className="text-brand-600 dark:text-brand-400" />
         Mon panier
       </h1>
       <div className="flex flex-col gap-4">
@@ -76,7 +76,7 @@ export default function Cart() {
             <div className="col-start-1 row-start-2 flex items-center justify-self-start rounded-lg border border-gray-300 sm:col-auto sm:row-auto dark:border-slate-600">
               <button
                 onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
-                className="px-3 py-1.5 font-bold text-gray-600 hover:text-indigo-600 dark:text-slate-300"
+                className="px-3 py-1.5 font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
               >
                 −
               </button>
@@ -85,7 +85,7 @@ export default function Cart() {
                 onClick={() =>
                   updateQuantity(item.variant_id, Math.min(item.stock, item.quantity + 1))
                 }
-                className="px-3 py-1.5 font-bold text-gray-600 hover:text-indigo-600 dark:text-slate-300"
+                className="px-3 py-1.5 font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
               >
                 +
               </button>

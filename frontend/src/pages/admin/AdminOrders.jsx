@@ -127,7 +127,7 @@ export default function AdminOrders() {
                       <p className="font-semibold text-gray-700 dark:text-slate-300">Client</p>
                       <p className="text-gray-600 dark:text-slate-300">
                         {o.customer_name} ·{" "}
-                        <a href={`tel:${o.customer_phone}`} className="text-indigo-600 dark:text-indigo-400">
+                        <a href={`tel:${o.customer_phone}`} className="text-brand-600 dark:text-brand-400">
                           {o.customer_phone}
                         </a>
                       </p>
@@ -151,7 +151,7 @@ export default function AdminOrders() {
                         </>
                       )}
                       {o.note && (
-                        <p className="mt-1 rounded border-l-2 border-indigo-500 bg-white px-2 py-1 text-xs text-gray-500 italic dark:bg-slate-800 dark:text-slate-400">
+                        <p className="mt-1 rounded border-l-2 border-brand-500 bg-white px-2 py-1 text-xs text-gray-500 italic dark:bg-slate-800 dark:text-slate-400">
                           📝 {o.note}
                         </p>
                       )}

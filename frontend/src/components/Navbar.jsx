@@ -36,12 +36,12 @@ export default function Navbar() {
   const linkCls = ({ isActive }) =>
     `hidden rounded-lg px-3 py-2 text-sm font-medium transition sm:flex sm:items-center sm:gap-1.5 ${
       isActive
-        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-        : "text-gray-600 hover:bg-gray-100 hover:text-indigo-600 dark:text-slate-300 dark:hover:bg-slate-800"
+        ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
+        : "text-gray-600 hover:bg-gray-100 hover:text-brand-600 dark:text-slate-300 dark:hover:bg-slate-800"
     }`;
 
   const iconBtnCls =
-    "relative rounded-xl p-3 text-gray-500 transition hover:bg-gray-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800";
+    "relative rounded-xl p-3 text-gray-500 transition hover:bg-gray-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800";
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80">
@@ -74,7 +74,7 @@ export default function Navbar() {
           <Link to="/cart" title="Mon panier" aria-label="Mon panier" className={iconBtnCls}>
             <ShoppingCart size={20} />
             {count > 0 && (
-              <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">
+              <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
                 {count}
               </span>
             )}
@@ -120,7 +120,7 @@ export default function Navbar() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition ${
                         isActive
-                          ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                          ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
                           : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
                       }`
                     }

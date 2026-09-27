@@ -76,7 +76,7 @@ export default function AdminProducts() {
                           {p.name}
                         </p>
                         {p.badge && (
-                          <span className="text-xs font-semibold text-indigo-500">{p.badge}</span>
+                          <span className="text-xs font-semibold text-brand-500">{p.badge}</span>
                         )}
                       </div>
                     </div>

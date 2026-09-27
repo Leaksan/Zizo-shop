@@ -27,7 +27,7 @@ export default function ShareButtons({ product }) {
   };
 
   const btnCls =
-    "flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:border-indigo-400 hover:text-indigo-600 dark:border-slate-600 dark:text-slate-300";
+    "flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:border-brand-400 hover:text-brand-600 dark:border-slate-600 dark:text-slate-300";
 
   return (
     <div className="flex flex-wrap items-center gap-2">

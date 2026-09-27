@@ -273,7 +273,7 @@ export default function AdminProductForm() {
                 type="checkbox"
                 checked={form.active}
                 onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                className="h-4 w-4 accent-indigo-600"
+                className="h-4 w-4 accent-brand-600"
               />
               Produit visible dans la boutique
             </label>

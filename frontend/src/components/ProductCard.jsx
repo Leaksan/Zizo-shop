@@ -45,7 +45,7 @@ export default function ProductCard({ product }) {
                   ? "bg-orange-500"
                   : product.badge === "Promo"
                     ? "bg-red-600"
-                    : "bg-indigo-600"
+                    : "bg-brand-600"
               }`}
             >
               {product.clearance && <Flame size={12} className="fill-white" />}
@@ -60,11 +60,11 @@ export default function ProductCard({ product }) {
         </div>
         <div className="flex flex-1 flex-col gap-1 p-4">
           {product.category && (
-            <span className="text-xs font-medium tracking-wide text-indigo-500 uppercase">
+            <span className="text-xs font-medium tracking-wide text-brand-500 uppercase">
               {product.category}
             </span>
           )}
-          <h3 className="font-semibold text-gray-900 transition group-hover:text-indigo-600 dark:text-gray-100">
+          <h3 className="font-semibold text-gray-900 transition group-hover:text-brand-600 dark:text-gray-100">
             {product.name}
           </h3>
           {(product.real_reviews_count > 0 || product.rating > 0) && (

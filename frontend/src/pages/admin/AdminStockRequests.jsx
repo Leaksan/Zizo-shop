@@ -65,7 +65,7 @@ export default function AdminStockRequests() {
                   Stock actuel : {r.current_stock} · dernière demande {formatDate(r.last_at)}
                 </p>
                 {r.phones.length > 0 && (
-                  <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">
+                  <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">
                     📞 {r.phones.join(" · ")}
                   </p>
                 )}

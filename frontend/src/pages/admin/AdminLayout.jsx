@@ -68,7 +68,7 @@ export default function AdminLayout() {
             className={({ isActive }) =>
               `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
                 isActive
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+                  ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
                   : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
               }`
             }
@@ -102,7 +102,7 @@ export default function AdminLayout() {
     <div className="flex min-h-screen flex-col bg-gray-100 lg:flex-row dark:bg-slate-900">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden dark:border-slate-700 dark:bg-slate-800">
         <div>
-          <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">{shopName}</p>
+          <p className="text-base font-bold text-brand-600 dark:text-brand-400">{shopName}</p>
           <p className="text-xs muted">Administration</p>
         </div>
         <button
@@ -123,7 +123,7 @@ export default function AdminLayout() {
           <aside className="absolute top-0 left-0 flex h-full w-72 flex-col bg-white shadow-2xl dark:bg-slate-800">
             <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700">
               <div>
-                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{shopName}</p>
+                <p className="text-lg font-bold text-brand-600 dark:text-brand-400">{shopName}</p>
                 <p className="text-xs muted">Administration</p>
               </div>
               <button
@@ -141,7 +141,7 @@ export default function AdminLayout() {
 
       <aside className="hidden w-60 shrink-0 flex-col border-r border-gray-200 bg-white lg:flex dark:border-slate-700 dark:bg-slate-800">
         <div className="border-b border-gray-200 p-5 dark:border-slate-700">
-          <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{shopName}</p>
+          <p className="text-lg font-bold text-brand-600 dark:text-brand-400">{shopName}</p>
           <p className="text-xs muted">Administration</p>
         </div>
         {navContent}

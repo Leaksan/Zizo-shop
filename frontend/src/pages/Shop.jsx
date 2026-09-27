@@ -135,14 +135,14 @@ export default function Shop() {
   const toggleCls = (active) =>
     `flex cursor-pointer items-center gap-2.5 rounded-xl border-2 px-4 py-3 text-sm font-medium transition ${
       active
-        ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-600 dark:bg-indigo-950 dark:text-indigo-300"
+        ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-600 dark:bg-brand-950 dark:text-brand-300"
         : "border-gray-200 text-gray-600 hover:border-gray-300 dark:border-slate-600 dark:text-slate-300"
     }`;
 
   const catCls = (active) =>
     `rounded-full px-4 py-1.5 text-sm font-medium transition ${
       active
-        ? "bg-indigo-600 text-white"
+        ? "bg-brand-600 text-white"
         : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-700"
     }`;
 
@@ -166,7 +166,7 @@ export default function Shop() {
             aria-expanded={filtersOpen}
             className={`relative flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
               filtersOpen || activeFilterCount > 0
-                ? "bg-indigo-600 text-white"
+                ? "bg-brand-600 text-white"
                 : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600"
             }`}
           >
@@ -261,7 +261,7 @@ export default function Shop() {
                   <span
                     className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition ${
                       filters.inStock
-                        ? "border-indigo-600 bg-indigo-600 text-white"
+                        ? "border-brand-600 bg-brand-600 text-white"
                         : "border-gray-300 dark:border-slate-500"
                     }`}
                   >
@@ -279,7 +279,7 @@ export default function Shop() {
                   <span
                     className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition ${
                       filters.promoOnly
-                        ? "border-indigo-600 bg-indigo-600 text-white"
+                        ? "border-brand-600 bg-brand-600 text-white"
                         : "border-gray-300 dark:border-slate-500"
                     }`}
                   >
@@ -327,10 +327,10 @@ export default function Shop() {
           <button
             key={chip.key}
             onClick={chip.clear}
-            className="flex items-center gap-1.5 rounded-full bg-indigo-50 py-1.5 pr-2 pl-3.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900"
+            className="flex items-center gap-1.5 rounded-full bg-brand-50 py-1.5 pr-2 pl-3.5 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300 dark:hover:bg-brand-900"
           >
             {chip.label}
-            <X size={14} className="rounded-full bg-indigo-600/15 p-0.5" />
+            <X size={14} className="rounded-full bg-brand-600/15 p-0.5" />
           </button>
         ))}
         {activeChips.length > 1 && (

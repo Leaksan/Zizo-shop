@@ -19,7 +19,7 @@ export default function ReviewsSection({ productId }) {
   return (
     <section className="mt-10">
       <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
-        <MessageSquare size={20} className="text-indigo-600 dark:text-indigo-400" />
+        <MessageSquare size={20} className="text-brand-600 dark:text-brand-400" />
         Avis clients {reviews.length > 0 && `(${reviews.length})`}
       </h2>
       {reviews.length === 0 ? (

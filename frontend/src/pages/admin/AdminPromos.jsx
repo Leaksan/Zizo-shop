@@ -161,7 +161,7 @@ export default function AdminPromos() {
             type="checkbox"
             checked={form.once_per_customer}
             onChange={(e) => setForm({ ...form, once_per_customer: e.target.checked })}
-            className="accent-indigo-600"
+            className="accent-brand-600"
           />
           Une seule utilisation par client (même numéro de téléphone)
         </label>
@@ -196,7 +196,7 @@ export default function AdminPromos() {
               key={p.id}
               className="flex flex-wrap items-center gap-3 border-b border-gray-100 p-4 last:border-0 dark:border-slate-700"
             >
-              <span className="rounded-lg bg-indigo-50 px-3 py-1 font-mono text-sm font-bold text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+              <span className="rounded-lg bg-brand-50 px-3 py-1 font-mono text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                 {p.code}
               </span>
               <span className="text-sm">

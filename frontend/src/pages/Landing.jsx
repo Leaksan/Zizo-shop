@@ -81,7 +81,7 @@ export default function Landing() {
             <h2 className="text-2xl font-bold">Les plus populaires</h2>
             <Link
               to="/boutique"
-              className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+              className="flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
             >
               <Store size={16} />
               Toute la boutique <ArrowRight size={15} />

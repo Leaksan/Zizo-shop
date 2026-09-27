@@ -85,7 +85,7 @@ export default function Checkout() {
     return (
       <div className="py-16 text-center">
         <p className="text-lg text-gray-600 dark:text-slate-300">Votre panier est vide.</p>
-        <Link to="/boutique" className="mt-4 inline-block text-indigo-600 hover:underline">
+        <Link to="/boutique" className="mt-4 inline-block text-brand-600 hover:underline">
           ← Retour à la boutique
         </Link>
       </div>
@@ -165,7 +165,7 @@ export default function Checkout() {
     <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
       <div>
         <h1 className="mb-1 flex items-center gap-2 text-2xl font-bold">
-          <Package size={24} className="text-indigo-600 dark:text-indigo-400" />
+          <Package size={24} className="text-brand-600 dark:text-brand-400" />
           Finaliser ma commande
         </h1>
         <p className="mb-2 text-sm muted">Remplissez vos informations de livraison.</p>
@@ -213,7 +213,7 @@ export default function Checkout() {
                   key={m.value}
                   className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-3 transition ${
                     deliveryMethod === m.value
-                      ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-950"
+                      ? "border-brand-600 bg-brand-50 dark:bg-brand-950"
                       : "border-gray-200 dark:border-slate-600"
                   }`}
                 >
@@ -223,11 +223,11 @@ export default function Checkout() {
                     value={m.value}
                     checked={deliveryMethod === m.value}
                     onChange={() => setDeliveryMethod(m.value)}
-                    className="accent-indigo-600"
+                    className="accent-brand-600"
                   />
                   <m.icon
                     size={20}
-                    className={deliveryMethod === m.value ? "text-indigo-600" : "text-gray-400"}
+                    className={deliveryMethod === m.value ? "text-brand-600" : "text-gray-400"}
                   />
                   <span>
                     <span className="block text-sm font-semibold">{m.label}</span>
@@ -358,7 +358,7 @@ export default function Checkout() {
                   key={p.value}
                   className={`flex cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-3 text-sm font-semibold transition ${
                     form.payment_method === p.value
-                      ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-950"
+                      ? "border-brand-600 bg-brand-50 dark:bg-brand-950"
                       : "border-gray-200 dark:border-slate-600"
                   }`}
                 >
@@ -368,7 +368,7 @@ export default function Checkout() {
                     value={p.value}
                     checked={form.payment_method === p.value}
                     onChange={set("payment_method")}
-                    className="accent-indigo-600"
+                    className="accent-brand-600"
                   />
                   {p.label}
                 </label>

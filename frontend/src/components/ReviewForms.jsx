@@ -27,7 +27,7 @@ export function CourierRatingForm({ order, onDone }) {
     return (
       <div className="card mt-6 p-5">
         <h3 className="mb-2 flex items-center gap-2 font-bold">
-          <Bike size={18} className="text-indigo-600 dark:text-indigo-400" />
+          <Bike size={18} className="text-brand-600 dark:text-brand-400" />
           Votre note pour {order.courier?.name || "le livreur"}
         </h3>
         <Rating value={order.courier_rating} />
@@ -53,7 +53,7 @@ export function CourierRatingForm({ order, onDone }) {
   return (
     <form onSubmit={submit} className="card mt-6 p-5">
       <h3 className="mb-1 flex items-center gap-2 font-bold">
-        <Bike size={18} className="text-indigo-600 dark:text-indigo-400" />
+        <Bike size={18} className="text-brand-600 dark:text-brand-400" />
         Notez votre livreur {order.courier?.name && `(${order.courier.name})`}
       </h3>
       <p className="mb-3 text-sm muted">Bon service ou problème ? Votre avis compte.</p>

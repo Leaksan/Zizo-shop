@@ -25,7 +25,7 @@ export default function OrderConfirmation() {
       <p className="mt-2 text-gray-600 dark:text-slate-300">
         Merci pour votre commande. Conservez votre numéro de suivi :
       </p>
-      <p className="animate-pop mx-auto mt-4 w-fit rounded-xl bg-indigo-50 px-6 py-3 text-xl font-bold tracking-widest text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+      <p className="animate-pop mx-auto mt-4 w-fit rounded-xl bg-brand-50 px-6 py-3 text-xl font-bold tracking-widest text-brand-700 dark:bg-brand-950 dark:text-brand-300">
         {reference}
       </p>
       {isPickup ? (

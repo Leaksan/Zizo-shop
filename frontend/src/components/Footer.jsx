@@ -13,7 +13,7 @@ export default function Footer() {
     <footer className="mt-12 border-t border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 text-sm font-semibold text-gray-600 transition hover:text-indigo-600 dark:text-slate-300"
+        className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 text-sm font-semibold text-gray-600 transition hover:text-brand-600 dark:text-slate-300"
         aria-expanded={open}
       >
         <span className="flex items-center gap-2">
@@ -41,7 +41,7 @@ export default function Footer() {
               <h4 className="mb-3 text-sm font-bold">Boutique</h4>
               <ul className="space-y-1 text-sm text-gray-500 dark:text-slate-400">
                 <li>
-                  <Link to="/boutique" className="transition hover:text-indigo-600">
+                  <Link to="/boutique" className="transition hover:text-brand-600">
                     Tous les produits
                   </Link>
                 </li>
@@ -51,7 +51,7 @@ export default function Footer() {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/favoris" className="transition hover:text-indigo-600">
+                  <Link to="/favoris" className="transition hover:text-brand-600">
                     Mes favoris
                   </Link>
                 </li>
@@ -62,13 +62,13 @@ export default function Footer() {
               <ul className="space-y-1 text-sm text-gray-500 dark:text-slate-400">
                 <li className="flex items-center gap-1.5">
                   <Package size={14} />
-                  <Link to="/suivi" className="transition hover:text-indigo-600">
+                  <Link to="/suivi" className="transition hover:text-brand-600">
                     Suivre ma commande
                   </Link>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Truck size={14} />
-                  <Link to="/livreur" className="transition hover:text-indigo-600">
+                  <Link to="/livreur" className="transition hover:text-brand-600">
                     Devenir livreur
                   </Link>
                 </li>

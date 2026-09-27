@@ -88,7 +88,7 @@ export default function AdminCouriers() {
                   <td className="p-4">
                     <p className="font-semibold">{c.name}</p>
                     <p className="text-xs muted">
-                      <a href={`tel:${c.phone}`} className="text-indigo-600 dark:text-indigo-400">
+                      <a href={`tel:${c.phone}`} className="text-brand-600 dark:text-brand-400">
                         {c.phone}
                       </a>
                       {" · "}

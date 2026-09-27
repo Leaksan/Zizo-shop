@@ -104,7 +104,7 @@ export default function TrackOrder() {
     <div className="mx-auto max-w-2xl">
       <div className="mb-8 text-center">
         <h1 className="flex items-center justify-center gap-2 text-2xl font-bold">
-          <Package size={24} className="text-indigo-600 dark:text-indigo-400" />
+          <Package size={24} className="text-brand-600 dark:text-brand-400" />
           Suivre ma commande
         </h1>
         <p className="mt-1 text-sm muted">
@@ -201,8 +201,8 @@ function OrderTracking({ order, currency, onRefresh }) {
       )}
 
       {!isPickup && order.status !== "delivered" && order.status !== "cancelled" && order.delivery_code && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 dark:border-indigo-800 dark:bg-indigo-950/50">
-          <KeyRound size={24} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+        <div className="mb-6 flex items-center gap-3 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-950/50">
+          <KeyRound size={24} className="shrink-0 text-brand-600 dark:text-brand-400" />
           <div>
             <p className="font-bold">Code de livraison : <span className="text-xl tracking-[0.3em]">{order.delivery_code}</span></p>
             <p className="text-xs muted">Communiquez ce code au livreur uniquement à la réception de votre colis. C'est lui qui confirme la livraison.</p>
@@ -250,9 +250,9 @@ function OrderTracking({ order, currency, onRefresh }) {
       )}
 
       {order.courier && (
-        <div className="mb-6 flex items-center gap-4 rounded-xl bg-indigo-50 p-4 dark:bg-indigo-950">
+        <div className="mb-6 flex items-center gap-4 rounded-xl bg-brand-50 p-4 dark:bg-brand-950">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-slate-800">
-            <Bike size={24} className="text-indigo-600 dark:text-indigo-400" />
+            <Bike size={24} className="text-brand-600 dark:text-brand-400" />
           </span>
           <div>
             <p className="font-bold">{order.courier.name}</p>
@@ -283,7 +283,7 @@ function OrderTracking({ order, currency, onRefresh }) {
                     href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-indigo-600 hover:underline dark:text-indigo-400"
+                    className="text-brand-600 hover:underline dark:text-brand-400"
                   >
                     {order.customer_address} ↗
                   </a>
@@ -325,7 +325,7 @@ function OrderTracking({ order, currency, onRefresh }) {
       {order.status === "delivered" && (
         <div className="mt-6 border-t border-gray-200 pt-5 dark:border-slate-700">
           <h3 className="mb-3 flex items-center gap-2 font-bold">
-            <MessageSquarePlus size={18} className="text-indigo-600 dark:text-indigo-400" />
+            <MessageSquarePlus size={18} className="text-brand-600 dark:text-brand-400" />
             Votre avis compte
           </h3>
           {!isPickup && order.courier && (

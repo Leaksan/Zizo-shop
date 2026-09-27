@@ -64,7 +64,7 @@ export default function AdminDashboard() {
       <div className="card overflow-x-auto">
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700">
           <h2 className="font-semibold">Commandes récentes</h2>
-          <Link to="/admin/orders" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">
+          <Link to="/admin/orders" className="text-sm text-brand-600 hover:underline dark:text-brand-400">
             Tout voir →
           </Link>
         </div>
