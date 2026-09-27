@@ -47,7 +47,7 @@ export default function DealOfDay() {
           to={`/products/${deal.id}`}
           className="mx-auto h-32 w-32 shrink-0 overflow-hidden rounded-2xl shadow-lg transition hover:scale-105"
         >
-          <ProductVisual product={deal} size="text-5xl" />
+          <ProductVisual product={deal} size="text-5xl" width={320} />
         </Link>
         <div className="text-center sm:text-left">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur">

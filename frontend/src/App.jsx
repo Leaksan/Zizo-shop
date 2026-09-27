@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -7,28 +8,36 @@ import Landing from "./pages/Landing";
 import Shop from "./pages/Shop";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Favorites from "./pages/Favorites";
-import Liquidation from "./pages/Liquidation";
-import OrderConfirmation from "./pages/OrderConfirmation";
-import TrackOrder from "./pages/TrackOrder";
-import Courier from "./pages/Courier";
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminProducts from "./pages/admin/AdminProducts";
-import AdminProductForm from "./pages/admin/AdminProductForm";
-import AdminOrders from "./pages/admin/AdminOrders";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminPromos from "./pages/admin/AdminPromos";
-import AdminCouriers from "./pages/admin/AdminCouriers";
-import AdminStockRequests from "./pages/admin/AdminStockRequests";
-import AdminSettings from "./pages/admin/AdminSettings";
+
+// Pages chargées à la demande : l'admin, l'espace livreur et les cartes (Leaflet)
+// ne sont plus téléchargés par les clients qui visitent seulement la boutique.
+const Checkout = lazy(() => import("./pages/Checkout"));
+const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
+const TrackOrder = lazy(() => import("./pages/TrackOrder"));
+const Courier = lazy(() => import("./pages/Courier"));
+const Liquidation = lazy(() => import("./pages/Liquidation"));
+const Favorites = lazy(() => import("./pages/Favorites"));
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
+const AdminProductForm = lazy(() => import("./pages/admin/AdminProductForm"));
+const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminPromos = lazy(() => import("./pages/admin/AdminPromos"));
+const AdminCouriers = lazy(() => import("./pages/admin/AdminCouriers"));
+const AdminStockRequests = lazy(() => import("./pages/admin/AdminStockRequests"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+
+function PageLoader() {
+  return <p className="py-16 text-center muted">Chargement…</p>;
+}
 
 export default function App() {
   return (
     <div className="min-h-screen overflow-x-clip bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-gray-100">
       <ScrollToTop />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
@@ -50,6 +59,7 @@ export default function App() {
             <div className="flex min-h-screen flex-col">
               <Navbar />
               <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+                <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/boutique" element={<Shop />} />
@@ -62,6 +72,7 @@ export default function App() {
                   <Route path="/suivi" element={<TrackOrder />} />
                   <Route path="/livreur" element={<Courier />} />
                 </Routes>
+                </Suspense>
               </main>
               <Footer />
               <FloatingWhatsApp />
@@ -69,6 +80,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Suspense>
     </div>
   );
 }

@@ -64,7 +64,7 @@ export default function Cart() {
             className="card grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-3 p-4 sm:flex sm:gap-4"
           >
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
-              <ProductVisual product={item} size="text-3xl" />
+              <ProductVisual product={item} size="text-3xl" width={160} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{item.product_name}</p>

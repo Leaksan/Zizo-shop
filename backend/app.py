@@ -1,5 +1,7 @@
 import hmac
+import html
 import os
+import re
 import random
 import string
 import threading
@@ -11,9 +13,11 @@ from urllib.request import Request, urlopen
 import json as _json_std
 
 from flask import Flask, jsonify, request, send_from_directory, session
+from flask_compress import Compress
 from flask_cors import CORS
 from PIL import Image
 from sqlalchemy import update as sa_update
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import (
     Category,
@@ -97,6 +101,8 @@ def notify_whatsapp_order(order):
 
 def create_app():
     app = Flask(__name__)
+    # Derrière le proxy HTTPS de Render : URL publiques correctes (https://…)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     basedir = os.path.abspath(os.path.dirname(__file__))
     # SHOP_DB / UPLOAD_DIR permettent de placer les données sur un disque
     # persistant (ex: Render) au lieu de l'image éphémère du conteneur.
@@ -124,6 +130,27 @@ def create_app():
     app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE") == "1"
 
     db.init_app(app)
+    # Réponses compressées (JS, CSS, JSON…) : ~3x moins de données mobiles
+    app.config["COMPRESS_MIMETYPES"] = [
+        "text/html",
+        "text/css",
+        "text/javascript",
+        "application/javascript",
+        "application/json",
+        "application/manifest+json",
+        "image/svg+xml",
+    ]
+    Compress(app)
+
+    @app.after_request
+    def cache_headers(response):
+        path = request.path
+        if path.startswith("/assets/") or path.startswith("/uploads/"):
+            # Noms de fichiers uniques (hash Vite / uuid) : jamais modifiés
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif path == "/sw.js":
+            response.headers["Cache-Control"] = "no-cache"
+        return response
 
     def admin_required(f):
         @wraps(f)
@@ -782,6 +809,32 @@ def create_app():
     def serve_upload(filename):
         return send_from_directory(upload_dir, filename)
 
+    THUMB_WIDTHS = {160, 320, 640}
+
+    @app.get("/uploads/thumb/<int:width>/<filename>")
+    def serve_thumb(width, filename):
+        """Miniature WebP d'une image envoyée, créée à la première demande puis gardée."""
+        if width not in THUMB_WIDTHS or filename.startswith("."):
+            return jsonify({"error": "Taille non disponible"}), 404
+        source = os.path.join(upload_dir, filename)
+        if not os.path.isfile(source):
+            return jsonify({"error": "Image introuvable"}), 404
+        thumb_dir = os.path.join(upload_dir, "thumbs", str(width))
+        thumb_name = filename.rsplit(".", 1)[0] + ".webp"
+        thumb_path = os.path.join(thumb_dir, thumb_name)
+        if not os.path.isfile(thumb_path):
+            try:
+                os.makedirs(thumb_dir, exist_ok=True)
+                with Image.open(source) as img:
+                    img = img.convert("RGB")
+                    img.thumbnail((width, width * 2), Image.LANCZOS)
+                    tmp = f"{thumb_path}.{uuid.uuid4().hex}.tmp"
+                    img.save(tmp, "WEBP", quality=78, method=4)
+                    os.replace(tmp, thumb_path)
+            except Exception:
+                return send_from_directory(upload_dir, filename)
+        return send_from_directory(thumb_dir, thumb_name, mimetype="image/webp")
+
     @app.post("/api/admin/upload")
     @admin_required
     def admin_upload():
@@ -1377,12 +1430,63 @@ def create_app():
     frontend_dir = os.environ.get("FRONTEND_DIR")
     if frontend_dir and os.path.isdir(frontend_dir):
 
+        index_path = os.path.join(frontend_dir, "index.html")
+
+        def page_meta(path):
+            """Titre / description / image de la page, pour les aperçus de liens
+            (WhatsApp, Facebook…) : ces robots ne lisent pas le JavaScript."""
+            shop = get_setting("shop_name") or "Boutique"
+            meta = {
+                "title": f"{shop} — Livraison à Libreville",
+                "description": "Commandez en ligne et faites-vous livrer à Libreville. "
+                "Paiement à la livraison, suivi du livreur en temps réel.",
+                "image": request.url_root.rstrip("/") + "/icons/icon-512.png",
+                "type": "website",
+            }
+            match = re.fullmatch(r"products/(\d+)", path)
+            product = db.session.get(Product, int(match.group(1))) if match else None
+            if product and product.active:
+                prices = [v.price for v in product.variants] or [0]
+                price = _fmt_money(min(prices))
+                if max(prices) != min(prices):
+                    price = "dès " + price
+                meta["title"] = f"{product.name} — {price} | {shop}"
+                desc = (product.description or "").strip()
+                meta["description"] = (desc[:180] + "…") if len(desc) > 180 else desc or meta["description"]
+                if product.image_url:
+                    meta["image"] = (
+                        product.image_url
+                        if product.image_url.startswith("http")
+                        else request.url_root.rstrip("/") + product.image_url
+                    )
+                meta["type"] = "product"
+            return meta
+
+        def render_index(path):
+            with open(index_path, encoding="utf-8") as f:
+                page = f.read()
+            m = {k: html.escape(v, quote=True) for k, v in page_meta(path).items()}
+            tags = (
+                f'<meta name="description" content="{m["description"]}" />\n'
+                f'    <meta property="og:type" content="{m["type"]}" />\n'
+                f'    <meta property="og:title" content="{m["title"]}" />\n'
+                f'    <meta property="og:description" content="{m["description"]}" />\n'
+                f'    <meta property="og:image" content="{m["image"]}" />\n'
+                f'    <meta property="og:url" content="{html.escape(request.base_url, quote=True)}" />\n'
+                f'    <meta name="twitter:card" content="summary_large_image" />\n'
+            )
+            page = re.sub(r"<title>.*?</title>", f"<title>{m['title']}</title>", page, count=1)
+            page = page.replace("</head>", f"    {tags}  </head>", 1)
+            return page, 200, {"Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"}
+
         @app.route("/")
         @app.route("/<path:path>")
         def serve_frontend(path=""):
+            if path.startswith("api/"):
+                return jsonify({"error": "Introuvable"}), 404
             if path and os.path.isfile(os.path.join(frontend_dir, path)):
                 return send_from_directory(frontend_dir, path)
-            return send_from_directory(frontend_dir, "index.html")
+            return render_index(path)
 
     with app.app_context():
         db.create_all()

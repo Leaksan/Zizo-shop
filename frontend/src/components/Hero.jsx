@@ -88,7 +88,7 @@ export default function Hero({ products }) {
                 style={{ animationDelay: `${i * 1.4}s` }}
               >
                 <span className="h-12 w-12 overflow-hidden rounded-xl">
-                  <ProductVisual product={p} size="text-2xl" />
+                  <ProductVisual product={p} size="text-2xl" width={160} />
                 </span>
                 <span>
                   <b className="block max-w-[130px] truncate text-sm text-gray-900 dark:text-white">

@@ -35,6 +35,7 @@ export default function ProductCard({ product }) {
           <ProductVisual
             product={product}
             size="text-6xl"
+            width={320}
             className="transition duration-500 group-hover:scale-110"
           />
           {badgeLabel && (
