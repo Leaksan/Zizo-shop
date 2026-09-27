@@ -110,6 +110,7 @@ export default function Footer() {
       <div className="border-t border-gray-200 py-4 text-center text-xs text-gray-400 dark:border-slate-700 dark:text-slate-500">
         © {new Date().getFullYear()} {shopName} — Fait avec{" "}
         <Heart size={11} className="inline fill-red-500 text-red-500" /> à Libreville.
+        <span className="mt-1 block opacity-70">Version du {__BUILD_TIME__}</span>
       </div>
     </footer>
   );
