@@ -31,7 +31,9 @@ cd whatsapp-bridge; npm install; cd ..
 .\start.ps1   # backend :5000, frontend :5173, pont WhatsApp :3100
 ```
 
-Admin : `/admin` (mot de passe démo `admin123`). Livreur démo : `0698765432` / `livre123`.
+Admin : `/admin` (mot de passe démo `admin123` sur une base neuve ; il est stocké dans la base,
+réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend\reset_admin_password.py`
+(en prod : Render > Shell, `python reset_admin_password.py`). Livreur démo : `0698765432` / `livre123`.
 
 ## Vérifications avant de pousser
 
