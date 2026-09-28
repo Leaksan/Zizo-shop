@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Banknote, Bike, CheckCircle2, ChevronDown, Package, Store } from "lucide-react";
+import { ArrowLeft, Banknote, Bike, CheckCircle2, ChevronDown, MapPin, Package, Store } from "lucide-react";
 import { api } from "../api";
 import { formatPrice } from "../format";
 import { computeTotals, feeForZone } from "../cartMath";
@@ -88,8 +88,9 @@ export default function Checkout() {
     return (
       <div className="py-16 text-center">
         <p className="text-lg text-gray-600 dark:text-slate-300">Votre panier est vide.</p>
-        <Link to="/boutique" className="mt-4 inline-block text-brand-600 hover:underline">
-          ← Retour à la boutique
+        <Link to="/boutique" className="mt-4 inline-flex items-center gap-1.5 text-brand-600 hover:underline">
+          <ArrowLeft size={16} />
+          Retour à la boutique
         </Link>
       </div>
     );
@@ -230,7 +231,10 @@ export default function Checkout() {
                 <Store size={16} />
                 Retrait gratuit en boutique
               </p>
-              <p className="mt-1">📍 {pickupAddress}</p>
+              <p className="mt-1 flex items-start gap-1.5">
+                <MapPin size={15} className="mt-0.5 shrink-0" />
+                {pickupAddress}
+              </p>
               <p className="mt-1 text-xs opacity-80">
                 Vous recevrez votre numéro de commande — présentez-le lors du retrait.
               </p>
@@ -288,8 +292,9 @@ export default function Checkout() {
                     </label>
                   </div>
                   {position && (
-                    <p className="mt-1 text-xs text-green-600">
-                      📍 Position enregistrée : {position[0].toFixed(5)}, {position[1].toFixed(5)}
+                    <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                      <MapPin size={13} />
+                      Position enregistrée : {position[0].toFixed(5)}, {position[1].toFixed(5)}
                     </p>
                   )}
                 </details>
@@ -335,8 +340,7 @@ export default function Checkout() {
               {[
                 {
                   value: "livraison",
-                  label:
-                    deliveryMethod === "pickup" ? "💵 Au retrait en boutique" : "💵 À la livraison",
+                  label: deliveryMethod === "pickup" ? "Au retrait en boutique" : "À la livraison",
                 },
                 // Pas encore de paiement en ligne branché : pas d'option carte.
               ].map((p) => (
@@ -356,6 +360,7 @@ export default function Checkout() {
                     onChange={set("payment_method")}
                     className="accent-brand-600"
                   />
+                  <Banknote size={17} className="text-brand-600 dark:text-brand-400" />
                   {p.label}
                 </label>
               ))}
@@ -373,7 +378,7 @@ export default function Checkout() {
         </form>
         {shopPhone && (
           <a
-            href={whatsappUrl(shopPhone, "Bonjour, j'ai besoin d'aide pour ma commande 🛒")}
+            href={whatsappUrl(shopPhone, "Bonjour, j'ai besoin d'aide pour ma commande.")}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-5 flex items-center justify-center gap-2 text-sm font-semibold text-green-700 hover:underline dark:text-green-400"
@@ -426,7 +431,7 @@ export default function Checkout() {
           <div className="flex justify-between muted">
             <span>Livraison</span>
             <span>
-              {totals.deliveryFee === 0 ? "Offerte 🎁" : formatPrice(totals.deliveryFee, currency)}
+              {totals.deliveryFee === 0 ? "Offerte" : formatPrice(totals.deliveryFee, currency)}
             </span>
           </div>
           <div className="flex justify-between border-t border-dashed border-gray-300 pt-2 text-base font-bold dark:border-slate-600">

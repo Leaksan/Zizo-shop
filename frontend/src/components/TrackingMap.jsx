@@ -1,20 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+import { Bike } from "lucide-react";
 import { LIBREVILLE_CENTER } from "../libreville";
+import { courierIcon, destinationIcon, ROUTE_COLOR } from "../mapIcons";
 import { fetchRoute } from "../routing";
-
-L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
-
-const courierIcon = L.divIcon({
-  className: "",
-  html: '<div style="width:36px;height:36px;border-radius:50%;background:#16a34a;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:17px">🛵</div>',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-});
 
 export default function TrackingMap({ courierPos, destPos }) {
   const containerRef = useRef(null);
@@ -43,9 +33,9 @@ export default function TrackingMap({ courierPos, destPos }) {
     const map = mapRef.current;
     if (!map) return;
     if (destPos && !destMarkerRef.current) {
-      destMarkerRef.current = L.marker(destPos)
+      destMarkerRef.current = L.marker(destPos, { icon: destinationIcon() })
         .addTo(map)
-        .bindTooltip("📍 Adresse de livraison")
+        .bindTooltip("Adresse de livraison")
         .openTooltip();
     }
   }, [destPos]);
@@ -57,9 +47,9 @@ export default function TrackingMap({ courierPos, destPos }) {
     if (courierPos) {
       if (courierMarkerRef.current) courierMarkerRef.current.setLatLng(courierPos);
       else {
-        courierMarkerRef.current = L.marker(courierPos, { icon: courierIcon })
+        courierMarkerRef.current = L.marker(courierPos, { icon: courierIcon() })
           .addTo(map)
-          .bindTooltip("🛵 Votre livreur");
+          .bindTooltip("Votre livreur");
       }
     }
 
@@ -72,7 +62,7 @@ export default function TrackingMap({ courierPos, destPos }) {
       routeLayerRef.current.clearLayers();
       fetchRoute(courierPos, destPos).then((route) => {
         if (route && routeLayerRef.current) {
-          L.polyline(route.points, { color: "#16a34a", weight: 5, opacity: 0.75 }).addTo(
+          L.polyline(route.points, { color: ROUTE_COLOR, weight: 5, opacity: 0.75 }).addTo(
             routeLayerRef.current
           );
           setRouteInfo(route);
@@ -88,8 +78,9 @@ export default function TrackingMap({ courierPos, destPos }) {
         className="z-0 h-72 w-full overflow-hidden rounded-xl border border-gray-300 dark:border-slate-600"
       />
       {routeInfo && (
-        <div className="absolute bottom-3 left-3 z-10 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold shadow dark:bg-slate-800/95">
-          🛵 Le livreur est à {routeInfo.distanceKm} km · ~{routeInfo.durationMin} min
+        <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-2 text-xs font-semibold shadow dark:bg-slate-800/95">
+          <Bike size={14} className="text-brand-600 dark:text-brand-400" />
+          Le livreur est à {routeInfo.distanceKm} km · ~{routeInfo.durationMin} min
         </div>
       )}
     </div>

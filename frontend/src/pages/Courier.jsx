@@ -4,6 +4,9 @@ import {
   Bike,
   CheckCircle2,
   Clock,
+  Compass,
+  ExternalLink,
+  Gift,
   Inbox,
   KeyRound,
   LogOut,
@@ -17,6 +20,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Star,
+  StickyNote,
+  TriangleAlert,
   User,
 } from "lucide-react";
 import { api } from "../api";
@@ -254,7 +259,7 @@ function CourierDashboard({ courier, onLogout }) {
           <Bike size={32} />
         </span>
         <div>
-          <h1 className="text-xl font-bold">Bonjour, {me.name} 👋</h1>
+          <h1 className="text-xl font-bold">Bonjour, {me.name}</h1>
           <p className="text-sm opacity-85">
             {me.vehicle} · Zone {me.zone} · {me.phone}
           </p>
@@ -276,7 +281,8 @@ function CourierDashboard({ courier, onLogout }) {
             )}
             {data?.bonus_total > 0 && (
               <span className="flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 font-bold">
-                🎁 Prime : {formatPrice(data.bonus_total, currency)}
+                <Gift size={13} />
+                Prime : {formatPrice(data.bonus_total, currency)}
               </span>
             )}
           </p>
@@ -319,8 +325,9 @@ function CourierDashboard({ courier, onLogout }) {
             )}
           </h2>
           {geoError && (
-            <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-              ⚠️ Activez la géolocalisation pour afficher votre position et les itinéraires.
+            <p className="mb-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+              <TriangleAlert size={15} className="shrink-0" />
+              Activez la géolocalisation pour afficher votre position et les itinéraires.
             </p>
           )}
           <CourierMap courierPos={myPos} deliveries={data.in_progress} />
@@ -542,12 +549,14 @@ function DeliveryCard({ order, myZone, currency, children }) {
             rel="noopener noreferrer"
             className="font-semibold text-brand-600 dark:text-brand-400"
           >
-            {order.customer_address} ↗
+            {order.customer_address}
+            <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
           </a>
         </span>
         {order.landmark && (
           <span className="flex items-center gap-1.5 font-medium text-gray-700 dark:text-slate-200">
-            🧭 {order.landmark}
+            <Compass size={14} className="shrink-0" />
+            {order.landmark}
           </span>
         )}
         <span className="flex items-center gap-1.5">
@@ -556,8 +565,9 @@ function DeliveryCard({ order, myZone, currency, children }) {
         </span>
       </div>
       {order.note && (
-        <p className="mb-3 rounded-lg border-l-2 border-brand-500 bg-gray-50 px-3 py-2 text-xs text-gray-500 italic dark:bg-slate-900 dark:text-slate-400">
-          📝 « {order.note} »
+        <p className="mb-3 flex items-start gap-1.5 rounded-lg border-l-2 border-brand-500 bg-gray-50 px-3 py-2 text-xs text-gray-500 italic dark:bg-slate-900 dark:text-slate-400">
+          <StickyNote size={14} className="mt-px shrink-0 not-italic" />
+          « {order.note} »
         </p>
       )}
       {/* Aucun paiement en ligne n'existe : toute commande est à encaisser. */}

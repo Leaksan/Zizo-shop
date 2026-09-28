@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Heart, Info, MapPin, Package, Truck } from "lucide-react";
+import { ChevronDown, Flame, Gift, Heart, Info, MapPin, Package, Truck } from "lucide-react";
 import { useShop } from "../context/ShopContext";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import Logo from "./Logo";
@@ -47,8 +47,9 @@ export default function Footer() {
                 </li>
                 {clearanceCount > 0 && (
                   <li>
-                    <Link to="/liquidation" className="transition hover:text-accent-600">
-                      🔥 Liquidation
+                    <Link to="/liquidation" className="flex items-center gap-1.5 transition hover:text-accent-600">
+                      <Flame size={14} />
+                      Liquidation
                     </Link>
                   </li>
                 )}
@@ -81,7 +82,7 @@ export default function Footer() {
               <p className="flex flex-col gap-1.5 text-sm text-gray-500 dark:text-slate-400">
                 {shopPhone && (
                   <a
-                    href={whatsappUrl(shopPhone, "Bonjour, j'ai une question 👋")}
+                    href={whatsappUrl(shopPhone, "Bonjour, j'ai une question.")}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 font-semibold text-[#1faa53] transition hover:text-[#25D366] dark:text-[#25D366]"
@@ -96,8 +97,9 @@ export default function Footer() {
                   <MapPin size={14} /> Libreville, Gabon
                 </span>
                 {freeShippingThreshold > 0 && (
-                  <span className="text-xs">
-                    🎁 Livraison offerte dès{" "}
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <Gift size={14} />
+                    Livraison offerte dès{" "}
                     {new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(
                       freeShippingThreshold
                     )}

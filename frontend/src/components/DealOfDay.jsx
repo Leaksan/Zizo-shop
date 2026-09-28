@@ -39,14 +39,14 @@ export default function DealOfDay() {
   const variant = deal.variants.find((v) => v.old_price) || deal.variants[0];
   if (!variant) return null;
 
-  // Carte compacte et entièrement cliquable, placée haut sur l'accueil
+  // Carte compacte et entièrement cliquable, en haut de la boutique
   return (
     <Link
       to={`/products/${deal.id}`}
-      className="group mb-8 flex items-center gap-3 rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-white p-3 shadow-sm transition hover:shadow-md sm:gap-5 sm:p-4 dark:border-accent-900 dark:from-accent-950/60 dark:to-slate-800"
+      className="group flex items-center gap-3 rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-white p-3 shadow-sm transition hover:shadow-md sm:gap-5 sm:p-4 dark:border-accent-900 dark:from-accent-950/60 dark:to-slate-800"
     >
       <span className="h-24 w-24 shrink-0 overflow-hidden rounded-xl sm:h-28 sm:w-28">
-        <ProductVisual product={deal} size="text-4xl" width={240} />
+        <ProductVisual product={deal} width={240} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Gift, ShoppingCart, Tag, Truck, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Gift, ShoppingCart, Tag, Truck, X, XCircle } from "lucide-react";
 import { formatPrice } from "../format";
 import { computeTotals, feeRange } from "../cartMath";
 import { useCart } from "../context/CartContext";
@@ -36,7 +36,7 @@ export default function Cart() {
     setPromoMsg(null);
     try {
       const p = await applyPromo(code.trim().toUpperCase());
-      setPromoMsg({ ok: true, text: `🎉 Code appliqué : ${p.label}` });
+      setPromoMsg({ ok: true, text: `Code appliqué : ${p.label}` });
     } catch (e) {
       clearPromo();
       setPromoMsg({ ok: false, text: e.message });
@@ -77,7 +77,7 @@ export default function Cart() {
             ) : (
               <>
                 <Gift size={17} className="text-green-600" />
-                <span className="text-green-700 dark:text-green-400">Livraison offerte 🎉</span>
+                <span className="text-green-700 dark:text-green-400">Livraison offerte !</span>
               </>
             )}
           </p>
@@ -96,7 +96,7 @@ export default function Cart() {
             className="card grid grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-3 p-4 sm:flex sm:gap-4"
           >
             <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg">
-              <ProductVisual product={item} size="text-3xl" width={160} />
+              <ProductVisual product={item} width={160} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{item.product_name}</p>
@@ -149,7 +149,10 @@ export default function Cart() {
           </button>
         </div>
         {promoMsg && (
-          <p className={`text-sm font-medium ${promoMsg.ok ? "text-green-600" : "text-red-600"}`}>
+          <p
+            className={`flex items-center gap-1.5 text-sm font-medium ${promoMsg.ok ? "text-green-600" : "text-red-600"}`}
+          >
+            {promoMsg.ok ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
             {promoMsg.text}
           </p>
         )}
@@ -192,8 +195,9 @@ export default function Cart() {
             <span>{formatPrice(totals.total, currency)}</span>
           </div>
         </div>
-        <Link to="/checkout" className="btn-primary mt-2 py-3 text-center">
-          Passer la commande →
+        <Link to="/checkout" className="btn-primary mt-2 flex items-center justify-center gap-2 py-3">
+          Passer la commande
+          <ArrowRight size={18} />
         </Link>
       </div>
 

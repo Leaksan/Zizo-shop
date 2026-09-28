@@ -8,8 +8,3 @@ export function formatDate(iso) {
     new Date(iso)
   );
 }
-
-export function stars(rating) {
-  const full = Math.round(rating || 0);
-  return "★".repeat(full) + "☆".repeat(5 - full);
-}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BellRing, PackageSearch, Trash2 } from "lucide-react";
+import { BellRing, PackageSearch, Phone, Trash2 } from "lucide-react";
 import { api } from "../../api";
 import { formatDate } from "../../format";
 import { usePolling } from "../../hooks";
@@ -65,8 +65,9 @@ export default function AdminStockRequests() {
                   Stock actuel : {r.current_stock} · dernière demande {formatDate(r.last_at)}
                 </p>
                 {r.phones.length > 0 && (
-                  <p className="mt-1 text-xs text-brand-600 dark:text-brand-400">
-                    📞 {r.phones.join(" · ")}
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400">
+                    <Phone size={13} className="shrink-0" />
+                    {r.phones.join(" · ")}
                   </p>
                 )}
               </div>

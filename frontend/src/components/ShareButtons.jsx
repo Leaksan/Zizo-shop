@@ -8,7 +8,7 @@ export default function ShareButtons({ product }) {
   const [copied, setCopied] = useState(false);
   const { shopName, currency } = useShop();
   const url = window.location.href;
-  const text = `${product.name} — dès ${formatPrice(product.price_min, currency)} chez ${shopName} 👉 ${url}`;
+  const text = `${product.name} — dès ${formatPrice(product.price_min, currency)} chez ${shopName} : ${url}`;
 
   const copy = async () => {
     try {

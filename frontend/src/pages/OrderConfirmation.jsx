@@ -34,7 +34,10 @@ export default function OrderConfirmation() {
             <Store size={16} />
             Retrait en boutique
           </p>
-          <p className="mt-1">📍 {pickupAddress}</p>
+          <p className="mt-1 flex items-center justify-center gap-1.5">
+            <MapPin size={15} className="shrink-0" />
+            {pickupAddress}
+          </p>
           <p className="mt-1 text-xs opacity-80">
             Présentez ce numéro au comptoir pour récupérer votre commande.
           </p>

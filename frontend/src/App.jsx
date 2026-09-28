@@ -1,17 +1,18 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import FloatingWhatsApp from "./components/FloatingWhatsApp";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
-import Landing from "./pages/Landing";
 import Shop from "./pages/Shop";
+import { welcomeSeen } from "./welcome";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 
 // Pages chargées à la demande : l'admin, l'espace livreur et les cartes (Leaflet)
 // ne sont plus téléchargés par les clients qui visitent seulement la boutique.
+const Landing = lazy(() => import("./pages/Landing"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const OrderConfirmation = lazy(() => import("./pages/OrderConfirmation"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
@@ -35,12 +36,19 @@ function PageLoader() {
   return <p className="py-16 text-center muted">Chargement…</p>;
 }
 
+// Accueil « à vue unique » : décidé une fois à l'arrivée sur /, pas à chaque rendu
+function WelcomeGate() {
+  const [seen] = useState(welcomeSeen);
+  return seen ? <Navigate to="/boutique" replace /> : <Landing />;
+}
+
 export default function App() {
   return (
     <div className="min-h-screen overflow-x-clip bg-gray-50 text-gray-900 dark:bg-slate-900 dark:text-gray-100">
       <ScrollToTop />
       <Suspense fallback={<PageLoader />}>
       <Routes>
+        <Route path="/" element={<WelcomeGate />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -63,7 +71,6 @@ export default function App() {
               <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
                 <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/" element={<Landing />} />
                   <Route path="/boutique" element={<Shop />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />

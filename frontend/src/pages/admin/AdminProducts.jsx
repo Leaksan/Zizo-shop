@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Flame } from "lucide-react";
 import { api } from "../../api";
 import { formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -68,11 +69,17 @@ export default function AdminProducts() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg">
-                        <ProductVisual product={p} size="text-xl" width={160} />
+                        <ProductVisual product={p} width={160} />
                       </div>
                       <div>
                         <p className="font-semibold">
-                          {p.clearance && <span title="Liquidation">🔥 </span>}
+                          {p.clearance && (
+                            <Flame
+                              size={14}
+                              aria-label="Liquidation"
+                              className="mr-1 inline align-[-2px] text-accent-600"
+                            />
+                          )}
                           {p.name}
                         </p>
                         {p.badge && (

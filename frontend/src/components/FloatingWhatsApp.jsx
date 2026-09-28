@@ -12,7 +12,7 @@ export default function FloatingWhatsApp() {
   if (!shopPhone || HIDDEN_ON.some((r) => r.test(pathname))) return null;
   return (
     <a
-      href={whatsappUrl(shopPhone, `Bonjour, j'ai une question sur ${shopName} 👋`)}
+      href={whatsappUrl(shopPhone, `Bonjour, j'ai une question sur ${shopName}.`)}
       target="_blank"
       rel="noopener noreferrer"
       title="Nous contacter sur WhatsApp"

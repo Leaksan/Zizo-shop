@@ -56,7 +56,6 @@ export default function ProductCard({ product }) {
         <div className="relative aspect-square overflow-hidden">
           <ProductVisual
             product={product}
-            size="text-6xl"
             width={320}
             className={`transition duration-500 group-hover:scale-105 ${outOfStock ? "opacity-50 grayscale" : ""}`}
           />

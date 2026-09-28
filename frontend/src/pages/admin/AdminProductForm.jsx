@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Flame, FolderOpen, ImagePlus, X } from "lucide-react";
 import { api } from "../../api";
 
 const emptyVariant = () => ({ name: "", price: "", old_price: "", stock: 0, sku: "" });
@@ -14,7 +15,6 @@ export default function AdminProductForm() {
     name: "",
     description: "",
     image_url: "",
-    emoji: "",
     badge: "",
     rating: "",
     reviews_count: 0,
@@ -54,7 +54,6 @@ export default function AdminProductForm() {
             name: p.name,
             description: p.description,
             image_url: p.image_url,
-            emoji: p.emoji,
             badge: p.badge,
             rating: p.rating || "",
             reviews_count: p.reviews_count,
@@ -174,12 +173,13 @@ export default function AdminProductForm() {
                 {form.image_url ? (
                   <img src={form.image_url} alt="Aperçu" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-4xl">{form.emoji || "🖼️"}</span>
+                  <ImagePlus size={36} strokeWidth={1.5} className="text-gray-300 dark:text-slate-500" />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2">
-                <label className="btn-outline w-fit cursor-pointer px-4 py-2 text-sm">
-                  {uploading ? "Envoi en cours…" : "📁 Choisir une image"}
+                <label className="btn-outline inline-flex w-fit cursor-pointer items-center gap-2 px-4 py-2 text-sm">
+                  {!uploading && <FolderOpen size={16} />}
+                  {uploading ? "Envoi en cours…" : "Choisir une image"}
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
@@ -201,18 +201,6 @@ export default function AdminProductForm() {
               </div>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="label">Emoji (si pas d'image)</span>
-              <input
-                value={form.emoji}
-                onChange={(e) => setForm({ ...form, emoji: e.target.value })}
-                placeholder="Ex. 🎧"
-                maxLength={4}
-                className="input"
-              />
-            </label>
-          </div>
           <div className="grid gap-4 sm:grid-cols-4">
             <label className="block">
               <span className="label">Catégorie</span>
@@ -227,7 +215,7 @@ export default function AdminProductForm() {
                     {c.name}
                   </option>
                 ))}
-                <option value="__new">➕ Nouvelle catégorie…</option>
+                <option value="__new">+ Nouvelle catégorie…</option>
               </select>
             </label>
             <label className="block">
@@ -277,14 +265,15 @@ export default function AdminProductForm() {
               />
               Produit visible dans la boutique
             </label>
-            <label className="flex items-center gap-2 text-sm font-medium text-orange-600 dark:text-orange-400">
+            <label className="flex items-center gap-2 text-sm font-medium text-accent-700 dark:text-accent-400">
               <input
                 type="checkbox"
                 checked={form.clearance}
                 onChange={(e) => setForm({ ...form, clearance: e.target.checked })}
-                className="h-4 w-4 accent-orange-500"
+                className="h-4 w-4 accent-accent-500"
               />
-              🔥 Liquidation (petit prix, à écouler)
+              <Flame size={15} />
+              Liquidation (petit prix, à écouler)
             </label>
           </div>
         </div>
@@ -358,10 +347,11 @@ export default function AdminProductForm() {
                   type="button"
                   disabled={variants.length === 1}
                   onClick={() => setVariants((prev) => prev.filter((_, j) => j !== i))}
-                  className="btn-danger col-span-2 disabled:opacity-30 lg:col-span-1"
+                  className="btn-danger col-span-2 inline-flex items-center justify-center gap-1 disabled:opacity-30 lg:col-span-1"
                   title="Retirer"
                 >
-                  ✕ Retirer
+                  <X size={14} />
+                  Retirer
                 </button>
               </div>
             ))}

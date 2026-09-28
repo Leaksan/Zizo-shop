@@ -50,10 +50,17 @@ Admin : `/admin` (mot de passe démo `admin123`). Livreur démo : `0698765432` /
   et au cœur des favoris.
 - Nom affiché : paramètre `shop_name` (Admin > Paramètres), jamais en dur dans les composants
   (`useShop().shopName`). Valeur par défaut « 241 Shop ».
-- Navigation mobile : barre d'onglets (Accueil, Boutique, Favoris, Panier, Commandes) + menu ☰
-  qui ne la répète pas (rayons, aide, mode sombre, espace livreur). Le rayon de la boutique vit
-  dans l'adresse (`/boutique?cat=<id>`, tri `?tri=`). Pas d'animation d'apparition au défilement
-  (cases blanches sur les téléphones lents).
+- Navigation mobile : barre d'onglets (Boutique, Favoris, Panier, Commandes) + menu ☰
+  qui ne la répète pas (rayons, aide, mode sombre, espace livreur). La **boutique est la page
+  principale** (le logo y mène). L'accueil `/` est « à vue unique » : écran de bienvenue montré à
+  la première visite seulement (`src/welcome.js`, `localStorage` `shop_welcome_seen`), puis `/`
+  redirige vers `/boutique` ; il n'est dans aucun menu. L'offre du jour est en haut de la
+  boutique. Le rayon de la boutique vit dans l'adresse (`/boutique?cat=<id>`, tri `?tri=`). Pas
+  d'animation d'apparition au défilement (cases blanches sur les téléphones lents).
+- **Aucun emoji sur le site** : uniquement des icônes SVG (`lucide-react`). Icône d'un rayon
+  choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo),
+  marqueurs des cartes Leaflet en SVG (`src/mapIcons.js`). Seul le message WhatsApp de nouvelle
+  commande (`notify_whatsapp_order`, backend) garde des emojis : il n'est pas affiché sur le site.
 - Devise : **XAF** (franc CFA d'Afrique centrale), jamais XOF. Montants en FCFA sans décimales.
 - Le calcul des totaux existe côté serveur (`create_order`) ET côté client (`src/cartMath.js`) :
   les garder identiques (remise, seuil de livraison offerte, frais par zone).
@@ -94,6 +101,11 @@ Admin : `/admin` (mot de passe démo `admin123`). Livreur démo : `0698765432` /
    la zone sûre « maskable ») et image des aperçus de partage `public/og-image.png` (1200 × 630).
    Les PNG ont été générés en rendant le SVG avec le Chrome de puppeteer
    (`whatsapp-bridge/node_modules`) : à refaire si le logo change.
+
+8. **Icônes SVG et accueil à vue unique** : tous les emojis du site (clients, livreur, admin)
+   remplacés par des icônes lucide, y compris les marqueurs de carte et l'épingle PNG de
+   Leaflet ; champ « emoji » retiré de la fiche produit admin ; onglet « Accueil » supprimé,
+   accueil montré une seule fois, `start_url` de l'appli sur `/boutique`.
 
 ## À faire avant la mise en production
 

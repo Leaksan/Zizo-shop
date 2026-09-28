@@ -58,7 +58,7 @@ export default function AdminSettings() {
         ),
         ...(newPassword ? { new_password: newPassword } : {}),
       });
-      setMessage("Paramètres enregistrés ✓");
+      setMessage("Paramètres enregistrés.");
       setNewPassword("");
       reload();
     } catch (e2) {

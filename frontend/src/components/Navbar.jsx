@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../api";
+import { categoryIcon } from "../categoryIcons";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -79,7 +80,7 @@ export default function Navbar() {
               <ChevronLeft size={24} />
             </button>
           )}
-          <Link to="/" className="min-w-0 shrink" aria-label="Accueil">
+          <Link to="/boutique" className="min-w-0 shrink" aria-label="Boutique">
             <Logo />
           </Link>
         </div>
@@ -196,20 +197,23 @@ function MobileMenu({ onClose }) {
             ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton mx-3 my-2 h-8" />)
             : categories
                 .filter((c) => c.product_count > 0)
-                .map((c) => (
-                  <Link
-                    key={c.id}
-                    to={`/boutique?cat=${c.id}`}
-                    onClick={onClose}
-                    className={itemCls(activeCat === String(c.id))}
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-lg dark:bg-brand-950">
-                      {c.emoji || c.name.charAt(0)}
-                    </span>
-                    <span className="flex-1">{c.name}</span>
-                    <span className="text-xs text-gray-400 dark:text-slate-500">{c.product_count}</span>
-                  </Link>
-                ))}
+                .map((c) => {
+                  const Icon = categoryIcon(c.name);
+                  return (
+                    <Link
+                      key={c.id}
+                      to={`/boutique?cat=${c.id}`}
+                      onClick={onClose}
+                      className={itemCls(activeCat === String(c.id))}
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
+                        <Icon size={18} strokeWidth={1.9} />
+                      </span>
+                      <span className="flex-1">{c.name}</span>
+                      <span className="text-xs text-gray-400 dark:text-slate-500">{c.product_count}</span>
+                    </Link>
+                  );
+                })}
           <Link to="/boutique" onClick={onClose} className={itemCls(pathname === "/boutique" && !activeCat)}>
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
               <Store size={20} />
@@ -232,7 +236,7 @@ function MobileMenu({ onClose }) {
           <p className={`${sectionCls} mt-5`}>Aide</p>
           {shopPhone && (
             <a
-              href={whatsappUrl(shopPhone, "Bonjour, j'ai une question 👋")}
+              href={whatsappUrl(shopPhone, "Bonjour, j'ai une question.")}
               target="_blank"
               rel="noopener noreferrer"
               className={itemCls(false)}

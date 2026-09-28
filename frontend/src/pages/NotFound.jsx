@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Home, SearchX, Store } from "lucide-react";
+import { SearchX, Store } from "lucide-react";
 
 // Adresse inconnue (lien mal copié, ancienne page…) : proposer une sortie plutôt qu'une page vide
 export default function NotFound() {
@@ -10,16 +10,13 @@ export default function NotFound() {
       <p className="mt-2 text-sm muted">
         Cette page n'existe pas ou n'existe plus. Le lien a peut-être été mal copié.
       </p>
-      <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-        <Link to="/boutique" className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-2.5">
-          <Store size={17} />
-          Voir la boutique
-        </Link>
-        <Link to="/" className="btn-outline inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm">
-          <Home size={16} />
-          Accueil
-        </Link>
-      </div>
+      <Link
+        to="/boutique"
+        className="btn-primary mt-8 inline-flex items-center justify-center gap-2 px-6 py-2.5"
+      >
+        <Store size={17} />
+        Voir la boutique
+      </Link>
     </div>
   );
 }

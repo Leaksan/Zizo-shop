@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ArrowDownNarrowWide, Check, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { api } from "../api";
+import DealOfDay from "../components/DealOfDay";
 import ProductCard from "../components/ProductCard";
 import { usePolling } from "../hooks";
 
@@ -15,9 +16,9 @@ const SORTS = [
 
 const RATING_OPTIONS = [
   { value: 0, label: "Toutes notes" },
-  { value: 3, label: "3★ et +" },
-  { value: 4, label: "4★ et +" },
-  { value: 4.5, label: "4,5★ et +" },
+  { value: 3, label: "3 et +" },
+  { value: 4, label: "4 et +" },
+  { value: 4.5, label: "4,5 et +" },
 ];
 
 const EMPTY_FILTERS = { minPrice: "", maxPrice: "", inStock: false, promoOnly: false, minRating: 0 };
@@ -142,7 +143,12 @@ export default function Shop() {
   if (filters.minRating > 0)
     activeChips.push({
       key: "rating",
-      label: `${filters.minRating.toString().replace(".", ",")}★ et +`,
+      label: (
+        <span className="flex items-center gap-1">
+          <Star size={12} className="fill-amber-400 text-amber-400" />
+          {filters.minRating.toString().replace(".", ",")} et +
+        </span>
+      ),
       clear: () => setFilters((f) => ({ ...f, minRating: 0 })),
     });
   if (filters.inStock)
@@ -218,6 +224,9 @@ export default function Shop() {
           ))}
         </div>
       )}
+
+      {/* Offre du jour sur la vue « tout » (l'accueil n'est vu qu'une fois : elle vit ici) */}
+      {!category && !debouncedSearch && <DealOfDay />}
 
       {/* Panneau de filtres : fermé par défaut, la page reste épurée tant que
           le client ne demande pas à filtrer. */}

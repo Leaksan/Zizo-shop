@@ -1,12 +1,8 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import iconUrl from "leaflet/dist/images/marker-icon.png";
-import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
-import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import { LIBREVILLE_CENTER } from "../libreville";
-
-L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
+import { destinationIcon } from "../mapIcons";
 
 export default function DeliveryMap({ position, onPick }) {
   const containerRef = useRef(null);
@@ -35,7 +31,7 @@ export default function DeliveryMap({ position, onPick }) {
     if (!map) return;
     if (position) {
       if (markerRef.current) markerRef.current.setLatLng(position);
-      else markerRef.current = L.marker(position).addTo(map);
+      else markerRef.current = L.marker(position, { icon: destinationIcon(36) }).addTo(map);
       map.flyTo(position, Math.max(map.getZoom(), 15), { duration: 0.8 });
     }
   }, [position]);

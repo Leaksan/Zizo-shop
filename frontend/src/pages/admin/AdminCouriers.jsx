@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Star } from "lucide-react";
+import { Coins, ShieldCheck, Star } from "lucide-react";
 import { api } from "../../api";
 import { formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -153,8 +153,9 @@ export default function AdminCouriers() {
                   </td>
                   <td className="p-4">
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => addBonus(c)} className="btn-outline">
-                        💰 Prime
+                      <button onClick={() => addBonus(c)} className="btn-outline inline-flex items-center gap-1">
+                        <Coins size={14} />
+                        Prime
                       </button>
                       <button onClick={() => remove(c)} className="btn-danger">
                         Supprimer

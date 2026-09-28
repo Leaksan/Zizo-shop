@@ -1,6 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Bike, ChevronLeft, ChevronRight, Clock, KeyRound, MapPin, MessageSquarePlus, Package, Phone, Search, Store, User, XCircle } from "lucide-react";
+import {
+  Bike,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Clock,
+  Compass,
+  ExternalLink,
+  Hand,
+  KeyRound,
+  MapPin,
+  MessageSquarePlus,
+  Package,
+  PackageCheck,
+  Phone,
+  Search,
+  ShoppingBag,
+  Store,
+  User,
+  Wallet,
+  XCircle,
+} from "lucide-react";
 import { api } from "../api";
 import { formatDate, formatPrice } from "../format";
 import { getMyOrders, rememberOrder } from "../myOrders";
@@ -273,20 +295,20 @@ function OrderTracking({ order, currency, onRefresh }) {
       : null;
   const steps = isPickup
     ? [
-        { label: "Commande confirmée", date: order.created_at, icon: "✓", done: rank >= 1 },
-        { label: "Prête en boutique", date: order.accepted_at, icon: "🛍️", done: rank >= 2 },
-        { label: "Commande récupérée", date: order.delivered_at, icon: "👋", done: rank >= 3 },
+        { label: "Commande confirmée", date: order.created_at, icon: Check, done: rank >= 1 },
+        { label: "Prête en boutique", date: order.accepted_at, icon: ShoppingBag, done: rank >= 2 },
+        { label: "Commande récupérée", date: order.delivered_at, icon: Hand, done: rank >= 3 },
       ]
     : [
-        { label: "Commande confirmée", date: order.created_at, icon: "✓", done: rank >= 1 },
+        { label: "Commande confirmée", date: order.created_at, icon: Check, done: rank >= 1 },
         {
           label: "Prise en charge par un livreur",
           date: order.accepted_at,
-          icon: "🛵",
+          icon: Bike,
           done: rank >= 2,
           extra: order.courier ? `${order.courier.name} (${order.courier.vehicle})` : "",
         },
-        { label: "Commande livrée", date: order.delivered_at, icon: "📦", done: rank >= 3 },
+        { label: "Commande livrée", date: order.delivered_at, icon: PackageCheck, done: rank >= 3 },
       ];
 
   return (
@@ -306,7 +328,10 @@ function OrderTracking({ order, currency, onRefresh }) {
           <Store size={24} className="shrink-0 text-green-600 dark:text-green-400" />
           <div>
             <p className="font-bold">Retrait en boutique</p>
-            <p className="text-sm">📍 {pickupAddress}</p>
+            <p className="flex items-start gap-1.5 text-sm">
+              <MapPin size={15} className="mt-0.5 shrink-0" />
+              {pickupAddress}
+            </p>
             <p className="mt-1 text-xs muted">
               Présentez votre numéro de commande <b>{order.reference}</b> au comptoir pour récupérer
               votre article.
@@ -342,7 +367,7 @@ function OrderTracking({ order, currency, onRefresh }) {
                   : "border-gray-300 bg-gray-50 text-gray-400 dark:border-slate-600 dark:bg-slate-800"
               }`}
             >
-              {s.done ? s.icon : "○"}
+              {s.done ? <s.icon size={18} strokeWidth={2.4} /> : <Circle size={10} />}
             </span>
             <div>
               <p className={`font-semibold ${s.done ? "" : "muted"}`}>{s.label}</p>
@@ -400,13 +425,19 @@ function OrderTracking({ order, currency, onRefresh }) {
                     rel="noopener noreferrer"
                     className="text-brand-600 hover:underline dark:text-brand-400"
                   >
-                    {order.customer_address} ↗
+                    {order.customer_address}
+                    <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
                   </a>
                 ) : (
                   order.customer_address
                 )}{" "}
                 ({order.zone})
-                {order.landmark && <span className="block text-xs muted">🧭 {order.landmark}</span>}
+                {order.landmark && (
+                  <span className="mt-0.5 flex items-center justify-end gap-1 text-xs muted">
+                    <Compass size={12} />
+                    {order.landmark}
+                  </span>
+                )}
               </>
             )}
           </span>
@@ -432,7 +463,9 @@ function OrderTracking({ order, currency, onRefresh }) {
           </div>
         )}
         <div className="flex justify-between gap-3">
-          <span className="muted">💰 Total</span>
+          <span className="flex items-center gap-1.5 muted">
+            <Wallet size={14} /> Total
+          </span>
           <span className="font-bold">{formatPrice(order.total, currency)}</span>
         </div>
       </div>

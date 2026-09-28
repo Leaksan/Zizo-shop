@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MapPin } from "lucide-react";
 import { api } from "../api";
 import { searchPlaces } from "../libreville";
 
@@ -87,7 +88,7 @@ export default function AddressInput({ value, onChange, onPick, required = true 
                     : "hover:bg-gray-50 dark:hover:bg-slate-700"
                 }`}
               >
-                <span>📍</span>
+                <MapPin size={15} className="shrink-0 text-brand-600 dark:text-brand-400" />
                 <span className="flex-1">{p.name}</span>
                 {p.zone && <span className="text-xs muted">{p.zone}</span>}
               </button>

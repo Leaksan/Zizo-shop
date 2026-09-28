@@ -319,28 +319,16 @@ def create_app():
     @app.get("/api/categories")
     def list_categories():
         cats = Category.query.order_by(Category.name).all()
-        # Un seul passage sur les produits actifs : nombre par rayon et emoji du
-        # premier produit, qui sert d'icône au rayon (menu mobile, accueil).
-        counts, emojis = {}, {}
-        rows = (
-            db.session.query(Product.category_id, Product.emoji)
+        # Nombre de produits actifs par rayon, en une seule requête (l'icône du rayon
+        # est choisie côté site d'après son nom : src/categoryIcons.js)
+        counts = dict(
+            db.session.query(Product.category_id, db.func.count(Product.id))
             .filter(Product.active.is_(True))
-            .order_by(Product.id)
+            .group_by(Product.category_id)
+            .all()
         )
-        for cat_id, emoji in rows:
-            counts[cat_id] = counts.get(cat_id, 0) + 1
-            if emoji and cat_id not in emojis:
-                emojis[cat_id] = emoji
         return jsonify(
-            [
-                {
-                    "id": c.id,
-                    "name": c.name,
-                    "product_count": counts.get(c.id, 0),
-                    "emoji": emojis.get(c.id, ""),
-                }
-                for c in cats
-            ]
+            [{"id": c.id, "name": c.name, "product_count": counts.get(c.id, 0)} for c in cats]
         )
 
     @app.get("/api/settings/public")

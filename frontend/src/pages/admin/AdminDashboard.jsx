@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { api } from "../../api";
 import { formatDate, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -64,8 +65,11 @@ export default function AdminDashboard() {
       <div className="card overflow-x-auto">
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700">
           <h2 className="font-semibold">Commandes récentes</h2>
-          <Link to="/admin/orders" className="text-sm text-brand-600 hover:underline dark:text-brand-400">
-            Tout voir →
+          <Link
+            to="/admin/orders"
+            className="flex items-center gap-1 text-sm text-brand-600 hover:underline dark:text-brand-400"
+          >
+            Tout voir <ArrowRight size={15} />
           </Link>
         </div>
         {stats.recent_orders.length === 0 ? (

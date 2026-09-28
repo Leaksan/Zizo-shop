@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Banknote, BellRing, CheckCircle2, ChevronRight, Flame, Heart, MapPin, ShoppingCart, Truck, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, Banknote, BellRing, Check, CheckCircle2, ChevronRight, Flame, Heart, MapPin, ShoppingCart, Truck, XCircle, Zap } from "lucide-react";
 import { feeRange } from "../cartMath";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import { api } from "../api";
@@ -62,8 +62,9 @@ export default function ProductDetail() {
     return (
       <div className="py-16 text-center">
         <p className="text-red-600">{error}</p>
-        <Link to="/boutique" className="mt-4 inline-block text-brand-600 hover:underline">
-          ← Retour à la boutique
+        <Link to="/boutique" className="mt-4 inline-flex items-center gap-1.5 text-brand-600 hover:underline">
+          <ArrowLeft size={16} />
+          Retour à la boutique
         </Link>
       </div>
     );
@@ -122,7 +123,6 @@ export default function ProductDetail() {
         <div className="card overflow-hidden">
           <ProductVisual
             product={product}
-            size="text-8xl"
             className="aspect-[4/3] sm:aspect-square"
           />
         </div>
@@ -253,8 +253,8 @@ export default function ProductDetail() {
                     onClick={handleAdd}
                     className="btn-primary flex w-full items-center justify-center gap-2 py-2.5"
                   >
-                    <ShoppingCart size={17} />
-                    {added ? "Ajouté au panier ✓" : "Ajouter au panier"}
+                    {added ? <Check size={17} /> : <ShoppingCart size={17} />}
+                    {added ? "Ajouté au panier" : "Ajouter au panier"}
                   </button>
                   <button
                     onClick={handleBuyNow}
@@ -323,8 +323,8 @@ export default function ProductDetail() {
               onClick={handleAdd}
               className="btn-primary flex shrink-0 items-center gap-2 px-5 py-3"
             >
-              <ShoppingCart size={18} />
-              {added ? "Ajouté ✓" : "Ajouter"}
+              {added ? <Check size={18} /> : <ShoppingCart size={18} />}
+              {added ? "Ajouté" : "Ajouter"}
             </button>
           ) : (
             <span className="shrink-0 rounded-lg bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-500 dark:bg-slate-700 dark:text-slate-400">

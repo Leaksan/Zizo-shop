@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bike, Store } from "lucide-react";
+import { Banknote, Bike, ChevronDown, ChevronUp, Compass, StickyNote, Store } from "lucide-react";
 import { api } from "../../api";
 import { formatDate, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -82,7 +82,9 @@ export default function AdminOrders() {
                 <span className="ml-auto flex items-center gap-3">
                   <StatusBadge status={o.status} method={o.delivery_method} />
                   <span className="font-bold">{formatPrice(o.total, currency)}</span>
-                  <span className="text-gray-400">{expanded === o.id ? "▲" : "▼"}</span>
+                  <span className="text-gray-400">
+                    {expanded === o.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </span>
                 </span>
               </button>
               {expanded === o.id && (
@@ -143,20 +145,25 @@ export default function AdminOrders() {
                             {o.customer_address} ({o.zone})
                           </p>
                           {o.landmark && (
-                            <p className="text-sm text-gray-600 dark:text-slate-300">🧭 Repère : {o.landmark}</p>
+                            <p className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-slate-300">
+                              <Compass size={14} className="shrink-0" /> Repère : {o.landmark}
+                            </p>
                           )}
                           {o.courier_name && (
-                            <p className="mt-1 text-xs muted">🛵 Livreur : {o.courier_name}</p>
+                            <p className="mt-1 flex items-center gap-1.5 text-xs muted">
+                              <Bike size={13} /> Livreur : {o.courier_name}
+                            </p>
                           )}
                         </>
                       )}
                       {o.note && (
                         <p className="mt-1 rounded border-l-2 border-brand-500 bg-white px-2 py-1 text-xs text-gray-500 italic dark:bg-slate-800 dark:text-slate-400">
-                          📝 {o.note}
+                          <StickyNote size={13} className="mr-1 inline align-[-2px] not-italic" />
+                          {o.note}
                         </p>
                       )}
-                      <p className="mt-1 text-xs muted">
-                        💳{" "}
+                      <p className="mt-1 flex items-center gap-1.5 text-xs muted">
+                        <Banknote size={13} />
                         {o.payment_method === "livraison"
                           ? o.delivery_method === "pickup"
                             ? "Paiement au retrait"
