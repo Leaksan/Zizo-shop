@@ -16,6 +16,19 @@ export function parseDate(iso) {
   return new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`);
 }
 
+// « il y a 3 h » : dates du fil d'actu
+export function timeAgo(iso) {
+  const date = parseDate(iso);
+  if (!date) return "";
+  const s = (Date.now() - date.getTime()) / 1000;
+  if (s < 60) return "à l'instant";
+  if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
+  if (s < 2 * 86400) return "hier";
+  if (s < 7 * 86400) return `il y a ${Math.floor(s / 86400)} j`;
+  return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(date);
+}
+
 export function formatDate(iso) {
   if (!iso) return "—";
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(

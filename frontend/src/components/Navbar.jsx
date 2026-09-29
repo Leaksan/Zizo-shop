@@ -10,6 +10,7 @@ import {
   Heart,
   Menu,
   Moon,
+  Newspaper,
   Package,
   Search,
   ShoppingBag,
@@ -59,6 +60,7 @@ export default function Navbar() {
 
   // Ordinateur : liens texte. Mobile : barre d'onglets en bas + menu ☰ (sans doublons)
   const links = [
+    { to: "/fil", icon: Newspaper, label: "Fil d'actu" },
     { to: "/boutique", icon: ShoppingBag, label: "Produits" },
     { to: "/boutiques", icon: Store, label: "Boutiques" },
     clearanceCount > 0 && { to: "/liquidation", icon: Flame, label: "Liquidation" },
@@ -66,25 +68,25 @@ export default function Navbar() {
   ].filter(Boolean);
 
   const linkCls = ({ isActive }) =>
-    `hidden rounded-lg px-3 py-2 text-sm font-medium transition sm:flex sm:items-center sm:gap-1.5 ${
+    `hidden rounded-lg px-3 py-2 text-sm font-medium transition lg:flex lg:items-center lg:gap-1.5 ${
       isActive
         ? "bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
         : "text-gray-600 hover:bg-gray-100 hover:text-brand-600 dark:text-slate-300 dark:hover:bg-slate-800"
     }`;
 
   // Ouvert depuis un lien partagé (pas d'historique) : retour à la boutique plutôt qu'hors du site
-  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/boutique"));
+  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/fil"));
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-1 px-4 sm:gap-4">
         <div className="flex min-w-0 items-center">
           {SUB_PAGES.test(pathname) && (
-            <button onClick={goBack} aria-label="Retour" title="Retour" className={`${iconBtnCls} -ml-3 sm:hidden`}>
+            <button onClick={goBack} aria-label="Retour" title="Retour" className={`${iconBtnCls} -ml-3 md:hidden`}>
               <ChevronLeft size={24} />
             </button>
           )}
-          <Link to="/boutique" className="min-w-0 shrink" aria-label="Boutique">
+          <Link to="/fil" className="min-w-0 shrink" aria-label="Fil d'actu">
             <Logo />
           </Link>
         </div>
@@ -98,7 +100,7 @@ export default function Navbar() {
             to="/boutique?focus=1"
             title="Rechercher"
             aria-label="Rechercher un produit"
-            className={`${iconBtnCls} sm:hidden`}
+            className={`${iconBtnCls} md:hidden`}
           >
             <Search size={21} />
           </Link>
@@ -106,11 +108,11 @@ export default function Navbar() {
             onClick={toggle}
             title="Changer de thème"
             aria-label="Changer de thème"
-            className={`${iconBtnCls} hidden sm:block`}
+            className={`${iconBtnCls} hidden md:block`}
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <Link to="/favoris" title="Mes favoris" aria-label="Mes favoris" className={`${iconBtnCls} hidden sm:block`}>
+          <Link to="/favoris" title="Mes favoris" aria-label="Mes favoris" className={`${iconBtnCls} hidden md:block`}>
             <Heart size={20} />
             {favCount > 0 && (
               <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent-500 text-[10px] font-bold text-gray-950">
@@ -118,7 +120,7 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-          <Link to="/cart" title="Mon panier" aria-label="Mon panier" className={`${iconBtnCls} hidden sm:block`}>
+          <Link to="/cart" title="Mon panier" aria-label="Mon panier" className={`${iconBtnCls} hidden md:block`}>
             <ShoppingCart size={20} />
             {count > 0 && (
               <span className="animate-pop absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
@@ -126,14 +128,14 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-          <Link to="/compte" title="Mon compte" aria-label="Mon compte" className={`${iconBtnCls} hidden sm:block`}>
+          <Link to="/compte" title="Mon compte" aria-label="Mon compte" className={`${iconBtnCls} hidden md:block`}>
             <UserRound size={20} />
           </Link>
           <button
             onClick={() => setMenuOpen(true)}
             title="Menu"
             aria-label="Ouvrir le menu"
-            className={`${iconBtnCls} sm:hidden`}
+            className={`${iconBtnCls} lg:hidden`}
           >
             <Menu size={22} />
           </button>
@@ -185,7 +187,7 @@ function MobileMenu({ onClose }) {
   const sectionCls = "px-3 pb-1 text-xs font-bold tracking-wide text-gray-400 uppercase dark:text-slate-500";
 
   return (
-    <div className="fixed inset-0 z-50 sm:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="absolute top-0 right-0 flex h-full w-80 max-w-[85vw] flex-col bg-white shadow-2xl dark:bg-slate-800">
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-slate-700">
@@ -200,6 +202,21 @@ function MobileMenu({ onClose }) {
         </div>
 
         <nav className="flex flex-1 flex-col overflow-y-auto p-3">
+          {/* Tablette : pas de barre d'onglets en bas, le menu reprend les pages principales */}
+          <div className="mb-4 hidden flex-col md:flex">
+            {[
+              { to: "/fil", icon: Newspaper, label: "Fil d'actu" },
+              { to: "/suivi", icon: Package, label: "Mes commandes" },
+              { to: "/compte", icon: UserRound, label: "Mon compte" },
+            ].map((l) => (
+              <Link key={l.to} to={l.to} onClick={onClose} className={itemCls(pathname === l.to)}>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+                  <l.icon size={20} />
+                </span>
+                {l.label}
+              </Link>
+            ))}
+          </div>
           <p className={sectionCls}>Rayons</p>
           {categories === null
             ? Array.from({ length: 4 }, (_, i) => <div key={i} className="skeleton mx-3 my-2 h-8" />)
@@ -234,6 +251,13 @@ function MobileMenu({ onClose }) {
               <Store size={20} />
             </span>
             <span className="flex-1">Toutes les boutiques</span>
+            <ChevronRight size={16} className="text-gray-400" />
+          </Link>
+          <Link to="/favoris" onClick={onClose} className={itemCls(pathname === "/favoris")}>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center text-red-500">
+              <Heart size={20} />
+            </span>
+            <span className="flex-1">Mes favoris</span>
             <ChevronRight size={16} className="text-gray-400" />
           </Link>
           {clearanceCount > 0 && (

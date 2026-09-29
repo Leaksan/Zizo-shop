@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { BadgeCheck, ChevronRight, MapPin, Search, Store } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
+import ExploreTabs from "../components/ExploreTabs";
 import ShopAvatar from "../components/ShopAvatar";
 
 // Annuaire des boutiques validées (la boutique officielle d'abord, puis les plus suivies)
@@ -22,6 +23,7 @@ export default function Shops() {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
+      <ExploreTabs />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Boutiques</h1>
         <div className="relative sm:w-72">

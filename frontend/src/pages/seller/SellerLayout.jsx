@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet } from "react-router-dom";
-import { Clock, ExternalLink, Package, Store, XCircle } from "lucide-react";
+import { Clock, ExternalLink, Newspaper, Package, Store, XCircle } from "lucide-react";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import ShopAvatar from "../../components/ShopAvatar";
 import { SHOP_STATUS } from "../../shopStatus";
+
+const TABS = [
+  { to: "/vendeur/produits", icon: Package, label: "Produits" },
+  { to: "/vendeur/publications", icon: Newspaper, label: "Publications" },
+  { to: "/vendeur/boutique", icon: Store, label: "Ma boutique" },
+];
 
 // Espace vendeur : sa boutique et ses produits (la boutique peut être en attente de validation)
 export default function SellerLayout() {
@@ -31,7 +37,7 @@ export default function SellerLayout() {
 
   const status = SHOP_STATUS[shop.status];
   const tabCls = ({ isActive }) =>
-    `flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+    `flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap transition ${
       isActive
         ? "bg-brand-600 text-white"
         : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -72,13 +78,12 @@ export default function SellerLayout() {
         </p>
       )}
 
-      <nav className="flex gap-2" aria-label="Espace vendeur">
-        <NavLink to="/vendeur/produits" className={tabCls}>
-          <Package size={16} /> Mes produits
-        </NavLink>
-        <NavLink to="/vendeur/boutique" className={tabCls}>
-          <Store size={16} /> Ma boutique
-        </NavLink>
+      <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]" aria-label="Espace vendeur">
+        {TABS.map((t) => (
+          <NavLink key={t.to} to={t.to} className={tabCls}>
+            <t.icon size={16} /> {t.label}
+          </NavLink>
+        ))}
       </nav>
 
       <Outlet context={{ shop, reload }} />

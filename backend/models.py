@@ -41,6 +41,11 @@ class Product(db.Model):
     reviews = db.relationship(
         "Review", back_populates="product", cascade="all, delete-orphan", order_by="Review.created_at.desc()"
     )
+    # Publications du fil qui montrent ce produit (liens retirés si le produit est supprimé)
+    posts = db.relationship("Post", secondary="post_products", back_populates="products")
+
+    def has_promo(self):
+        return any(v.old_price and v.old_price > v.price for v in self.variants)
 
     def to_dict(self, with_variants=True):
         data = {
@@ -321,6 +326,55 @@ class Follow(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
     shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), primary_key=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+post_products = db.Table(
+    "post_products",
+    db.Column("post_id", db.Integer, db.ForeignKey("posts.id"), primary_key=True),
+    db.Column("product_id", db.Integer, db.ForeignKey("products.id"), primary_key=True),
+)
+
+# post : écrite par le vendeur · new_product / promo : nouveautés automatiques
+POST_KINDS = ("post", "new_product", "promo")
+MAX_POST_IMAGES = 6
+
+
+class Post(db.Model):
+    """Publication du fil d'actu d'une boutique."""
+
+    __tablename__ = "posts"
+    id = db.Column(db.Integer, primary_key=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), nullable=False)
+    kind = db.Column(db.String(20), default="post", nullable=False)
+    text = db.Column(db.Text, default="")
+    images = db.Column(db.Text, default="[]")  # liste JSON d'adresses /uploads/…
+    hidden = db.Column(db.Boolean, default=False, nullable=False)  # masquée par l'admin
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    shop = db.relationship("Shop")
+    products = db.relationship("Product", secondary=post_products, back_populates="posts")
+
+    def image_list(self):
+        try:
+            images = json.loads(self.images or "[]")
+        except ValueError:
+            return []
+        return [i for i in images if isinstance(i, str)]
+
+    def to_dict(self, following=False, private=False):
+        data = {
+            "id": self.id,
+            "kind": self.kind,
+            "text": self.text or "",
+            "images": self.image_list(),
+            "created_at": self.created_at.isoformat(),
+            "shop": self.shop.summary() if self.shop else None,
+            "following": following,
+            # Produits toujours en vente seulement (un produit masqué disparaît de la publication)
+            "products": [p.to_dict() for p in self.products if p.active],
+        }
+        if private:
+            data["hidden"] = self.hidden
+        return data
 
 
 def slugify(text):

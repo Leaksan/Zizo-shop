@@ -2,7 +2,7 @@
   "name": "241 Shop — Livraison à Libreville",
   "short_name": "241 Shop",
   "description": "Boutique en ligne avec livraison rapide à Libreville, Gabon.",
-  "start_url": "/boutique",
+  "start_url": "/fil",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

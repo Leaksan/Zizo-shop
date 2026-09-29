@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { ArrowDownNarrowWide, Check, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
 import { api } from "../api";
 import DealOfDay from "../components/DealOfDay";
+import ExploreTabs from "../components/ExploreTabs";
 import ProductCard from "../components/ProductCard";
 import { usePolling } from "../hooks";
 
@@ -172,6 +173,7 @@ export default function Shop() {
 
   return (
     <div className="flex flex-col gap-5">
+      <ExploreTabs />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">{currentCategory ? currentCategory.name : "Produits"}</h1>
         <div className="flex gap-2">

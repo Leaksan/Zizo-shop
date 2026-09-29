@@ -21,12 +21,14 @@ from sqlalchemy import update as sa_update
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import (
+    MAX_POST_IMAGES,
     SHOP_STATUSES,
     Category,
     DeliveryPerson,
     Follow,
     Order,
     OrderItem,
+    Post,
     Product,
     PromoCode,
     Review,
@@ -259,6 +261,34 @@ def create_app():
         if user and product.shop and product.shop.owner_id == user.id:
             return True
         return product.active and product.shop is not None and product.shop.status == "active"
+
+    def utcnow():
+        """Heure UTC sans fuseau, comme les dates relues depuis SQLite (comparaisons)."""
+        return datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Nouveautés automatiques : ajouts rapprochés regroupés dans une seule publication
+    AUTO_POST_WINDOW = timedelta(hours=3)
+
+    def announce(product, kind):
+        """Un nouveau produit (new_product) ou une nouvelle promo (promo) apparaît dans le fil."""
+        # active vaut None tant que le produit n'est pas enregistré (valeur par défaut : visible)
+        if product.active is False or not product.shop_id:
+            return
+        post = (
+            Post.query.filter(
+                Post.shop_id == product.shop_id,
+                Post.kind == kind,
+                Post.created_at >= utcnow() - AUTO_POST_WINDOW,
+            )
+            .order_by(Post.created_at.desc())
+            .first()
+        )
+        if post is None:
+            post = Post(shop_id=product.shop_id, kind=kind)
+            db.session.add(post)
+        if product not in post.products:
+            post.products.append(product)
+        post.created_at = utcnow()  # remonte dans le fil à chaque ajout
 
     # Tentatives ratées de code de livraison, par commande (anti-devinette).
     CODE_FAILS = {}
@@ -1204,6 +1234,7 @@ def create_app():
             db.session.rollback()
             return jsonify({"error": error}), 400
         db.session.add(product)
+        announce(product, "new_product")
         db.session.commit()
         return jsonify(product.to_dict()), 201
 
@@ -1213,10 +1244,13 @@ def create_app():
         product = my_product(shop, product_id)
         if not product:
             return jsonify({"error": "Produit introuvable"}), 404
+        had_promo = product.has_promo()
         error = apply_product_payload(product, request.get_json(force=True))
         if error:
             db.session.rollback()
             return jsonify({"error": error}), 400
+        if not had_promo and product.has_promo():
+            announce(product, "promo")
         db.session.commit()
         return jsonify(product.to_dict())
 
@@ -1227,6 +1261,105 @@ def create_app():
         if not product:
             return jsonify({"error": "Produit introuvable"}), 404
         db.session.delete(product)
+        db.session.commit()
+        return jsonify({"ok": True})
+
+    # ---------------- Fil d'actu ----------------
+
+    FEED_PAGE = 15
+    FOLLOW_BOOST = timedelta(hours=48)  # « Pour vous » : les boutiques suivies remontent
+
+    def visible_posts():
+        return Post.query.join(Shop, Post.shop_id == Shop.id).filter(
+            Post.hidden.is_(False), Shop.status == "active"
+        )
+
+    def post_page(posts, followed, page):
+        """Une page du fil : les publications vidées (produits retirés) sont écartées."""
+        chunk = posts[page * FEED_PAGE : (page + 1) * FEED_PAGE + 1]
+        items = [p.to_dict(following=p.shop_id in followed) for p in chunk[:FEED_PAGE]]
+        items = [i for i in items if i["text"] or i["images"] or i["products"]]
+        return jsonify({"posts": items, "has_more": len(chunk) > FEED_PAGE, "page": page})
+
+    @app.get("/api/feed")
+    def feed():
+        user = current_user()
+        page = max(0, request.args.get("page", 0, type=int))
+        followed = (
+            {f.shop_id for f in Follow.query.filter_by(user_id=user.id)} if user else set()
+        )
+        if request.args.get("tab") == "following":
+            if not user:
+                return jsonify({"error": "Connectez-vous pour voir vos abonnements"}), 401
+            posts = (
+                visible_posts()
+                .filter(Post.shop_id.in_(list(followed) or [0]))
+                .order_by(Post.created_at.desc())
+                .limit((page + 1) * FEED_PAGE + 1)
+                .all()
+            )
+            return post_page(posts, followed, page)
+        posts = visible_posts().order_by(Post.created_at.desc()).limit(400).all()
+        posts.sort(
+            key=lambda p: p.created_at + (FOLLOW_BOOST if p.shop_id in followed else timedelta(0)),
+            reverse=True,
+        )
+        return post_page(posts, followed, page)
+
+    @app.get("/api/shops/<slug>/posts")
+    def shop_posts(slug):
+        shop = visible_shop(slug)
+        if not shop:
+            return jsonify({"error": "Boutique introuvable"}), 404
+        page = max(0, request.args.get("page", 0, type=int))
+        posts = (
+            Post.query.filter_by(shop_id=shop.id, hidden=False)
+            .order_by(Post.created_at.desc())
+            .limit((page + 1) * FEED_PAGE + 1)
+            .all()
+        )
+        user = current_user()
+        following = bool(user and db.session.get(Follow, {"user_id": user.id, "shop_id": shop.id}))
+        return post_page(posts, {shop.id} if following else set(), page)
+
+    @app.get("/api/my/posts")
+    @seller_required
+    def my_posts(user, shop):
+        posts = Post.query.filter_by(shop_id=shop.id).order_by(Post.created_at.desc()).limit(100)
+        return jsonify([p.to_dict(private=True) for p in posts])
+
+    @app.post("/api/my/posts")
+    @seller_required
+    def create_post(user, shop):
+        data = request.get_json(force=True)
+        text = str(data.get("text") or "").strip()
+        if len(text) > 2000:
+            return jsonify({"error": "Texte trop long (2000 caractères maximum)"}), 400
+        # Seulement des photos envoyées sur la plateforme (pas d'images externes)
+        images = [u for u in (data.get("images") or []) if isinstance(u, str) and u.startswith("/uploads/")]
+        if len(images) > MAX_POST_IMAGES:
+            return jsonify({"error": f"{MAX_POST_IMAGES} photos maximum"}), 400
+        products = []
+        for pid in data.get("product_ids") or []:
+            product = db.session.get(Product, pid) if isinstance(pid, int) else None
+            if not product or product.shop_id != shop.id:
+                return jsonify({"error": "Produit invalide"}), 400
+            products.append(product)
+        if not (text or images or products):
+            return jsonify({"error": "Ajoutez un texte, une photo ou un produit"}), 400
+        post = Post(shop_id=shop.id, kind="post", text=text, images=_json_std.dumps(images))
+        post.products = products
+        db.session.add(post)
+        db.session.commit()
+        return jsonify(post.to_dict(private=True)), 201
+
+    @app.delete("/api/my/posts/<int:post_id>")
+    @seller_required
+    def delete_post(user, shop, post_id):
+        post = db.session.get(Post, post_id)
+        if not post or post.shop_id != shop.id:
+            return jsonify({"error": "Publication introuvable"}), 404
+        db.session.delete(post)
         db.session.commit()
         return jsonify({"ok": True})
 
@@ -1429,6 +1562,7 @@ def create_app():
             db.session.rollback()
             return jsonify({"error": error}), 400
         db.session.add(product)
+        announce(product, "new_product")
         db.session.commit()
         return jsonify(product.to_dict()), 201
 
@@ -1443,10 +1577,13 @@ def create_app():
             if not db.session.get(Shop, data["shop_id"]):
                 return jsonify({"error": "Boutique invalide"}), 400
             product.shop_id = data["shop_id"]
+        had_promo = product.has_promo()
         error = apply_product_payload(product, data, demo_fields=True)
         if error:
             db.session.rollback()
             return jsonify({"error": error}), 400
+        if not had_promo and product.has_promo():
+            announce(product, "promo")
         db.session.commit()
         return jsonify(product.to_dict())
 

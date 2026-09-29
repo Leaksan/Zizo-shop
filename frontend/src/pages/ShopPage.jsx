@@ -4,6 +4,7 @@ import { BadgeCheck, Check, Eye, MapPin, Plus, Share2, Store } from "lucide-reac
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
+import PostCard from "../components/PostCard";
 import ProductCard from "../components/ProductCard";
 import ShopAvatar from "../components/ShopAvatar";
 import { SHOP_STATUS } from "../shopStatus";
@@ -19,6 +20,23 @@ export default function ShopPage() {
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState("produits");
+  const [posts, setPosts] = useState(null);
+
+  // Publications chargées à la première ouverture de l'onglet
+  useEffect(() => {
+    if (tab !== "publications" || posts !== null) return;
+    api
+      .get(`/shops/${slug}/posts`)
+      .then((r) => setPosts(r.posts))
+      .catch(() => setPosts([]));
+  }, [tab, posts, slug]);
+
+  // Autre boutique (lien depuis une publication) : repartir de l'onglet Produits
+  useEffect(() => {
+    setTab("produits");
+    setPosts(null);
+  }, [slug]);
 
   useEffect(() => {
     setShop(null);
@@ -170,8 +188,41 @@ export default function ShopPage() {
           <p className="mt-4 text-sm whitespace-pre-line text-gray-700 dark:text-slate-300">{shop.description}</p>
         )}
 
-        <section className="mt-6 mb-8">
-          <h2 className="mb-3 text-lg font-bold">Produits</h2>
+        <div className="mt-6 flex border-b border-gray-200 dark:border-slate-700" role="tablist">
+          {[
+            ["produits", `Produits (${shop.products_count})`],
+            ["publications", "Publications"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+                tab === key
+                  ? "border-brand-600 text-brand-700 dark:text-brand-300"
+                  : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-slate-300"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "publications" ? (
+          <section className="mx-auto mt-4 mb-8 flex max-w-xl flex-col gap-4">
+            {posts === null ? (
+              <div className="skeleton h-72" />
+            ) : posts.length === 0 ? (
+              <p className="card p-6 text-center text-sm muted">
+                {shop.is_owner ? "Publiez depuis votre espace vendeur : arrivages, promos, nouveautés…" : "Aucune publication pour le moment."}
+              </p>
+            ) : (
+              posts.map((p) => <PostCard key={p.id} post={p} onFollow={() => setShop((s) => ({ ...s, is_following: true }))} />)
+            )}
+          </section>
+        ) : (
+        <section className="mt-4 mb-8">
           {products === null ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {Array.from({ length: 4 }, (_, i) => (
@@ -190,6 +241,7 @@ export default function ShopPage() {
             </div>
           )}
         </section>
+        )}
       </div>
     </div>
   );

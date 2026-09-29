@@ -6,6 +6,7 @@ import FloatingWhatsApp from "./components/FloatingWhatsApp";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
 import Shop from "./pages/Shop";
+import Feed from "./pages/Feed";
 import { welcomeSeen } from "./welcome";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -26,6 +27,7 @@ const ShopPage = lazy(() => import("./pages/ShopPage"));
 const OpenShop = lazy(() => import("./pages/OpenShop"));
 const SellerLayout = lazy(() => import("./pages/seller/SellerLayout"));
 const SellerShopEdit = lazy(() => import("./pages/seller/SellerShopEdit"));
+const SellerPosts = lazy(() => import("./pages/seller/SellerPosts"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -47,7 +49,7 @@ function PageLoader() {
 // Accueil « à vue unique » : décidé une fois à l'arrivée sur /, pas à chaque rendu
 function WelcomeGate() {
   const [seen] = useState(welcomeSeen);
-  return seen ? <Navigate to="/boutique" replace /> : <Landing />;
+  return seen ? <Navigate to="/fil" replace /> : <Landing />;
 }
 
 export default function App() {
@@ -81,6 +83,7 @@ export default function App() {
               <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
                 <Suspense fallback={<PageLoader />}>
                 <Routes>
+                  <Route path="/fil" element={<Feed />} />
                   <Route path="/boutique" element={<Shop />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
@@ -99,6 +102,7 @@ export default function App() {
                     <Route path="produits" element={<AdminProducts mode="vendeur" />} />
                     <Route path="produits/nouveau" element={<AdminProductForm mode="vendeur" />} />
                     <Route path="produits/:id" element={<AdminProductForm mode="vendeur" />} />
+                    <Route path="publications" element={<SellerPosts />} />
                     <Route path="boutique" element={<SellerShopEdit />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
