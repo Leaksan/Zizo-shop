@@ -6,6 +6,7 @@ import { useShop } from "../context/ShopContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import ProductVisual from "./ProductVisual";
+import ShopAvatar from "./ShopAvatar";
 
 const LOW_STOCK = 5;
 
@@ -81,6 +82,13 @@ export default function ProductCard({ product }) {
           <h3 className="line-clamp-2 text-sm leading-snug font-semibold text-gray-900 transition group-hover:text-brand-600 sm:text-base dark:text-gray-100">
             {product.name}
           </h3>
+          {/* Boutique du vendeur (texte simple : la carte entière est déjà un lien) */}
+          {product.shop && (
+            <span className="flex min-w-0 items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
+              <ShopAvatar shop={product.shop} className="h-4 w-4 text-[9px]" />
+              <span className="truncate">{product.shop.name}</span>
+            </span>
+          )}
           {rating > 0 && (
             <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-slate-400">
               <Star size={13} className="fill-amber-400 text-amber-400" />

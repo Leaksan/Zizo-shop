@@ -12,14 +12,17 @@ import {
   Moon,
   Package,
   Search,
+  ShoppingBag,
   ShoppingCart,
   Store,
   Sun,
   Truck,
+  UserRound,
   X,
 } from "lucide-react";
 import { api } from "../api";
 import { categoryIcon } from "../categoryIcons";
+import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -29,7 +32,7 @@ import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import Logo from "./Logo";
 
 // Pages de détail : la barre d'onglets y est masquée, un bouton retour la remplace (mobile)
-const SUB_PAGES = /^\/(products|checkout|order-confirmation)(\/|$)/;
+const SUB_PAGES = /^\/(products|checkout|order-confirmation|b)(\/|$)|^\/vendeur\/produits\/.+/;
 
 const iconBtnCls =
   "relative rounded-xl p-3 text-gray-500 transition hover:bg-gray-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800";
@@ -56,7 +59,8 @@ export default function Navbar() {
 
   // Ordinateur : liens texte. Mobile : barre d'onglets en bas + menu ☰ (sans doublons)
   const links = [
-    { to: "/boutique", icon: Store, label: "Boutique" },
+    { to: "/boutique", icon: ShoppingBag, label: "Produits" },
+    { to: "/boutiques", icon: Store, label: "Boutiques" },
     clearanceCount > 0 && { to: "/liquidation", icon: Flame, label: "Liquidation" },
     { to: "/suivi", icon: Package, label: "Mes commandes" },
   ].filter(Boolean);
@@ -122,6 +126,9 @@ export default function Navbar() {
               </span>
             )}
           </Link>
+          <Link to="/compte" title="Mon compte" aria-label="Mon compte" className={`${iconBtnCls} hidden sm:block`}>
+            <UserRound size={20} />
+          </Link>
           <button
             onClick={() => setMenuOpen(true)}
             title="Menu"
@@ -147,6 +154,7 @@ let categoriesCache = null;
 // Menu ☰ mobile : ce que la barre d'onglets n'offre pas (rayons, aide, réglages)
 function MobileMenu({ onClose }) {
   const { theme, toggle } = useTheme();
+  const { user } = useAuth();
   const { shopPhone, clearanceCount, freeShippingThreshold, currency } = useShop();
   const { pathname, search } = useLocation();
   const [categories, setCategories] = useState(categoriesCache);
@@ -216,9 +224,16 @@ function MobileMenu({ onClose }) {
                 })}
           <Link to="/boutique" onClick={onClose} className={itemCls(pathname === "/boutique" && !activeCat)}>
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+              <ShoppingBag size={20} />
+            </span>
+            <span className="flex-1">Tous les produits</span>
+            <ChevronRight size={16} className="text-gray-400" />
+          </Link>
+          <Link to="/boutiques" onClick={onClose} className={itemCls(pathname === "/boutiques")}>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center">
               <Store size={20} />
             </span>
-            <span className="flex-1">Toute la boutique</span>
+            <span className="flex-1">Toutes les boutiques</span>
             <ChevronRight size={16} className="text-gray-400" />
           </Link>
           {clearanceCount > 0 && (
@@ -232,6 +247,19 @@ function MobileMenu({ onClose }) {
               </span>
             </Link>
           )}
+
+          <p className={`${sectionCls} mt-5`}>Vendre</p>
+          <Link
+            to={user?.shop ? "/vendeur" : "/vendeur/ouvrir"}
+            onClick={onClose}
+            className={itemCls(pathname.startsWith("/vendeur"))}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center text-brand-600 dark:text-brand-400">
+              <Store size={20} />
+            </span>
+            <span className="flex-1">{user?.shop ? "Mon espace vendeur" : "Ouvrir ma boutique"}</span>
+            <ChevronRight size={16} className="text-gray-400" />
+          </Link>
 
           <p className={`${sectionCls} mt-5`}>Aide</p>
           {shopPhone && (

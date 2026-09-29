@@ -1,7 +1,9 @@
 # 241 Shop (ex-Zizo Shop) — boutique en ligne (Libreville, Gabon)
 
 Boutique en ligne avec livraison à Libreville : catalogue, panier, commande avec
-carte, suivi du livreur en temps réel, espace livreur, admin, PWA.
+carte, suivi du livreur en temps réel, espace livreur, admin, PWA. **En cours de transformation
+en hub multi-vendeurs** (branche `hub-vendeurs`) : comptes, boutiques de vendeurs validées par
+l'admin, fil d'actu — voir « Hub vendeurs » plus bas.
 Tout le produit (interface, messages, commits) est en **français**.
 
 ## Architecture
@@ -39,7 +41,8 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
 
 - `cd frontend; npm run build` et `npx oxlint` (0 erreur ; quelques warnings
   `only-export-components` préexistants).
-- Backend : tester les routes avec `app.test_client()` (voir les scénarios de l'historique).
+- Backend : `.venv\Scripts\python backend\test_scenarios.py` (base temporaire neuve, jamais la
+  vraie) ; y ajouter les scénarios de chaque nouvelle fonctionnalité.
 - Vérifier le rendu mobile (390 px) : c'est l'usage principal.
 
 ## Conventions
@@ -63,6 +66,8 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
   choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo),
   marqueurs des cartes Leaflet en SVG (`src/mapIcons.js`). Seul le message WhatsApp de nouvelle
   commande (`notify_whatsapp_order`, backend) garde des emojis : il n'est pas affiché sur le site.
+- Dates : l'API les envoie en UTC **sans fuseau** ; côté site, toujours `parseDate` / `formatDate`
+  (`src/format.js`), jamais `new Date(iso)` directement (1 h de décalage à Libreville sinon).
 - Devise : **XAF** (franc CFA d'Afrique centrale), jamais XOF. Montants en FCFA sans décimales.
 - Le calcul des totaux existe côté serveur (`create_order`) ET côté client (`src/cartMath.js`) :
   les garder identiques (remise, seuil de livraison offerte, frais par zone).
@@ -109,6 +114,37 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
    Leaflet ; champ « emoji » retiré de la fiche produit admin ; onglet « Accueil » supprimé,
    accueil montré une seule fois, `start_url` de l'appli sur `/boutique`.
 
+## Hub vendeurs (branche `hub-vendeurs`, à partir de `corrections-bugs`)
+
+Décisions du propriétaire : commande sur la plateforme (paiement à la livraison, livreurs de la
+plateforme) ; boutiques ouvertes librement mais **visibles seulement après validation par
+l'admin** ; comptes **téléphone + mot de passe** (pas de SMS) ; fil d'actu = publications des
+vendeurs + nouveautés automatiques + abonnements (pas de « j'aime » ni de commentaires).
+
+**Phase 1 faite — comptes et boutiques**
+- Modèles `User` (téléphone normalisé par `normalize_phone`, mot de passe ≥ 6, session 30 jours,
+  8 essais / 15 min), `Shop` (statuts `pending` / `active` / `rejected` / `suspended`, motif
+  `status_note` montré au vendeur), `Follow`, `Product.shop_id`. Un compte = une boutique.
+- Boutique officielle `241-shop` (`official`, jamais suspendue) créée au démarrage ; elle reçoit
+  les produits sans boutique. L'admin peut confier une boutique à un compte (`owner_phone`).
+- Le public ne voit que les boutiques `active` (`public_products()`, `visible_shop()` dans
+  `app.py`) : catalogue, fiche, rayons, liquidation, offre du jour, commande. Le vendeur (et
+  l'admin) voient un aperçu de la boutique non validée.
+- Routes : `/api/auth/*`, `/api/shops*` (+ `follow`), `/api/me/*`, `/api/my/shop`,
+  `/api/my/products`, `/api/admin/shops`, `/api/admin/users`.
+- Pages : `/compte`, `/boutiques` (annuaire), `/b/<slug>` (page boutique, aperçu de partage
+  WhatsApp/Facebook), `/vendeur/ouvrir`, `/vendeur` (réutilise `AdminProducts` /
+  `AdminProductForm` avec `mode="vendeur"` : pas de note/avis saisis, pas de création de rayon),
+  admin « Boutiques » (validation) et « Comptes » (blocage, nouveau mot de passe).
+- Le catalogue s'appelle « Produits » (route `/boutique` inchangée) ; l'annuaire « Boutiques ».
+
+**Phases suivantes**
+- Phase 2 — fil d'actu : publications (photos, texte, produits liés), nouveautés automatiques,
+  abonnements en priorité ; « Explorer » ; barre du bas Fil / Explorer / Panier / Commandes / Compte.
+- Phase 3 — commandes multi-boutiques : une commande par boutique, espace « Commandes » du
+  vendeur, livreur qui récupère chez le vendeur (adresse de retrait, GPS de la boutique).
+- Phase 4 — notifications, avis sur les boutiques, statistiques vendeur, signalements.
+
 ## À faire avant la mise en production
 
 - Réinitialiser le lien d'invitation du groupe WhatsApp (l'ancien est dans l'historique Git public).
@@ -121,6 +157,5 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
 - **Paiement mobile money** (Airtel Money / Moov Money) via un agrégateur gabonais
   (e-Billing, SingPay, PVit… à comparer) ; statut de paiement séparé du statut de livraison.
 - **Notifications en production** : API WhatsApp Business (Meta) à la place du pont local.
-- **Comptes clients** (connexion par code reçu par téléphone, historique des commandes).
 - Les notes/avis de démo (`rating`, `reviews_count` saisis à la main) s'affichent comme de vrais
   avis : à retirer avant la production.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Banknote, BellRing, Check, CheckCircle2, ChevronRight, Flame, Heart, MapPin, ShoppingCart, Truck, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Banknote, BellRing, Check, CheckCircle2, ChevronRight, Flame, Heart, MapPin, ShoppingCart, Truck, XCircle, Zap } from "lucide-react";
 import { feeRange } from "../cartMath";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import { api } from "../api";
@@ -10,6 +10,7 @@ import { useShop } from "../context/ShopContext";
 import { useFavorites } from "../context/FavoritesContext";
 import ProductVisual from "../components/ProductVisual";
 import Rating from "../components/Rating";
+import ShopAvatar from "../components/ShopAvatar";
 import ShareButtons from "../components/ShareButtons";
 import ReviewsSection from "../components/ReviewsSection";
 import { usePolling } from "../hooks";
@@ -162,6 +163,25 @@ export default function ProductDetail() {
             </span>
           )}
           <p className="text-gray-600 dark:text-slate-300">{product.description}</p>
+
+          {product.shop && (
+            <Link
+              to={`/b/${product.shop.slug}`}
+              className="card flex items-center gap-3 p-3 transition hover:border-brand-300"
+            >
+              <ShopAvatar shop={product.shop} className="h-10 w-10 text-base" />
+              <span className="min-w-0 flex-1">
+                <small className="block text-xs muted">Vendu par</small>
+                <b className="flex items-center gap-1 text-sm">
+                  <span className="truncate">{product.shop.name}</span>
+                  {product.shop.official && <BadgeCheck size={15} className="shrink-0 text-brand-600 dark:text-brand-400" />}
+                </b>
+              </span>
+              <span className="flex shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-600 dark:text-brand-400">
+                Voir la boutique <ChevronRight size={16} />
+              </span>
+            </Link>
+          )}
 
           <div>
             <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-slate-300">

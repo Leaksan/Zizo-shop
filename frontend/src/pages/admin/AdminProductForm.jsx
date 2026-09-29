@@ -6,7 +6,29 @@ import { api } from "../../api";
 const emptyVariant = () => ({ name: "", price: "", old_price: "", stock: 0, sku: "" });
 const BADGES = ["", "Promo", "Nouveau", "Top vente"];
 
-export default function AdminProductForm() {
+// Même formulaire pour l'admin (tous les produits) et pour un vendeur (sa boutique).
+// Un vendeur ne crée pas de rayon (liste commune) et ne saisit pas de note ni d'avis.
+const MODES = {
+  admin: {
+    api: "/admin/products",
+    categories: "/admin/categories",
+    upload: "/admin/upload",
+    back: "/admin/products",
+    demoFields: true,
+    newCategory: true,
+  },
+  vendeur: {
+    api: "/my/products",
+    categories: "/categories",
+    upload: "/me/upload",
+    back: "/vendeur/produits",
+    demoFields: false,
+    newCategory: false,
+  },
+};
+
+export default function AdminProductForm({ mode = "admin" }) {
+  const cfg = MODES[mode];
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
@@ -33,7 +55,7 @@ export default function AdminProductForm() {
     setUploading(true);
     setError("");
     try {
-      const res = await api.upload("/admin/upload", file);
+      const res = await api.upload(cfg.upload, file);
       setForm((f) => ({ ...f, image_url: res.url }));
     } catch (e2) {
       setError(e2.message);
@@ -43,10 +65,10 @@ export default function AdminProductForm() {
   };
 
   useEffect(() => {
-    api.get("/admin/categories").then(setCategories).catch(() => {});
+    api.get(cfg.categories).then(setCategories).catch(() => {});
     if (isEdit) {
       api
-        .get(`/admin/products`)
+        .get(cfg.api)
         .then((products) => {
           const p = products.find((x) => x.id === Number(id));
           if (!p) throw new Error("Produit introuvable");
@@ -73,7 +95,7 @@ export default function AdminProductForm() {
         })
         .catch((e) => setError(e.message));
     }
-  }, [id, isEdit]);
+  }, [id, isEdit, cfg.api, cfg.categories]);
 
   const setVariant = (index, key, value) => {
     setVariants((prev) => prev.map((v, i) => (i === index ? { ...v, [key]: value } : v)));
@@ -81,7 +103,7 @@ export default function AdminProductForm() {
 
   const handleCategoryChange = async (e) => {
     const value = e.target.value;
-    if (value !== "__new") {
+    if (value !== "__new" || !cfg.newCategory) {
       setForm({ ...form, category_id: value });
       return;
     }
@@ -115,10 +137,12 @@ export default function AdminProductForm() {
         return;
       }
     }
+    const { rating, reviews_count, ...fields } = form;
     const payload = {
-      ...form,
-      rating: form.rating === "" ? 0 : parseFloat(form.rating),
-      reviews_count: parseInt(form.reviews_count, 10) || 0,
+      ...fields,
+      ...(cfg.demoFields
+        ? { rating: rating === "" ? 0 : parseFloat(rating), reviews_count: parseInt(reviews_count, 10) || 0 }
+        : {}),
       category_id: form.category_id ? Number(form.category_id) : null,
       variants: cleaned.map((v) => ({
         ...(v.id ? { id: v.id } : {}),
@@ -131,9 +155,9 @@ export default function AdminProductForm() {
     };
     setSaving(true);
     try {
-      if (isEdit) await api.put(`/admin/products/${id}`, payload);
-      else await api.post("/admin/products", payload);
-      navigate("/admin/products");
+      if (isEdit) await api.put(`${cfg.api}/${id}`, payload);
+      else await api.post(cfg.api, payload);
+      navigate(cfg.back);
     } catch (e2) {
       setError(e2.message);
     } finally {
@@ -201,7 +225,7 @@ export default function AdminProductForm() {
               </div>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className={`grid gap-4 ${cfg.demoFields ? "sm:grid-cols-4" : "sm:grid-cols-2"}`}>
             <label className="block">
               <span className="label">Catégorie</span>
               <select
@@ -215,7 +239,7 @@ export default function AdminProductForm() {
                     {c.name}
                   </option>
                 ))}
-                <option value="__new">+ Nouvelle catégorie…</option>
+                {cfg.newCategory && <option value="__new">+ Nouvelle catégorie…</option>}
               </select>
             </label>
             <label className="block">
@@ -232,28 +256,32 @@ export default function AdminProductForm() {
                 ))}
               </select>
             </label>
-            <label className="block">
-              <span className="label">Note (0-5)</span>
-              <input
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={form.rating}
-                onChange={(e) => setForm({ ...form, rating: e.target.value })}
-                className="input"
-              />
-            </label>
-            <label className="block">
-              <span className="label">Nb d'avis</span>
-              <input
-                type="number"
-                min="0"
-                value={form.reviews_count}
-                onChange={(e) => setForm({ ...form, reviews_count: e.target.value })}
-                className="input"
-              />
-            </label>
+            {cfg.demoFields && (
+              <>
+                <label className="block">
+                  <span className="label">Note (0-5)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value={form.rating}
+                    onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                    className="input"
+                  />
+                </label>
+                <label className="block">
+                  <span className="label">Nb d'avis</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.reviews_count}
+                    onChange={(e) => setForm({ ...form, reviews_count: e.target.value })}
+                    className="input"
+                  />
+                </label>
+              </>
+            )}
           </div>
           <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-slate-300">
@@ -365,7 +393,7 @@ export default function AdminProductForm() {
           </button>
           <button
             type="button"
-            onClick={() => navigate("/admin/products")}
+            onClick={() => navigate(cfg.back)}
             className="btn-outline px-6 py-2.5 text-sm"
           >
             Annuler

@@ -20,6 +20,12 @@ const Courier = lazy(() => import("./pages/Courier"));
 const Liquidation = lazy(() => import("./pages/Liquidation"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Account = lazy(() => import("./pages/Account"));
+const Shops = lazy(() => import("./pages/Shops"));
+const ShopPage = lazy(() => import("./pages/ShopPage"));
+const OpenShop = lazy(() => import("./pages/OpenShop"));
+const SellerLayout = lazy(() => import("./pages/seller/SellerLayout"));
+const SellerShopEdit = lazy(() => import("./pages/seller/SellerShopEdit"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -31,6 +37,8 @@ const AdminPromos = lazy(() => import("./pages/admin/AdminPromos"));
 const AdminCouriers = lazy(() => import("./pages/admin/AdminCouriers"));
 const AdminStockRequests = lazy(() => import("./pages/admin/AdminStockRequests"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminShops = lazy(() => import("./pages/admin/AdminShops"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 
 function PageLoader() {
   return <p className="py-16 text-center muted">Chargement…</p>;
@@ -53,6 +61,8 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="shops" element={<AdminShops />} />
+          <Route path="users" element={<AdminUsers />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id/edit" element={<AdminProductForm />} />
@@ -80,6 +90,17 @@ export default function App() {
                   <Route path="/order-confirmation/:reference" element={<OrderConfirmation />} />
                   <Route path="/suivi" element={<TrackOrder />} />
                   <Route path="/livreur" element={<Courier />} />
+                  <Route path="/compte" element={<Account />} />
+                  <Route path="/boutiques" element={<Shops />} />
+                  <Route path="/b/:slug" element={<ShopPage />} />
+                  <Route path="/vendeur/ouvrir" element={<OpenShop />} />
+                  <Route path="/vendeur" element={<SellerLayout />}>
+                    <Route index element={<Navigate to="produits" replace />} />
+                    <Route path="produits" element={<AdminProducts mode="vendeur" />} />
+                    <Route path="produits/nouveau" element={<AdminProductForm mode="vendeur" />} />
+                    <Route path="produits/:id" element={<AdminProductForm mode="vendeur" />} />
+                    <Route path="boutique" element={<SellerShopEdit />} />
+                  </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 </Suspense>

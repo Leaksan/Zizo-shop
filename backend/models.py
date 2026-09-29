@@ -32,6 +32,9 @@ class Product(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
     category = db.relationship("Category", back_populates="products")
+    # Boutique du vendeur (les anciens produits vont dans la boutique officielle au démarrage)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), nullable=True)
+    shop = db.relationship("Shop", back_populates="products")
     variants = db.relationship(
         "Variant", back_populates="product", cascade="all, delete-orphan", order_by="Variant.id"
     )
@@ -54,6 +57,8 @@ class Product(db.Model):
             "created_at": self.created_at.isoformat(),
             "category_id": self.category_id,
             "category": self.category.name if self.category else None,
+            "shop_id": self.shop_id,
+            "shop": self.shop.summary() if self.shop else None,
         }
         if with_variants:
             data["variants"] = [v.to_dict() for v in self.variants]
@@ -196,6 +201,136 @@ class StockRequest(db.Model):
             "phone": self.phone,
             "created_at": self.created_at.isoformat(),
         }
+
+
+class User(db.Model):
+    """Compte d'un client ou d'un vendeur : téléphone + mot de passe."""
+
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    # Chiffres du numéro (normalize_phone) : un seul compte par numéro, quelle que soit l'écriture
+    phone = db.Column(db.String(20), unique=True, nullable=False)
+    password_hash = db.Column(db.String(300), nullable=False)
+    avatar_url = db.Column(db.String(500), default="")
+    active = db.Column(db.Boolean, default=True, nullable=False)  # False : bloqué par l'admin
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    shop = db.relationship("Shop", back_populates="owner", uselist=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self, private=False):
+        data = {
+            "id": self.id,
+            "name": self.name,
+            "avatar_url": self.avatar_url or "",
+            "created_at": self.created_at.isoformat(),
+        }
+        if private:
+            data["phone"] = self.phone
+            data["active"] = self.active
+            data["shop"] = self.shop.summary(private=True) if self.shop else None
+        return data
+
+
+# pending : en attente de validation · active : visible · rejected : refusée · suspended : masquée
+SHOP_STATUSES = ("pending", "active", "rejected", "suspended")
+
+
+class Shop(db.Model):
+    """Boutique d'un vendeur. Le public ne la voit qu'une fois validée par l'admin (active)."""
+
+    __tablename__ = "shops"
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), unique=True, nullable=False)  # adresse /b/<slug>
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text, default="")
+    logo_url = db.Column(db.String(500), default="")
+    cover_url = db.Column(db.String(500), default="")
+    whatsapp = db.Column(db.String(40), default="")
+    zone = db.Column(db.String(120), default="")
+    address = db.Column(db.Text, default="")  # point de retrait des commandes par le livreur
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    status = db.Column(db.String(20), default="pending", nullable=False)
+    status_note = db.Column(db.Text, default="")  # motif d'un refus ou d'une suspension
+    official = db.Column(db.Boolean, default=False, nullable=False)  # boutique de la plateforme
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True, nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    validated_at = db.Column(db.DateTime, nullable=True)
+    owner = db.relationship("User", back_populates="shop")
+    products = db.relationship("Product", back_populates="shop")
+
+    def followers_count(self):
+        return Follow.query.filter_by(shop_id=self.id).count()
+
+    def products_count(self):
+        return Product.query.filter_by(shop_id=self.id, active=True).count()
+
+    def summary(self, private=False):
+        """Version courte, affichée sur les cartes produit et dans les listes."""
+        data = {
+            "id": self.id,
+            "slug": self.slug,
+            "name": self.name,
+            "logo_url": self.logo_url or "",
+            "official": self.official,
+        }
+        if private:
+            data["status"] = self.status
+        return data
+
+    def to_dict(self, private=False):
+        data = {
+            **self.summary(),
+            "description": self.description or "",
+            "cover_url": self.cover_url or "",
+            "whatsapp": self.whatsapp or "",
+            "zone": self.zone or "",
+            "followers_count": self.followers_count(),
+            "products_count": self.products_count(),
+            "created_at": self.created_at.isoformat(),
+        }
+        if private:
+            data.update(
+                {
+                    "status": self.status,
+                    "status_note": self.status_note or "",
+                    "address": self.address or "",
+                    "latitude": self.latitude,
+                    "longitude": self.longitude,
+                    "validated_at": self.validated_at.isoformat() if self.validated_at else None,
+                    "owner": (
+                        {"id": self.owner.id, "name": self.owner.name, "phone": self.owner.phone}
+                        if self.owner
+                        else None
+                    ),
+                }
+            )
+        return data
+
+
+class Follow(db.Model):
+    """Un client suit une boutique : ses publications passent en premier dans son fil."""
+
+    __tablename__ = "follows"
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), primary_key=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+def slugify(text):
+    """« Chez Awa & Fils ! » -> « chez-awa-fils » (adresse de la boutique)."""
+    import re
+    import unicodedata
+
+    ascii_text = unicodedata.normalize("NFD", text or "").encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_text.lower()).strip("-")
+    return slug[:60].strip("-") or "boutique"
 
 
 class DeliveryPerson(db.Model):

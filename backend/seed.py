@@ -6,6 +6,7 @@ from models import (
     OrderItem,
     Product,
     PromoCode,
+    Shop,
     Variant,
     db,
 )
@@ -130,6 +131,8 @@ def run():
             print("Base déjà remplie, seed ignoré.")
             return
 
+        # Produits de démo : dans la boutique officielle (créée au démarrage de l'app)
+        official = Shop.query.filter_by(official=True).first()
         cats = {}
         for item in PRODUCTS:
             cat_name = item["cat"]
@@ -150,6 +153,7 @@ def run():
                 reviews_count=item["reviews"],
                 clearance=item.get("clearance", False),
                 category_id=cats[cat_name].id,
+                shop_id=official.id if official else None,
             )
             for v in item["variants"]:
                 product.variants.append(

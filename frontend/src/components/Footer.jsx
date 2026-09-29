@@ -45,6 +45,16 @@ export default function Footer() {
                     Tous les produits
                   </Link>
                 </li>
+                <li>
+                  <Link to="/boutiques" className="transition hover:text-brand-600">
+                    Toutes les boutiques
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/vendeur/ouvrir" className="transition hover:text-brand-600">
+                    Vendre sur la plateforme
+                  </Link>
+                </li>
                 {clearanceCount > 0 && (
                   <li>
                     <Link to="/liquidation" className="flex items-center gap-1.5 transition hover:text-accent-600">

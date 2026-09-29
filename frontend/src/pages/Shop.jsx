@@ -173,7 +173,7 @@ export default function Shop() {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">{currentCategory ? currentCategory.name : "Boutique"}</h1>
+        <h1 className="text-2xl font-bold">{currentCategory ? currentCategory.name : "Produits"}</h1>
         <div className="flex gap-2">
           <div className="relative min-w-0 flex-1 sm:flex-none">
             <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />

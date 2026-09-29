@@ -15,7 +15,7 @@ export default function NotFound() {
         className="btn-primary mt-8 inline-flex items-center justify-center gap-2 px-6 py-2.5"
       >
         <Store size={17} />
-        Voir la boutique
+        Voir les produits
       </Link>
     </div>
   );

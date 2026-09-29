@@ -24,7 +24,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { api } from "../api";
-import { formatDate, formatPrice } from "../format";
+import { formatDate, formatPrice, parseDate } from "../format";
 import { getMyOrders, rememberOrder } from "../myOrders";
 import { useShop } from "../context/ShopContext";
 import TrackingMap from "../components/TrackingMap";
@@ -227,7 +227,7 @@ export default function TrackOrder() {
 }
 
 function shortDate(iso) {
-  return iso ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(iso)) : "";
+  return iso ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(parseDate(iso)) : "";
 }
 
 function MyOrdersList({ orders, currency, onOpen }) {

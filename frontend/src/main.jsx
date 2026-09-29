@@ -7,17 +7,20 @@ import { CartProvider } from "./context/CartContext.jsx";
 import { ShopProvider } from "./context/ShopContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { FavoritesProvider } from "./context/FavoritesContext.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <ThemeProvider>
         <ShopProvider>
-          <FavoritesProvider>
-            <CartProvider>
-              <App />
-            </CartProvider>
-          </FavoritesProvider>
+          <AuthProvider>
+            <FavoritesProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </FavoritesProvider>
+          </AuthProvider>
         </ShopProvider>
       </ThemeProvider>
     </BrowserRouter>

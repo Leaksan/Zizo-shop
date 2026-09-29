@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BellRing,
   Bike,
+  ExternalLink,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -12,6 +13,7 @@ import {
   Store,
   Tag,
   TicketPercent,
+  Users,
   X,
 } from "lucide-react";
 import { api } from "../../api";
@@ -19,6 +21,8 @@ import { useShop } from "../../context/ShopContext";
 
 const LINKS = [
   { to: "/admin/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { to: "/admin/shops", label: "Boutiques", icon: Store, badge: "pending_shops" },
+  { to: "/admin/users", label: "Comptes", icon: Users },
   { to: "/admin/products", label: "Produits", icon: ShoppingBag },
   { to: "/admin/orders", label: "Commandes", icon: Package },
   { to: "/admin/stock-requests", label: "Demandes", icon: BellRing },
@@ -31,7 +35,9 @@ const LINKS = [
 export default function AdminLayout() {
   const [checked, setChecked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [counts, setCounts] = useState({});
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { shopName } = useShop();
 
   useEffect(() => {
@@ -43,6 +49,16 @@ export default function AdminLayout() {
       })
       .catch(() => navigate("/admin/login", { replace: true }));
   }, [navigate]);
+
+  // Pastilles du menu (boutiques à valider…), rafraîchies à chaque changement de page
+  // et par les pages qui les font changer (validation d'une boutique)
+  const refreshCounts = useCallback(() => {
+    api.get("/admin/stats").then(setCounts).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (checked) refreshCounts();
+  }, [checked, pathname, refreshCounts]);
 
   const logout = async () => {
     await api.post("/admin/logout").catch(() => {});
@@ -74,7 +90,12 @@ export default function AdminLayout() {
             }
           >
             <l.icon size={17} />
-            {l.label}
+            <span className="flex-1">{l.label}</span>
+            {l.badge && counts[l.badge] > 0 && (
+              <span className="rounded-full bg-accent-400 px-1.5 text-xs font-bold text-gray-950">
+                {counts[l.badge]}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
@@ -84,8 +105,8 @@ export default function AdminLayout() {
           onClick={() => setMenuOpen(false)}
           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700"
         >
-          <Store size={17} />
-          Voir la boutique
+          <ExternalLink size={17} />
+          Voir le site
         </NavLink>
         <button
           onClick={logout}
@@ -148,7 +169,7 @@ export default function AdminLayout() {
       </aside>
 
       <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-        <Outlet />
+        <Outlet context={{ refreshCounts }} />
       </main>
     </div>
   );
