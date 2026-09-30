@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Banknote,
+  Bell,
   Bike,
   ChevronLeft,
   ChevronRight,
@@ -39,6 +40,7 @@ const iconBtnCls =
   "relative rounded-xl p-3 text-gray-500 transition hover:bg-gray-100 hover:text-brand-600 dark:text-slate-400 dark:hover:bg-slate-800";
 
 export default function Navbar() {
+  const { user, unread } = useAuth();
   const { count } = useCart();
   const { count: favCount } = useFavorites();
   const { theme, toggle } = useTheme();
@@ -104,6 +106,21 @@ export default function Navbar() {
           >
             <Search size={21} />
           </Link>
+          {user && (
+            <Link
+              to="/notifications"
+              title="Notifications"
+              aria-label={unread > 0 ? `Notifications (${unread} non lues)` : "Notifications"}
+              className={iconBtnCls}
+            >
+              <Bell size={21} />
+              {unread > 0 && (
+                <span className="animate-pop absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-gray-950">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </Link>
+          )}
           <button
             onClick={toggle}
             title="Changer de thème"

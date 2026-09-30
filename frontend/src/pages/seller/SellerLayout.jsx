@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet } from "react-router-dom";
-import { Clock, ExternalLink, Newspaper, Package, ShoppingBag, Store, XCircle } from "lucide-react";
+import {
+  Ban,
+  Clock,
+  ExternalLink,
+  LayoutDashboard,
+  Newspaper,
+  Package,
+  ShoppingBag,
+  Store,
+  XCircle,
+} from "lucide-react";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import ShopAvatar from "../../components/ShopAvatar";
@@ -8,6 +18,7 @@ import { SHOP_STATUS } from "../../shopStatus";
 import { usePolling } from "../../hooks";
 
 const TABS = [
+  { to: "/vendeur/tableau", icon: LayoutDashboard, label: "Tableau de bord" },
   { to: "/vendeur/produits", icon: Package, label: "Produits" },
   { to: "/vendeur/commandes", icon: ShoppingBag, label: "Commandes", badge: "orders_to_prepare" },
   { to: "/vendeur/publications", icon: Newspaper, label: "Publications" },
@@ -82,6 +93,16 @@ export default function SellerLayout() {
           <span>
             Votre boutique n'a pas été validée{shop.status_note ? ` : ${shop.status_note}` : "."} Corrigez
             ses informations dans « Ma boutique » et enregistrez : elle repassera en validation.
+          </span>
+        </p>
+      )}
+
+      {shop.status === "suspended" && (
+        <p className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/50 dark:text-red-200">
+          <Ban size={18} className="mt-0.5 shrink-0" />
+          <span>
+            Votre boutique est suspendue{shop.status_note ? ` : ${shop.status_note}` : "."} Elle n'est plus
+            visible et vous ne pouvez plus la modifier : contactez la plateforme.
           </span>
         </p>
       )}

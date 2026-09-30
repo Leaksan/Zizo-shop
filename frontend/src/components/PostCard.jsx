@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import { formatPrice, timeAgo } from "../format";
 import ProductVisual from "./ProductVisual";
+import ReportButton from "./ReportButton";
 import ShopAvatar from "./ShopAvatar";
 
 // Texte des nouveautés automatiques (le vendeur n'a rien écrit)
@@ -75,15 +76,23 @@ export default function PostCard({ post, onFollow, onDelete }) {
             <Trash2 size={15} />
           </button>
         ) : (
-          !post.following &&
           !isMine && (
-            <button
-              onClick={follow}
-              disabled={busy}
-              className="flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300"
-            >
-              <Plus size={14} /> Suivre
-            </button>
+            <>
+              {!post.following && (
+                <button
+                  onClick={follow}
+                  disabled={busy}
+                  className="flex shrink-0 items-center gap-1 rounded-full bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300"
+                >
+                  <Plus size={14} /> Suivre
+                </button>
+              )}
+              <ReportButton
+                target="post"
+                targetId={post.id}
+                className="-mr-1 shrink-0 rounded-full p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:text-slate-500 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+              />
+            </>
           )
         )}
       </header>

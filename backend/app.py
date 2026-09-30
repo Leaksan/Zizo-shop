@@ -21,16 +21,21 @@ from sqlalchemy import update as sa_update
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import (
+    GABON_TZ,
     MAX_POST_IMAGES,
+    REPORT_REASONS,
+    REPORT_TARGETS,
     SHOP_STATUSES,
     Category,
     DeliveryPerson,
     Follow,
+    Notification,
     Order,
     OrderItem,
     Post,
     Product,
     PromoCode,
+    Report,
     Review,
     Setting,
     Shop,
@@ -339,6 +344,58 @@ def create_app():
                     .values(stock=Variant.stock + item.quantity)
                 )
 
+    # ---------------- Notifications ----------------
+
+    def notify(user_id, kind, text, link=""):
+        """Notification pour un compte, enregistrée avec la transaction en cours."""
+        if user_id:
+            db.session.add(Notification(user_id=user_id, kind=kind, text=text[:300], link=link))
+
+    def money(value):
+        return f"{round(value or 0):,}".replace(",", " ") + " FCFA"
+
+    def order_event(order, event, to_customer=True, to_seller=True, courier=None):
+        """Avancée d'une commande : prévient le client (s'il avait un compte) et le vendeur,
+        sauf celui qui vient d'agir."""
+        ref = order.reference
+        shop = order.shop
+        shop_name = shop.name if shop else ""
+        if to_customer and order.user_id:
+            text = {
+                "ready": f"Votre commande {ref} est prête : retirez-la chez {shop_name}.",
+                "delivering": f"Votre commande {ref} ({shop_name}) est en route : le livreur arrive.",
+                "delivered": f"Commande {ref} livrée. Donnez votre avis sur vos articles !",
+                "cancelled": f"Votre commande {ref} ({shop_name}) a été annulée.",
+            }.get(event)
+            if text:
+                notify(order.user_id, "order", text, f"/suivi?ref={ref}")
+        if to_seller and shop and shop.owner_id:
+            count = sum(i.quantity for i in order.items)
+            amount = money(order.subtotal - (order.discount or 0))
+            text = {
+                "new": f"Nouvelle commande {ref} : {count} article{'s' if count > 1 else ''}, "
+                f"{amount}. À préparer !",
+                "delivering": f"{courier.name if courier else 'Un livreur'} vient chercher la "
+                f"commande {ref}.",
+                "delivered": f"Commande {ref} livrée au client.",
+                "cancelled": f"Commande {ref} annulée par la plateforme.",
+            }.get(event)
+            if text:
+                notify(shop.owner_id, "order", text, "/vendeur/commandes")
+
+    SHOP_STATUS_NOTICES = {
+        "active": "Bonne nouvelle : votre boutique {name} est validée, elle est visible de tous !",
+        "rejected": "Votre boutique {name} n'a pas été validée{note}. Corrigez-la puis enregistrez : "
+        "elle repassera en validation.",
+        "suspended": "Votre boutique {name} est suspendue{note}. Contactez la plateforme.",
+    }
+
+    def shop_status_notice(shop):
+        template = SHOP_STATUS_NOTICES.get(shop.status)
+        if template and shop.owner_id:
+            note = f" : {shop.status_note}" if shop.status_note else ""
+            notify(shop.owner_id, "shop", template.format(name=shop.name, note=note), "/vendeur")
+
     def generate_reference():
         while True:
             ref = "CMD-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -581,6 +638,7 @@ def create_app():
             if not promo:
                 return jsonify({"error": "Code promo invalide"}), 400
 
+        buyer = current_user()
         # Articles regroupés par boutique : une commande par boutique (le livreur passe chez
         # chaque vendeur). Le code promo de la plateforme ne vaut que pour la boutique officielle.
         groups = {}
@@ -645,7 +703,8 @@ def create_app():
             )
             order = Order(
                 reference=generate_reference(),
-                shop_id=shop.id,
+                shop=shop,  # la relation (pas seulement shop_id) : utilisée avant l'enregistrement
+                user_id=buyer.id if buyer else None,
                 customer_name=name,
                 customer_email=email,
                 customer_phone=phone,
@@ -678,6 +737,7 @@ def create_app():
                 )
             db.session.add(order)
             orders.append(order)
+            order_event(order, "new")
         db.session.commit()
         for order in orders:
             notify_whatsapp_order(order)
@@ -776,6 +836,14 @@ def create_app():
             photo_url=photo_url,
         )
         db.session.add(review)
+        shop = product.shop
+        if shop and shop.owner_id:
+            notify(
+                shop.owner_id,
+                "review",
+                f"Nouvel avis {rating}/5 sur « {product.name} ».",
+                f"/b/{shop.slug}?onglet=avis",
+            )
         db.session.commit()
         return jsonify(review.to_dict()), 201
 
@@ -958,8 +1026,10 @@ def create_app():
         if result.rowcount == 0:
             db.session.rollback()
             return jsonify({"error": "Cette course n'est plus disponible"}), 400
+        order = db.session.get(Order, order_id)
+        order_event(order, "delivering", courier=courier)
         db.session.commit()
-        return jsonify(courier_order_dict(db.session.get(Order, order_id)))
+        return jsonify(courier_order_dict(order))
 
     @app.post("/api/courier/deliveries/<int:order_id>/complete")
     @courier_required
@@ -984,6 +1054,7 @@ def create_app():
         CODE_FAILS.pop(order.id, None)
         order.status = "delivered"
         order.delivered_at = datetime.now(timezone.utc)
+        order_event(order, "delivered")
         db.session.commit()
         return jsonify(courier_order_dict(order))
 
@@ -1153,13 +1224,32 @@ def create_app():
             return shop
         return None
 
+    def shop_ratings(shop_ids):
+        """Note des boutiques d'après les avis laissés sur leurs produits (vrais avis, après
+        livraison ; jamais les notes de démo saisies à la main) : {shop_id: (moyenne, nombre)}."""
+        if not shop_ids:
+            return {}
+        rows = (
+            db.session.query(Product.shop_id, db.func.avg(Review.rating), db.func.count(Review.id))
+            .join(Review, Review.product_id == Product.id)
+            .filter(Product.shop_id.in_(list(shop_ids)))
+            .group_by(Product.shop_id)
+        )
+        return {shop_id: (round(float(avg), 1), count) for shop_id, avg, count in rows}
+
+    def with_rating(data, rating):
+        data["rating"], data["reviews_count"] = rating or (None, 0)
+        return data
+
     @app.get("/api/shops")
     def list_shops():
         query = Shop.query.filter_by(status="active")
         search = request.args.get("search", "").strip()
         if search:
             query = query.filter(Shop.name.ilike(f"%{search}%"))
-        shops = [s.to_dict() for s in query.all()]
+        found = query.all()
+        ratings = shop_ratings([s.id for s in found])
+        shops = [with_rating(s.to_dict(), ratings.get(s.id)) for s in found]
         # Boutique officielle d'abord, puis les plus suivies, puis les plus fournies
         shops.sort(key=lambda s: (not s["official"], -s["followers_count"], -s["products_count"]))
         return jsonify(shops)
@@ -1170,7 +1260,7 @@ def create_app():
         if not shop:
             return jsonify({"error": "Boutique introuvable"}), 404
         user = current_user()
-        data = shop.to_dict()
+        data = with_rating(shop.to_dict(), shop_ratings([shop.id]).get(shop.id))
         data["is_following"] = bool(
             user and db.session.get(Follow, {"user_id": user.id, "shop_id": shop.id})
         )
@@ -1178,6 +1268,34 @@ def create_app():
         if shop.status != "active":
             data["status"] = shop.status  # aperçu du vendeur : « en attente de validation »
         return jsonify(data)
+
+    REVIEWS_PAGE = 20
+
+    @app.get("/api/shops/<slug>/reviews")
+    def shop_reviews(slug):
+        shop = visible_shop(slug)
+        if not shop:
+            return jsonify({"error": "Boutique introuvable"}), 404
+        page = max(0, request.args.get("page", 0, type=int))
+        rows = (
+            Review.query.join(Product, Review.product_id == Product.id)
+            .filter(Product.shop_id == shop.id)
+            .order_by(Review.created_at.desc(), Review.id.desc())
+            .offset(page * REVIEWS_PAGE)
+            .limit(REVIEWS_PAGE + 1)
+            .all()
+        )
+        reviews = []
+        for review in rows[:REVIEWS_PAGE]:
+            data = review.to_dict()
+            data["product"] = {
+                "id": review.product.id,
+                "name": review.product.name,
+                "image_url": review.product.image_url or "",
+                "category": review.product.category.name if review.product.category else None,
+            }
+            reviews.append(data)
+        return jsonify({"reviews": reviews, "has_more": len(rows) > REVIEWS_PAGE, "page": page})
 
     @app.post("/api/shops/<slug>/follow")
     @user_required
@@ -1329,6 +1447,251 @@ def create_app():
         db.session.commit()
         return jsonify({"ok": True})
 
+    # ---------------- Compte : ses commandes et ses notifications ----------------
+
+    @app.get("/api/me/orders")
+    @user_required
+    def my_account_orders(user):
+        """Commandes passées connecté : elles suivent le client d'un téléphone à l'autre."""
+        orders = (
+            Order.query.filter_by(user_id=user.id).order_by(Order.created_at.desc()).limit(30).all()
+        )
+        result = []
+        for order in orders:
+            data = order.to_dict()
+            data.pop("delivery_code", None)  # affiché seulement sur la page de suivi
+            result.append(data)
+        return jsonify(result)
+
+    @app.get("/api/me/notifications")
+    @user_required
+    def my_notifications(user):
+        items = (
+            Notification.query.filter_by(user_id=user.id)
+            .order_by(Notification.created_at.desc(), Notification.id.desc())
+            .limit(50)
+            .all()
+        )
+        unread = Notification.query.filter_by(user_id=user.id, read=False).count()
+        return jsonify({"items": [n.to_dict() for n in items], "unread": unread})
+
+    @app.get("/api/me/notifications/count")
+    @user_required
+    def my_notifications_count(user):
+        return jsonify({"unread": Notification.query.filter_by(user_id=user.id, read=False).count()})
+
+    @app.post("/api/me/notifications/read")
+    @user_required
+    def read_my_notifications(user):
+        Notification.query.filter_by(user_id=user.id, read=False).update({"read": True})
+        db.session.commit()
+        return jsonify({"unread": 0})
+
+    # ---------------- Espace vendeur : tableau de bord ----------------
+
+    STATS_DAYS = 30
+    CHART_DAYS = 14
+
+    @app.get("/api/my/stats")
+    @seller_required
+    def my_stats(user, shop):
+        """Ventes des 30 derniers jours, commandes par jour, meilleures ventes, stock bas."""
+        since = utcnow() - timedelta(days=STATS_DAYS)
+        orders = Order.query.filter(Order.shop_id == shop.id, Order.created_at >= since).all()
+        live = [o for o in orders if o.status != "cancelled"]
+
+        def amount(order):
+            return order.subtotal - (order.discount or 0)
+
+        def local_day(dt):
+            return dt.replace(tzinfo=timezone.utc).astimezone(GABON_TZ).date()
+
+        today = datetime.now(GABON_TZ).date()
+        days = []
+        for back in range(CHART_DAYS - 1, -1, -1):
+            day = today - timedelta(days=back)
+            same_day = [o for o in live if local_day(o.created_at) == day]
+            days.append(
+                {
+                    "date": day.isoformat(),
+                    "orders": len(same_day),
+                    "amount": round(sum(amount(o) for o in same_day)),
+                }
+            )
+
+        top = {}
+        for order in live:
+            for item in order.items:
+                line = top.setdefault(item.product_name, {"name": item.product_name, "quantity": 0, "amount": 0})
+                line["quantity"] += item.quantity
+                line["amount"] += item.quantity * item.unit_price
+        top_products = sorted(top.values(), key=lambda x: (-x["quantity"], -x["amount"]))[:5]
+
+        threshold = int(get_number("low_stock_threshold", 5))
+        low_stock = (
+            Variant.query.join(Product, Variant.product_id == Product.id)
+            .filter(Product.shop_id == shop.id, Product.active.is_(True), Variant.stock <= threshold)
+            .order_by(Variant.stock, Product.name)
+            .limit(10)
+            .all()
+        )
+        rating = shop_ratings([shop.id]).get(shop.id) or (None, 0)
+        return jsonify(
+            {
+                "period_days": STATS_DAYS,
+                "orders": len(live),
+                "delivered": sum(1 for o in live if o.status == "delivered"),
+                "cancelled": len(orders) - len(live),
+                "sales": round(sum(amount(o) for o in live if o.status == "delivered")),
+                "sales_pending": round(sum(amount(o) for o in live if o.status != "delivered")),
+                "to_prepare": Order.query.filter(
+                    Order.shop_id == shop.id, Order.status == "pending", Order.ready_at.is_(None)
+                ).count(),
+                "followers": shop.followers_count(),
+                "new_followers": Follow.query.filter(
+                    Follow.shop_id == shop.id, Follow.created_at >= since
+                ).count(),
+                "rating": rating[0],
+                "reviews_count": rating[1],
+                "days": days,
+                "top_products": [{**t, "amount": round(t["amount"])} for t in top_products],
+                "low_stock": [
+                    {
+                        "product_id": v.product_id,
+                        "product": v.product.name,
+                        "variant": v.name,
+                        "stock": v.stock,
+                    }
+                    for v in low_stock
+                ],
+            }
+        )
+
+    # ---------------- Signalements ----------------
+
+    REPORTS_PER_DAY = 10
+
+    def report_target(target, target_id):
+        """(contenu signalé, boutique concernée)"""
+        if target == "post":
+            post = db.session.get(Post, target_id)
+            return post, post.shop if post else None
+        shop = db.session.get(Shop, target_id)
+        return shop, shop
+
+    @app.post("/api/reports")
+    @user_required
+    def create_report(user):
+        data = request.get_json(force=True) or {}
+        target, reason = data.get("target"), data.get("reason")
+        try:
+            target_id = int(data.get("target_id"))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Signalement invalide"}), 400
+        if target not in REPORT_TARGETS or reason not in REPORT_REASONS:
+            return jsonify({"error": "Signalement invalide"}), 400
+        item, shop = report_target(target, target_id)
+        if not item or not shop or shop.status != "active" or getattr(item, "hidden", False):
+            return jsonify({"error": "Contenu introuvable"}), 404
+        if shop.owner_id == user.id:
+            return jsonify({"error": "Vous ne pouvez pas signaler votre propre boutique"}), 400
+        already = Report.query.filter_by(
+            target=target, target_id=target_id, user_id=user.id, status="open"
+        ).first()
+        if already:
+            return jsonify({"ok": True})
+        today = Report.query.filter(
+            Report.user_id == user.id, Report.created_at >= utcnow() - timedelta(days=1)
+        ).count()
+        if today >= REPORTS_PER_DAY:
+            return jsonify({"error": "Trop de signalements aujourd'hui : réessayez demain"}), 429
+        db.session.add(
+            Report(
+                target=target,
+                target_id=target_id,
+                reason=reason,
+                details=str(data.get("details") or "").strip()[:500],
+                user_id=user.id,
+            )
+        )
+        db.session.commit()
+        return jsonify({"ok": True}), 201
+
+    @app.get("/api/admin/reports")
+    @admin_required
+    def admin_reports():
+        """Signalements regroupés par contenu (plusieurs personnes peuvent signaler le même)."""
+        status = request.args.get("status", "open")
+        query = Report.query
+        if status == "open":
+            query = query.filter_by(status="open")
+        else:
+            query = query.filter(Report.status != "open")
+        groups = {}
+        for report in query.order_by(Report.created_at.desc()).limit(300):
+            key = (report.target, report.target_id)
+            if key not in groups:
+                item, shop = report_target(*key)
+                groups[key] = {
+                    "target": report.target,
+                    "target_id": report.target_id,
+                    "post": item.to_dict(private=True) if report.target == "post" and item else None,
+                    "shop": shop.to_dict(private=True) if shop else None,
+                    "reports": [],
+                }
+            groups[key]["reports"].append(report.to_dict())
+        return jsonify(list(groups.values()))
+
+    @app.put("/api/admin/reports")
+    @admin_required
+    def admin_resolve_reports():
+        """Décision sur un contenu signalé : masquer la publication, suspendre la boutique,
+        rétablir une publication masquée, ou classer sans suite."""
+        data = request.get_json(force=True) or {}
+        target, action = data.get("target"), data.get("action")
+        try:
+            target_id = int(data.get("target_id"))
+        except (TypeError, ValueError):
+            return jsonify({"error": "Signalement invalide"}), 400
+        if target not in REPORT_TARGETS:
+            return jsonify({"error": "Signalement invalide"}), 400
+        item, shop = report_target(target, target_id)
+        if not item:
+            return jsonify({"error": "Contenu introuvable"}), 404
+        note = str(data.get("note") or "").strip()[:300]
+        pending = Report.query.filter_by(target=target, target_id=target_id, status="open").all()
+        reason = REPORT_REASONS.get(pending[0].reason, "") if pending else ""
+        if action == "hide_post":
+            if target != "post":
+                return jsonify({"error": "Action impossible"}), 400
+            item.hidden = True
+            if shop and shop.owner_id:
+                notify(
+                    shop.owner_id,
+                    "moderation",
+                    f"Une de vos publications a été masquée par la modération : {note or reason}.",
+                    "/vendeur/publications",
+                )
+        elif action == "restore_post":
+            if target != "post":
+                return jsonify({"error": "Action impossible"}), 400
+            item.hidden = False
+        elif action == "suspend_shop":
+            if not shop or shop.official:
+                return jsonify({"error": "La boutique officielle ne peut pas être suspendue"}), 400
+            if shop.status != "suspended":
+                shop.status = "suspended"
+                shop.status_note = note or reason
+                shop_status_notice(shop)
+        elif action != "dismiss":
+            return jsonify({"error": "Action inconnue"}), 400
+        now = utcnow()
+        for report in pending:
+            report.status = "dismissed" if action == "dismiss" else "done"
+            report.resolved_at = now
+        db.session.commit()
+        return jsonify({"ok": True, "resolved": len(pending)})
+
     # ---------------- Espace vendeur : ses commandes ----------------
 
     @app.get("/api/my/orders")
@@ -1354,6 +1717,7 @@ def create_app():
             if order.delivery_method == "pickup":
                 order.status = "delivering"  # « prête à retirer » pour le client
                 order.accepted_at = now
+                order_event(order, "ready", to_seller=False)
         elif action == "picked_up":
             if order.delivery_method != "pickup" or order.status != "delivering":
                 return jsonify({"error": "Commande pas encore prête"}), 400
@@ -1367,6 +1731,7 @@ def create_app():
                 return jsonify({"error": "Trop tard : la commande est déjà en livraison"}), 400
             restock(order)
             order.status = "cancelled"
+            order_event(order, "cancelled", to_seller=False)
         else:
             return jsonify({"error": "Action inconnue"}), 400
         db.session.commit()
@@ -1488,6 +1853,7 @@ def create_app():
         if not shop:
             return jsonify({"error": "Boutique introuvable"}), 404
         data = request.get_json(force=True)
+        previous = shop.status
         if "status" in data:
             if data["status"] not in SHOP_STATUSES:
                 return jsonify({"error": "Statut invalide"}), 400
@@ -1510,6 +1876,8 @@ def create_app():
         if error:
             db.session.rollback()
             return jsonify({"error": error}), 400
+        if shop.status != previous:
+            shop_status_notice(shop)
         db.session.commit()
         return jsonify(shop.to_dict(private=True))
 
@@ -1591,6 +1959,11 @@ def create_app():
                 "total_categories": Category.query.count(),
                 "total_couriers": DeliveryPerson.query.count(),
                 "pending_shops": Shop.query.filter_by(status="pending").count(),
+                # Contenus signalés à traiter (un même contenu peut l'être plusieurs fois)
+                "open_reports": db.session.query(Report.target, Report.target_id)
+                .filter(Report.status == "open")
+                .distinct()
+                .count(),
                 "total_shops": Shop.query.count(),
                 "total_users": User.query.count(),
                 "low_stock_variants": low_stock,
@@ -2034,12 +2407,22 @@ def create_app():
                     return jsonify(
                         {"error": f"Stock insuffisant pour réactiver : {item.product_name} - {item.variant_name}"}
                     ), 400
+        previous = order.status
         order.status = status
         now = datetime.now(timezone.utc)
         if status == "delivering" and not order.accepted_at:
             order.accepted_at = now
         if status == "delivered" and not order.delivered_at:
             order.delivered_at = now
+        if status != previous:
+            pickup = order.delivery_method == "pickup"
+            event = {
+                "delivering": "ready" if pickup else "delivering",
+                "delivered": None if pickup else "delivered",
+                "cancelled": "cancelled",
+            }.get(status)
+            if event:
+                order_event(order, event)
         db.session.commit()
         return jsonify(order.to_dict())
 
@@ -2233,6 +2616,7 @@ def create_app():
         Order.query.filter(Order.shop_id.is_(None)).update(
             {"shop_id": official.id, "ready_at": Order.created_at}, synchronize_session=False
         )
+        Notification.query.filter(Notification.created_at < utcnow() - timedelta(days=90)).delete()
         # Véhicules enregistrés avec un emoji (« 🛵 Scooter ») avant qu'ils soient retirés du site
         for courier in DeliveryPerson.query.all():
             cleaned = re.sub(r"^\W+", "", courier.vehicle or "")
@@ -2265,6 +2649,7 @@ def _migrate_schema():
         ("products", "shop_id", "shop_id INTEGER REFERENCES shops(id)"),
         ("orders", "shop_id", "shop_id INTEGER REFERENCES shops(id)"),
         ("orders", "ready_at", "ready_at DATETIME"),
+        ("orders", "user_id", "user_id INTEGER REFERENCES users(id)"),
     ]
     for table, column, ddl in additions:
         cols = [r[1] for r in db.session.execute(db.text(f"PRAGMA table_info({table})"))]

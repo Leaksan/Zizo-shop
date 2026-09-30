@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { api } from "../api";
+import { usePolling } from "../hooks";
 
 // Compte client / vendeur (téléphone + mot de passe, session côté serveur)
 const AuthContext = createContext(null);
@@ -7,6 +8,9 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   // undefined : vérification en cours · null : pas connecté · objet : connecté
   const [user, setUser] = useState(undefined);
+  // Notifications non lues : pastille de la cloche, vérifiée à chaque minute
+  const [unread, setUnread] = useState(0);
+  const loggedIn = Boolean(user);
 
   const refresh = useCallback(
     () =>
@@ -17,14 +21,34 @@ export function AuthProvider({ children }) {
     []
   );
 
+  const refreshUnread = useCallback(
+    () =>
+      api
+        .get("/me/notifications/count")
+        .then((r) => setUnread(r.unread))
+        .catch(() => {}),
+    []
+  );
+
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (loggedIn) refreshUnread();
+    else setUnread(0);
+  }, [loggedIn, refreshUnread]);
+
+  // Onglet en arrière-plan : pas de requête inutile
+  usePolling(() => loggedIn && document.visibilityState === "visible" && refreshUnread(), 60000, [loggedIn]);
 
   const value = {
     user,
     loading: user === undefined,
     refresh,
+    unread,
+    setUnread,
+    refreshUnread,
     login: async (phone, password) => setUser(await api.post("/auth/login", { phone, password })),
     register: async (form) => setUser(await api.post("/auth/register", form)),
     logout: async () => {

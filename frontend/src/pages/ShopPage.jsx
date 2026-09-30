@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { BadgeCheck, Check, Eye, MapPin, Plus, Share2, Store } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
+import { timeAgo } from "../format";
 import PostCard from "../components/PostCard";
 import ProductCard from "../components/ProductCard";
+import ProductVisual from "../components/ProductVisual";
+import Rating from "../components/Rating";
+import ReportButton from "../components/ReportButton";
 import ShopAvatar from "../components/ShopAvatar";
 import { SHOP_STATUS } from "../shopStatus";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 
+const TABS = ["produits", "publications", "avis"];
+
 export default function ShopPage() {
   const { slug } = useParams();
+  // Onglet ouvert par un lien (ex. notification d'un nouvel avis : ?onglet=avis)
+  const [searchParams] = useSearchParams();
+  const onglet = searchParams.get("onglet");
+  const tabFromUrl = TABS.includes(onglet) ? onglet : "produits";
   const { user } = useAuth();
   const { shopName } = useShop();
   const navigate = useNavigate();
@@ -20,8 +30,9 @@ export default function ShopPage() {
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState("produits");
+  const [tab, setTab] = useState(tabFromUrl);
   const [posts, setPosts] = useState(null);
+  const [reviews, setReviews] = useState(null);
 
   // Publications chargées à la première ouverture de l'onglet
   useEffect(() => {
@@ -32,11 +43,29 @@ export default function ShopPage() {
       .catch(() => setPosts([]));
   }, [tab, posts, slug]);
 
-  // Autre boutique (lien depuis une publication) : repartir de l'onglet Produits
+  // Avis chargés à la première ouverture de l'onglet, 20 par 20
   useEffect(() => {
-    setTab("produits");
+    if (tab !== "avis" || reviews !== null) return;
+    api
+      .get(`/shops/${slug}/reviews`)
+      .then((r) => setReviews({ items: r.reviews, hasMore: r.has_more, page: 0 }))
+      .catch(() => setReviews({ items: [], hasMore: false, page: 0 }));
+  }, [tab, reviews, slug]);
+
+  const moreReviews = () =>
+    api
+      .get(`/shops/${slug}/reviews?page=${reviews.page + 1}`)
+      .then((r) =>
+        setReviews((prev) => ({ items: [...prev.items, ...r.reviews], hasMore: r.has_more, page: prev.page + 1 }))
+      )
+      .catch(() => {});
+
+  // Autre boutique (lien depuis une publication) : repartir de l'onglet demandé (Produits)
+  useEffect(() => {
+    setTab(tabFromUrl);
     setPosts(null);
-  }, [slug]);
+    setReviews(null);
+  }, [slug, tabFromUrl]);
 
   useEffect(() => {
     setShop(null);
@@ -140,6 +169,11 @@ export default function ShopPage() {
                 {shop.products_count > 1 ? "s" : ""}
               </span>
             </p>
+            {shop.reviews_count > 0 && (
+              <button onClick={() => setTab("avis")} className="mt-0.5" aria-label="Voir les avis">
+                <Rating value={shop.rating} count={shop.reviews_count} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -182,6 +216,13 @@ export default function ShopPage() {
           >
             {copied ? <Check size={17} /> : <Share2 size={17} />}
           </button>
+          {!shop.is_owner && !shop.status && (
+            <ReportButton
+              target="shop"
+              targetId={shop.id}
+              className="flex items-center justify-center rounded-lg border border-gray-300 px-3 text-gray-500 transition hover:bg-gray-100 dark:border-slate-600 dark:text-slate-400 dark:hover:bg-slate-800"
+            />
+          )}
         </div>
 
         {shop.description && (
@@ -192,6 +233,7 @@ export default function ShopPage() {
           {[
             ["produits", `Produits (${shop.products_count})`],
             ["publications", "Publications"],
+            ["avis", shop.reviews_count > 0 ? `Avis (${shop.reviews_count})` : "Avis"],
           ].map(([key, label]) => (
             <button
               key={key}
@@ -209,7 +251,49 @@ export default function ShopPage() {
           ))}
         </div>
 
-        {tab === "publications" ? (
+        {tab === "avis" ? (
+          <section className="mx-auto mt-4 mb-8 flex max-w-xl flex-col gap-3">
+            {reviews === null ? (
+              <div className="skeleton h-40" />
+            ) : reviews.items.length === 0 ? (
+              <p className="card p-6 text-center text-sm muted">
+                Aucun avis pour le moment. Les clients notent leurs articles après la livraison.
+              </p>
+            ) : (
+              <>
+                {reviews.items.map((r) => (
+                  <article key={r.id} className="card p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate font-semibold">{r.customer_name}</span>
+                      <span className="shrink-0 text-xs muted">{timeAgo(r.created_at)}</span>
+                    </div>
+                    <Rating value={r.rating} className="mt-1" />
+                    {r.comment && <p className="mt-2 text-sm text-gray-700 dark:text-slate-300">{r.comment}</p>}
+                    {r.photo_url && (
+                      <a href={r.photo_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block">
+                        <img src={r.photo_url} alt="Photo du client" loading="lazy" className="h-28 w-28 rounded-lg object-cover" />
+                      </a>
+                    )}
+                    <Link
+                      to={`/products/${r.product.id}`}
+                      className="mt-3 flex items-center gap-2 rounded-lg bg-gray-50 p-2 text-xs font-semibold transition hover:bg-gray-100 dark:bg-slate-900 dark:hover:bg-slate-700"
+                    >
+                      <span className="h-9 w-9 shrink-0 overflow-hidden rounded-md">
+                        <ProductVisual product={r.product} width={160} />
+                      </span>
+                      <span className="min-w-0 truncate">{r.product.name}</span>
+                    </Link>
+                  </article>
+                ))}
+                {reviews.hasMore && (
+                  <button onClick={moreReviews} className="btn-outline py-2.5">
+                    Voir plus d'avis
+                  </button>
+                )}
+              </>
+            )}
+          </section>
+        ) : tab === "publications" ? (
           <section className="mx-auto mt-4 mb-8 flex max-w-xl flex-col gap-4">
             {posts === null ? (
               <div className="skeleton h-72" />

@@ -377,6 +377,71 @@ class Post(db.Model):
         return data
 
 
+class Notification(db.Model):
+    """Message pour un compte : nouvelle commande (vendeur), suivi de commande (client),
+    décision de l'admin (boutique validée, publication masquée…)."""
+
+    __tablename__ = "notifications"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    kind = db.Column(db.String(30), nullable=False)  # order, shop, review, moderation
+    text = db.Column(db.String(300), nullable=False)
+    link = db.Column(db.String(200), default="")  # page du site à ouvrir
+    read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "text": self.text,
+            "link": self.link or "",
+            "read": self.read,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+# Signalements : ce que les clients peuvent signaler, et pourquoi
+REPORT_TARGETS = ("post", "shop")
+REPORT_REASONS = {
+    "arnaque": "Arnaque ou fraude",
+    "contrefacon": "Contrefaçon",
+    "inapproprie": "Contenu choquant ou inapproprié",
+    "trompeur": "Prix ou description trompeurs",
+    "autre": "Autre raison",
+}
+
+
+class Report(db.Model):
+    """Signalement d'une publication ou d'une boutique, traité par l'admin."""
+
+    __tablename__ = "reports"
+    id = db.Column(db.Integer, primary_key=True)
+    target = db.Column(db.String(20), nullable=False)  # post | shop
+    target_id = db.Column(db.Integer, nullable=False)
+    reason = db.Column(db.String(30), nullable=False)
+    details = db.Column(db.Text, default="")
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user = db.relationship("User")
+    status = db.Column(db.String(20), default="open", nullable=False)  # open | done | dismissed
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    resolved_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "target": self.target,
+            "target_id": self.target_id,
+            "reason": self.reason,
+            "reason_label": REPORT_REASONS.get(self.reason, self.reason),
+            "details": self.details or "",
+            "status": self.status,
+            "created_at": self.created_at.isoformat(),
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "user": {"name": self.user.name, "phone": self.user.phone} if self.user else None,
+        }
+
+
 def slugify(text):
     """« Chez Awa & Fils ! » -> « chez-awa-fils » (adresse de la boutique)."""
     import re
@@ -455,6 +520,8 @@ class Order(db.Model):
     shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), nullable=True)
     shop = db.relationship("Shop")
     ready_at = db.Column(db.DateTime, nullable=True)
+    # Compte du client s'il était connecté : ses commandes le suivent d'un téléphone à l'autre
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     courier_rating = db.Column(db.Integer, nullable=True)
     courier_comment = db.Column(db.Text, default="")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))

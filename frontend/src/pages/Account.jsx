@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronRight, Heart, LogOut, Package, Settings, Store, UserRound } from "lucide-react";
+import { Bell, ChevronRight, Heart, LogOut, Package, Settings, Store, UserRound } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
@@ -125,7 +125,7 @@ function AuthForms() {
 }
 
 function Profile({ user }) {
-  const { logout, update } = useAuth();
+  const { logout, update, unread } = useAuth();
   const [follows, setFollows] = useState(null);
   const [name, setName] = useState(user.name);
   const [passwords, setPasswords] = useState({ current_password: "", new_password: "" });
@@ -193,6 +193,14 @@ function Profile({ user }) {
       )}
 
       <nav className="card divide-y divide-gray-100 overflow-hidden dark:divide-slate-700">
+        <Link to="/notifications" className={rowCls}>
+          <Bell size={18} className="text-brand-600 dark:text-brand-400" />
+          <span className="flex-1">Notifications</span>
+          {unread > 0 && (
+            <span className="rounded-full bg-accent-500 px-2 py-0.5 text-xs font-bold text-gray-950">{unread}</span>
+          )}
+          <ChevronRight size={16} className="text-gray-400" />
+        </Link>
         <Link to="/suivi" className={rowCls}>
           <Package size={18} className="text-brand-600 dark:text-brand-400" />
           <span className="flex-1">Mes commandes</span>

@@ -58,6 +58,7 @@ def run():
     phase1_accounts_and_shops()
     phase2_feed()
     phase3_orders()
+    phase4_notifications_reviews_reports()
     login_rate_limit()
 
 
@@ -311,6 +312,118 @@ def phase3_orders():
     check("retrait : récupérée par le client", r.get_json()["status"] == "delivered")
     check("admin : commande marquée prête à la place du vendeur",
           admin.put(f"/api/admin/orders/{extra['id']}", json={"ready": True}).status_code == 200)
+
+
+def texts(client):
+    return [n["text"] for n in client.get("/api/me/notifications").get_json()["items"]]
+
+
+def phase4_notifications_reviews_reports():
+    admin = new_admin()
+    seller, shop = open_shop("077 88 99 00", "Robes de Nzeng", admin)
+    check("vendeur prévenu de la validation", any("est validée" in t for t in texts(seller)), texts(seller))
+    check("compteur de notifications", seller.get("/api/me/notifications/count").get_json()["unread"] >= 1)
+    check("notifications privées", app.test_client().get("/api/me/notifications").status_code == 401)
+    product = new_product(seller, "Robe pagne", price=20000, stock=5)
+    variant = product["variants"][0]["id"]
+
+    # --- Commande passée connecté : liée au compte, vendeur prévenu ---
+    buyer = app.test_client()
+    buyer.post("/api/auth/register", json={"name": "Cliente Fidèle", "phone": "066 21 21 21", "password": "secret1"})
+    order = place_order(buyer, [(variant, 1)]).get_json()["orders"][0]
+    anonymous = place_order(app.test_client(), [(variant, 1)]).get_json()["orders"][0]
+    mine = buyer.get("/api/me/orders").get_json()
+    check("commande liée au compte", [o["reference"] for o in mine] == [order["reference"]], mine)
+    check("pas de code de livraison dans la liste", "delivery_code" not in mine[0])
+    check("vendeur prévenu de la nouvelle commande", any(order["reference"] in t for t in texts(seller)))
+    check("commande sans compte aussi signalée au vendeur", any(anonymous["reference"] in t for t in texts(seller)))
+
+    # --- Suivi : le client est prévenu, le vendeur aussi quand le livreur arrive ---
+    seller.put(f"/api/my/orders/{order['id']}", json={"action": "ready"})
+    courier = app.test_client()
+    courier.post("/api/courier/login", json={"phone": "0698765432", "password": "livre123"})
+    courier.post(f"/api/courier/deliveries/{order['id']}/accept")
+    check("client prévenu : commande en route", any("en route" in t for t in texts(buyer)), texts(buyer))
+    check("vendeur prévenu : le livreur arrive", any("vient chercher" in t for t in texts(seller)))
+    code = buyer.get(f"/api/orders/track/{order['reference']}").get_json()["delivery_code"]
+    courier.post(f"/api/courier/deliveries/{order['id']}/complete", json={"code": code})
+    check("client prévenu : commande livrée", any("livrée" in t for t in texts(buyer)))
+    pickup = place_order(buyer, [(variant, 1)], method="pickup").get_json()["orders"][0]
+    seller.put(f"/api/my/orders/{pickup['id']}", json={"action": "ready"})
+    check("client prévenu : prête à retirer", any("retirez-la chez Robes de Nzeng" in t for t in texts(buyer)))
+    refused = place_order(buyer, [(variant, 1)]).get_json()["orders"][0]
+    seller.put(f"/api/my/orders/{refused['id']}", json={"action": "cancel"})
+    check("client prévenu : commande annulée", any(refused["reference"] in t and "annulée" in t for t in texts(buyer)))
+    check("le vendeur n'est pas prévenu de sa propre annulation",
+          not any(refused["reference"] in t and "annulée" in t for t in texts(seller)))
+    buyer.post("/api/me/notifications/read")
+    check("notifications lues", buyer.get("/api/me/notifications/count").get_json()["unread"] == 0)
+
+    # --- Avis : note de la boutique, vendeur prévenu ---
+    r = buyer.post(f"/api/orders/{order['reference']}/reviews",
+                   data={"product_id": product["id"], "rating": "4", "comment": "Belle robe"})
+    check("avis laissé après livraison", r.status_code == 201, r.get_json())
+    page = app.test_client().get(f"/api/shops/{shop['slug']}").get_json()
+    check("note de la boutique", page["rating"] == 4.0 and page["reviews_count"] == 1, page)
+    reviews = app.test_client().get(f"/api/shops/{shop['slug']}/reviews").get_json()
+    check("avis listés avec leur produit", reviews["reviews"][0]["product"]["name"] == "Robe pagne", reviews)
+    listed = {s["slug"]: s for s in app.test_client().get("/api/shops").get_json()}
+    check("note dans l'annuaire", listed[shop["slug"]]["rating"] == 4.0)
+    check("pas de note sans avis", listed["autre-boutique"]["rating"] is None)
+    check("vendeur prévenu du nouvel avis", any("Nouvel avis 4/5" in t for t in texts(seller)))
+
+    # --- Tableau de bord du vendeur ---
+    stats = seller.get("/api/my/stats").get_json()
+    check("stats : commandes et annulations", stats["orders"] == 3 and stats["cancelled"] == 1, stats)
+    check("stats : ventes livrées", stats["sales"] == 20000 and stats["sales_pending"] == 40000, stats)
+    check("stats : commandes du jour", stats["days"][-1]["orders"] == 3 and len(stats["days"]) == 14)
+    check("stats : meilleure vente", stats["top_products"][0] == {"name": "Robe pagne", "quantity": 3, "amount": 60000})
+    check("stats : stock bas", stats["low_stock"][0]["stock"] == 2, stats["low_stock"])
+    check("stats réservées aux vendeurs", buyer.get("/api/my/stats").status_code == 403)
+
+    # --- Boutique refusée : le vendeur reçoit le motif ---
+    other, other_shop = open_shop("077 90 90 90", "Boutique douteuse")
+    admin.put(f"/api/admin/shops/{other_shop['id']}", json={"status": "rejected", "status_note": "Photos floues"})
+    check("vendeur prévenu du refus avec le motif", any("Photos floues" in t for t in texts(other)))
+
+    # --- Signalements ---
+    post = seller.post("/api/my/posts", json={"text": "Arrivage de robes !"}).get_json()
+    report = {"target": "post", "target_id": post["id"], "reason": "arnaque", "details": "Prix trop beau"}
+    check("signaler demande un compte", app.test_client().post("/api/reports", json=report).status_code == 401)
+    check("motif inconnu refusé", buyer.post("/api/reports", json={**report, "reason": "x"}).status_code == 400)
+    check("publication signalée", buyer.post("/api/reports", json=report).status_code == 201)
+    check("pas de doublon", buyer.post("/api/reports", json=report).status_code == 200)
+    check("on ne signale pas sa propre boutique",
+          seller.post("/api/reports", json={"target": "shop", "target_id": shop["id"], "reason": "autre"}).status_code == 400)
+    witness = app.test_client()
+    witness.post("/api/auth/register", json={"name": "Témoin", "phone": "066 31 31 31", "password": "secret1"})
+    witness.post("/api/reports", json={**report, "reason": "trompeur"})
+    check("compteur admin des signalements", admin.get("/api/admin/stats").get_json()["open_reports"] == 1)
+    groups = admin.get("/api/admin/reports").get_json()
+    check("signalements regroupés par contenu", len(groups) == 1 and len(groups[0]["reports"]) == 2, groups)
+    check("admin : aperçu de la publication", groups[0]["post"]["text"] == "Arrivage de robes !")
+    r = admin.put("/api/admin/reports", json={"target": "post", "target_id": post["id"], "action": "hide_post"})
+    check("publication masquée, signalements traités", r.get_json()["resolved"] == 2, r.get_json())
+    feed = {p["id"] for p in app.test_client().get("/api/feed").get_json()["posts"]}
+    check("publication masquée absente du fil", post["id"] not in feed)
+    check("vendeur prévenu de la modération", any("masquée par la modération" in t for t in texts(seller)))
+    check("plus rien à traiter", admin.get("/api/admin/stats").get_json()["open_reports"] == 0)
+    check("signalements traités consultables", len(admin.get("/api/admin/reports?status=done").get_json()) == 1)
+    admin.put("/api/admin/reports", json={"target": "post", "target_id": post["id"], "action": "restore_post"})
+    feed = {p["id"] for p in app.test_client().get("/api/feed").get_json()["posts"]}
+    check("publication rétablie", post["id"] in feed)
+    witness.post("/api/reports", json={"target": "shop", "target_id": shop["id"], "reason": "contrefacon"})
+    admin.put("/api/admin/reports", json={"target": "shop", "target_id": shop["id"], "action": "suspend_shop",
+                                          "note": "Contrefaçons"})
+    check("boutique suspendue invisible", app.test_client().get(f"/api/shops/{shop['slug']}").status_code == 404)
+    check("vendeur prévenu de la suspension", any("suspendue : Contrefaçons" in t for t in texts(seller)))
+    official = next(s for s in app.test_client().get("/api/shops").get_json() if s["official"])
+    witness.post("/api/reports", json={"target": "shop", "target_id": official["id"], "reason": "autre"})
+    check("boutique officielle jamais suspendue",
+          admin.put("/api/admin/reports", json={"target": "shop", "target_id": official["id"],
+                                                "action": "suspend_shop"}).status_code == 400)
+    r = admin.put("/api/admin/reports", json={"target": "shop", "target_id": official["id"], "action": "dismiss"})
+    check("signalement classé sans suite", r.get_json()["resolved"] == 1)
 
 
 def login_rate_limit():

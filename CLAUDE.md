@@ -1,9 +1,10 @@
 # 241 Shop (ex-Zizo Shop) — boutique en ligne (Libreville, Gabon)
 
 Boutique en ligne avec livraison à Libreville : catalogue, panier, commande avec
-carte, suivi du livreur en temps réel, espace livreur, admin, PWA. **En cours de transformation
-en hub multi-vendeurs** (branche `hub-vendeurs`) : comptes, boutiques de vendeurs validées par
-l'admin, fil d'actu — voir « Hub vendeurs » plus bas.
+carte, suivi du livreur en temps réel, espace livreur, admin, PWA. **Devenue un hub
+multi-vendeurs** (branche `hub-vendeurs`, pas encore fusionnée) : comptes, boutiques de vendeurs
+validées par l'admin, fil d'actu, une commande par boutique, notifications — voir « Hub vendeurs »
+plus bas.
 Tout le produit (interface, messages, commits) est en **français**.
 
 ## Architecture
@@ -164,15 +165,40 @@ vendeurs + nouveautés automatiques + abonnements (pas de « j'aime » ni de com
   et boutiques sur sa carte. L'adresse de retrait de la boutique se choisit dans les suggestions
   de lieux (position GPS pour le livreur) ; elle n'est jamais sur la page publique.
 
-**Phase suivante**
-- Phase 4 — notifications, avis sur les boutiques, statistiques vendeur, signalements.
+**Phase 4 faite — notifications, avis, statistiques, signalements**
+- `Notification` (par compte ; `notify()`, `order_event()`, `shop_status_notice()` dans `app.py`,
+  enregistrées avec la transaction en cours) : nouvelle commande, livreur en route, commande
+  livrée ou annulée, nouvel avis (vendeur) ; commande prête, en route, livrée, annulée (client,
+  s'il était connecté en commandant : `Order.user_id`) ; boutique validée / refusée / suspendue,
+  publication masquée. Jamais à celui qui vient d'agir. Cloche dans l'en-tête (compteur
+  `/api/me/notifications/count` chaque minute, dans `AuthContext`) et page `/notifications`
+  (l'ouvrir marque tout comme lu). Notifications de plus de 90 jours effacées au démarrage.
+- « Mes commandes » réunit les commandes du téléphone (`localStorage`) et celles du compte
+  (`/api/me/orders`). Jamais de rattachement d'anciennes commandes par numéro de téléphone : le
+  numéro n'est pas vérifié, ce serait une fuite d'adresses.
+- Note d'une boutique = moyenne des **vrais** avis sur ses produits (`shop_ratings()`, jamais les
+  notes de démo saisies à la main) : annuaire, page boutique, onglet « Avis »
+  (`/api/shops/<slug>/reviews`, lien direct `/b/<slug>?onglet=avis`).
+- Tableau de bord vendeur `/vendeur/tableau` (accueil de l'espace vendeur, `/api/my/stats`) :
+  ventes et commandes des 30 derniers jours, commandes par jour sur 14 jours (heure de
+  Libreville), meilleures ventes, stock bas, abonnés, note.
+- Signalements (`Report` ; motifs `REPORT_REASONS`, recopiés dans `ReportButton.jsx`) d'une
+  publication ou d'une boutique : compte obligatoire, 10 par jour, jamais sa propre boutique.
+  Admin « Signalements » (regroupés par contenu) : masquer / rétablir la publication, suspendre
+  la boutique (jamais l'officielle), classer sans suite. Le vendeur est prévenu de la décision,
+  jamais de l'auteur du signalement.
+
+**Pistes pour la suite** : commission par vente, paiement mobile money (voir plus bas),
+« j'aime » / commentaires (écartés pour l'instant), notifications WhatsApp aux vendeurs.
 
 ## À faire avant la mise en production
 
 - Réinitialiser le lien d'invitation du groupe WhatsApp (l'ancien est dans l'historique Git public).
 - Changer `admin123`, supprimer le livreur de démo, revoir les codes promo de démo.
 - Mettre le nom « 241 Shop » dans Admin > Paramètres (la base garde l'ancien nom).
-- Fusionner `corrections-bugs` dans `master` (Render redéploie la prod).
+- Fusionner `corrections-bugs` dans `master` (Render redéploie la prod), puis `hub-vendeurs`.
+  Au premier démarrage, la base de prod est complétée toute seule (nouvelles tables et colonnes,
+  boutique officielle « 241 Shop » qui reçoit les produits et commandes existants).
 
 ## Prochaines étapes (décisions du propriétaire en attente)
 

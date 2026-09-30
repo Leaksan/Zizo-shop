@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { BadgeCheck, ChevronRight, MapPin, Search, Store } from "lucide-react";
+import { BadgeCheck, ChevronRight, MapPin, Search, Star, Store } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import ExploreTabs from "../components/ExploreTabs";
@@ -63,6 +63,12 @@ export default function Shops() {
                   </small>
                 )}
                 <small className="block text-xs muted">
+                  {s.reviews_count > 0 && (
+                    <span className="font-semibold text-gray-700 dark:text-slate-200">
+                      <Star size={11} className="-mt-0.5 mr-0.5 inline fill-amber-400 text-amber-400" />
+                      {s.rating.toFixed(1).replace(".", ",")} ·{" "}
+                    </span>
+                  )}
                   {s.products_count} produit{s.products_count > 1 ? "s" : ""} · {s.followers_count} abonné
                   {s.followers_count > 1 ? "s" : ""}
                 </small>

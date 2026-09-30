@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Bike,
@@ -26,6 +26,7 @@ import {
 import { api } from "../api";
 import { formatDate, formatPrice, parseDate } from "../format";
 import { getMyOrders, rememberOrder } from "../myOrders";
+import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import ShopAvatar from "../components/ShopAvatar";
 import TrackingMap from "../components/TrackingMap";
@@ -97,6 +98,22 @@ const STATUS_CHIP = {
   preparing: { delivery: "En préparation", pickup: "En préparation", cls: STATUS_INFO.pending.cls },
 };
 
+// Commandes de ce téléphone + celles du compte (passées depuis un autre appareil), sans doublon
+function mergeOrders(local, account) {
+  const known = new Set(local.map((o) => o.reference));
+  const extra = account
+    .filter((o) => !known.has(o.reference))
+    .map((o) => ({
+      reference: o.reference,
+      created_at: o.created_at,
+      total: o.total,
+      items_count: (o.items || []).reduce((n, i) => n + i.quantity, 0),
+      delivery_method: o.delivery_method,
+      shop_name: o.shop?.name || "",
+    }));
+  return [...local, ...extra].sort((a, b) => parseDate(b.created_at) - parseDate(a.created_at));
+}
+
 export default function TrackOrder() {
   const [searchParams, setSearchParams] = useSearchParams();
   const refParam = (searchParams.get("ref") || "").trim().toUpperCase();
@@ -105,8 +122,22 @@ export default function TrackOrder() {
   const [error, setError] = useState("");
   // Ouvert avec ?ref= : afficher le chargement tout de suite, sans montrer la liste un instant
   const [loading, setLoading] = useState(() => Boolean(refParam));
-  const [myOrders, setMyOrders] = useState(getMyOrders);
+  const [localOrders, setLocalOrders] = useState(getMyOrders);
+  const [accountOrders, setAccountOrders] = useState([]);
+  const { user } = useAuth();
   const { currency } = useShop();
+  const myOrders = useMemo(() => mergeOrders(localOrders, accountOrders), [localOrders, accountOrders]);
+
+  useEffect(() => {
+    if (!user) {
+      setAccountOrders([]);
+      return;
+    }
+    api
+      .get("/me/orders")
+      .then(setAccountOrders)
+      .catch(() => {});
+  }, [user]);
 
   const search = useCallback(
     async (reference, silent = false) => {
@@ -123,7 +154,7 @@ export default function TrackOrder() {
         if (!silent) {
           setRef(value);
           rememberOrder(found);
-          setMyOrders(getMyOrders());
+          setLocalOrders(getMyOrders());
         }
       } catch (e) {
         if (!silent) setError(e.message);
@@ -190,7 +221,9 @@ export default function TrackOrder() {
         </h1>
         <p className="mt-1 text-sm muted">
           {myOrders.length > 0
-            ? "Vos commandes passées sur ce téléphone. Touchez-en une pour la suivre."
+            ? user
+              ? "Vos commandes (ce téléphone et votre compte). Touchez-en une pour la suivre."
+              : "Vos commandes passées sur ce téléphone. Touchez-en une pour la suivre."
             : "Entrez votre numéro de commande (ex. CMD-AB12CD) pour connaître son statut."}
         </p>
       </div>

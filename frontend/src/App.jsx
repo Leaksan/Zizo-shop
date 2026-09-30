@@ -29,6 +29,8 @@ const SellerLayout = lazy(() => import("./pages/seller/SellerLayout"));
 const SellerShopEdit = lazy(() => import("./pages/seller/SellerShopEdit"));
 const SellerPosts = lazy(() => import("./pages/seller/SellerPosts"));
 const SellerOrders = lazy(() => import("./pages/seller/SellerOrders"));
+const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -42,6 +44,7 @@ const AdminStockRequests = lazy(() => import("./pages/admin/AdminStockRequests")
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminShops = lazy(() => import("./pages/admin/AdminShops"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 
 function PageLoader() {
   return <p className="py-16 text-center muted">Chargement…</p>;
@@ -66,6 +69,7 @@ export default function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="shops" element={<AdminShops />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="reports" element={<AdminReports />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id/edit" element={<AdminProductForm />} />
@@ -95,11 +99,13 @@ export default function App() {
                   <Route path="/suivi" element={<TrackOrder />} />
                   <Route path="/livreur" element={<Courier />} />
                   <Route path="/compte" element={<Account />} />
+                  <Route path="/notifications" element={<Notifications />} />
                   <Route path="/boutiques" element={<Shops />} />
                   <Route path="/b/:slug" element={<ShopPage />} />
                   <Route path="/vendeur/ouvrir" element={<OpenShop />} />
                   <Route path="/vendeur" element={<SellerLayout />}>
-                    <Route index element={<Navigate to="produits" replace />} />
+                    <Route index element={<Navigate to="tableau" replace />} />
+                    <Route path="tableau" element={<SellerDashboard />} />
                     <Route path="produits" element={<AdminProducts mode="vendeur" />} />
                     <Route path="produits/nouveau" element={<AdminProductForm mode="vendeur" />} />
                     <Route path="produits/:id" element={<AdminProductForm mode="vendeur" />} />
