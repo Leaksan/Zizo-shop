@@ -3,29 +3,35 @@ import { MapPin } from "lucide-react";
 import { api } from "../api";
 import { searchPlaces } from "../libreville";
 
-export default function AddressInput({ value, onChange, onPick, required = true }) {
+export default function AddressInput({
+  value,
+  onChange,
+  onPick,
+  required = true,
+  placeholder = "Ex. Glass, Akébé, Marché Mont-Bouët…",
+}) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
-  const [remote, setRemote] = useState([]);
+  // Résultats du serveur, gardés avec la saisie qui les a demandés : ceux d'une saisie
+  // précédente ne s'affichent pas pendant que la nouvelle recherche est en cours
+  const [remote, setRemote] = useState({ query: "", places: [] });
   const boxRef = useRef(null);
 
+  const query = value.trim();
   const local = searchPlaces(value);
-  const suggestions = remote.length > 0 ? remote : local;
+  const fresh = remote.query === query ? remote.places : [];
+  const suggestions = fresh.length > 0 ? fresh : local;
 
   useEffect(() => {
-    const q = value.trim();
-    if (q.length < 3) {
-      setRemote([]);
-      return;
-    }
+    if (query.length < 3) return undefined;
     const timer = setTimeout(() => {
       api
-        .get(`/geocode/search?q=${encodeURIComponent(q)}`)
-        .then((results) => setRemote(results))
-        .catch(() => setRemote([]));
+        .get(`/geocode/search?q=${encodeURIComponent(query)}`)
+        .then((places) => setRemote({ query, places }))
+        .catch(() => setRemote({ query, places: [] }));
     }, 350);
     return () => clearTimeout(timer);
-  }, [value]);
+  }, [query]);
 
   useEffect(() => {
     const close = (e) => {
@@ -71,7 +77,7 @@ export default function AddressInput({ value, onChange, onPick, required = true 
         onFocus={() => setOpen(true)}
         onKeyDown={onKeyDown}
         className="input"
-        placeholder="Ex. Glass, Akébé, Marché Mont-Bouët…"
+        placeholder={placeholder}
         autoComplete="off"
       />
       {open && suggestions.length > 0 && (

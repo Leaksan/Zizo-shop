@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet } from "react-router-dom";
-import { Clock, ExternalLink, Newspaper, Package, Store, XCircle } from "lucide-react";
+import { Clock, ExternalLink, Newspaper, Package, ShoppingBag, Store, XCircle } from "lucide-react";
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import ShopAvatar from "../../components/ShopAvatar";
 import { SHOP_STATUS } from "../../shopStatus";
+import { usePolling } from "../../hooks";
 
 const TABS = [
   { to: "/vendeur/produits", icon: Package, label: "Produits" },
+  { to: "/vendeur/commandes", icon: ShoppingBag, label: "Commandes", badge: "orders_to_prepare" },
   { to: "/vendeur/publications", icon: Newspaper, label: "Publications" },
   { to: "/vendeur/boutique", icon: Store, label: "Ma boutique" },
 ];
@@ -16,12 +18,16 @@ const TABS = [
 export default function SellerLayout() {
   const { user, loading } = useAuth();
   const [shop, setShop] = useState(null);
+  const [counts, setCounts] = useState({});
 
   const reload = useCallback(
     () =>
       api
         .get("/my/shop")
-        .then((r) => setShop(r.shop))
+        .then((r) => {
+          setShop(r.shop);
+          setCounts({ orders_to_prepare: r.orders_to_prepare || 0 });
+        })
         .catch(() => {}),
     []
   );
@@ -29,6 +35,8 @@ export default function SellerLayout() {
   useEffect(() => {
     if (user?.shop) reload();
   }, [user?.shop, reload]);
+  // Nouvelles commandes : le compteur de l'onglet se met à jour tout seul
+  usePolling(() => user?.shop && reload(), 30000, [user?.shop]);
 
   if (loading) return <div className="skeleton h-40" />;
   if (!user) return <Navigate to="/compte?suite=/vendeur" replace />;
@@ -82,6 +90,11 @@ export default function SellerLayout() {
         {TABS.map((t) => (
           <NavLink key={t.to} to={t.to} className={tabCls}>
             <t.icon size={16} /> {t.label}
+            {counts[t.badge] > 0 && (
+              <span className="rounded-full bg-accent-500 px-1.5 text-xs font-bold text-gray-950">
+                {counts[t.badge]}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

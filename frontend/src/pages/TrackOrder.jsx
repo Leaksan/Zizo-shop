@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Bike,
   Check,
@@ -27,6 +27,7 @@ import { api } from "../api";
 import { formatDate, formatPrice, parseDate } from "../format";
 import { getMyOrders, rememberOrder } from "../myOrders";
 import { useShop } from "../context/ShopContext";
+import ShopAvatar from "../components/ShopAvatar";
 import TrackingMap from "../components/TrackingMap";
 import { CourierRatingForm, ProductReviewForm } from "../components/ReviewForms";
 
@@ -57,6 +58,14 @@ const STATUS_INFO = {
   },
 };
 
+// Livraison : tant que la boutique n'a pas préparé le colis, aucun livreur ne le voit
+const PREPARING_INFO = {
+  icon: ShoppingBag,
+  title: "En préparation",
+  sub: "La boutique prépare votre colis, puis un livreur viendra le chercher.",
+  cls: STATUS_INFO.pending.cls,
+};
+
 const PICKUP_STATUS_INFO = {
   pending: {
     icon: Clock,
@@ -85,6 +94,7 @@ const STATUS_CHIP = {
   delivering: { delivery: "En route", pickup: "Prête", cls: STATUS_INFO.delivering.cls },
   delivered: { delivery: "Livrée", pickup: "Récupérée", cls: STATUS_INFO.delivered.cls },
   cancelled: { delivery: "Annulée", pickup: "Annulée", cls: STATUS_INFO.cancelled.cls },
+  preparing: { delivery: "En préparation", pickup: "En préparation", cls: STATUS_INFO.pending.cls },
 };
 
 export default function TrackOrder() {
@@ -95,7 +105,7 @@ export default function TrackOrder() {
   const [error, setError] = useState("");
   // Ouvert avec ?ref= : afficher le chargement tout de suite, sans montrer la liste un instant
   const [loading, setLoading] = useState(() => Boolean(refParam));
-  const [myOrders] = useState(getMyOrders);
+  const [myOrders, setMyOrders] = useState(getMyOrders);
   const { currency } = useShop();
 
   const search = useCallback(
@@ -113,6 +123,7 @@ export default function TrackOrder() {
         if (!silent) {
           setRef(value);
           rememberOrder(found);
+          setMyOrders(getMyOrders());
         }
       } catch (e) {
         if (!silent) setError(e.message);
@@ -138,10 +149,8 @@ export default function TrackOrder() {
 
   useEffect(() => {
     if (!order) return;
-    const shouldPoll =
-      order.status === "delivering" ||
-      (order.delivery_method === "pickup" && order.status === "pending");
-    if (!shouldPoll) return;
+    // En préparation, en attente d'un livreur ou en route : le suivi se met à jour tout seul
+    if (order.status !== "pending" && order.status !== "delivering") return;
     const timer = setInterval(() => search(order.reference, true), 15000);
     return () => clearInterval(timer);
   }, [order, search]);
@@ -231,14 +240,14 @@ function shortDate(iso) {
 }
 
 function MyOrdersList({ orders, currency, onOpen }) {
-  const [statuses, setStatuses] = useState({});
+  const [live, setLive] = useState({});
 
   // Statut à jour de chaque commande (quelques petites requêtes, en parallèle)
   useEffect(() => {
     orders.forEach((o) =>
       api
         .get(`/orders/track/${o.reference}`)
-        .then((full) => setStatuses((s) => ({ ...s, [o.reference]: full.status })))
+        .then((full) => setLive((s) => ({ ...s, [o.reference]: full })))
         .catch(() => {})
     );
   }, [orders]);
@@ -248,8 +257,11 @@ function MyOrdersList({ orders, currency, onOpen }) {
   return (
     <ul className="mb-8 flex flex-col gap-2">
       {orders.map((o) => {
-        const chip = STATUS_CHIP[statuses[o.reference]];
+        const full = live[o.reference];
         const method = o.delivery_method === "pickup" ? "pickup" : "delivery";
+        const preparing = full?.status === "pending" && method === "delivery" && !full.ready_at;
+        const chip = STATUS_CHIP[preparing ? "preparing" : full?.status];
+        const shopName = full?.shop?.name || o.shop_name;
         return (
           <li key={o.reference}>
             <button
@@ -262,6 +274,7 @@ function MyOrdersList({ orders, currency, onOpen }) {
               <span className="min-w-0 flex-1">
                 <b className="block text-sm tracking-wide">{o.reference}</b>
                 <small className="block truncate text-xs muted">
+                  {shopName && `${shopName} · `}
                   {shortDate(o.created_at)} · {o.items_count} article{o.items_count > 1 ? "s" : ""}
                 </small>
               </span>
@@ -283,9 +296,14 @@ function MyOrdersList({ orders, currency, onOpen }) {
 }
 
 function OrderTracking({ order, currency, onRefresh }) {
-  const { pickupAddress } = useShop();
+  const { pickupAddress: platformPickup } = useShop();
+  // Retrait chez le vendeur de la commande (adresse de sa boutique)
+  const pickupAddress = order.pickup_address || platformPickup;
   const isPickup = order.delivery_method === "pickup";
-  const info = (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] || STATUS_INFO.pending;
+  const preparing = !isPickup && order.status === "pending" && !order.ready_at;
+  const info = preparing
+    ? PREPARING_INFO
+    : (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] || STATUS_INFO.pending;
   const rank = { pending: 1, delivering: 2, delivered: 3 }[order.status] || 0;
   const destPos =
     order.latitude != null && order.longitude != null ? [order.latitude, order.longitude] : null;
@@ -301,6 +319,13 @@ function OrderTracking({ order, currency, onRefresh }) {
       ]
     : [
         { label: "Commande confirmée", date: order.created_at, icon: Check, done: rank >= 1 },
+        // Hub : le vendeur prépare le colis avant qu'un livreur vienne le chercher
+        {
+          label: "Préparée par la boutique",
+          date: order.ready_at,
+          icon: ShoppingBag,
+          done: Boolean(order.ready_at) || rank >= 2,
+        },
         {
           label: "Prise en charge par un livreur",
           date: order.accepted_at,
@@ -313,6 +338,15 @@ function OrderTracking({ order, currency, onRefresh }) {
 
   return (
     <div className="card p-6">
+      {order.shop && (
+        <Link
+          to={`/b/${order.shop.slug}`}
+          className="mb-4 flex items-center gap-2 text-sm font-semibold hover:text-brand-600"
+        >
+          <ShopAvatar shop={order.shop} className="h-7 w-7 text-xs" />
+          Commande chez {order.shop.name}
+        </Link>
+      )}
       <div className={`mb-6 flex items-center gap-3 rounded-xl p-4 font-semibold ${info.cls}`}>
         <info.icon size={26} />
         <div>

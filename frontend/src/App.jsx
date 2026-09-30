@@ -28,6 +28,7 @@ const OpenShop = lazy(() => import("./pages/OpenShop"));
 const SellerLayout = lazy(() => import("./pages/seller/SellerLayout"));
 const SellerShopEdit = lazy(() => import("./pages/seller/SellerShopEdit"));
 const SellerPosts = lazy(() => import("./pages/seller/SellerPosts"));
+const SellerOrders = lazy(() => import("./pages/seller/SellerOrders"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -102,6 +103,7 @@ export default function App() {
                     <Route path="produits" element={<AdminProducts mode="vendeur" />} />
                     <Route path="produits/nouveau" element={<AdminProductForm mode="vendeur" />} />
                     <Route path="produits/:id" element={<AdminProductForm mode="vendeur" />} />
+                    <Route path="commandes" element={<SellerOrders />} />
                     <Route path="publications" element={<SellerPosts />} />
                     <Route path="boutique" element={<SellerShopEdit />} />
                   </Route>

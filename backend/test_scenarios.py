@@ -13,6 +13,8 @@ from datetime import timedelta
 TMP = tempfile.mkdtemp(prefix="241shop-tests-")
 os.environ["SHOP_DB"] = os.path.join(TMP, "test.db")
 os.environ["UPLOAD_DIR"] = os.path.join(TMP, "uploads")
+# Jamais de message dans le vrai groupe WhatsApp, même si le pont tourne sur ce PC
+os.environ["WHATSAPP_BRIDGE_URL"] = "http://127.0.0.1:9/notify"
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import seed  # noqa: E402  (crée l'app sur la base temporaire)
@@ -55,7 +57,17 @@ def run():
     seed.run()
     phase1_accounts_and_shops()
     phase2_feed()
+    phase3_orders()
     login_rate_limit()
+
+
+def place_order(client, items, method="delivery", **extra):
+    return client.post("/api/orders", json={
+        "customer_name": "Cliente Test", "customer_phone": "066 12 34 56",
+        "customer_address": "Carrefour Léon Mba", "zone": "Centre-ville",
+        "delivery_method": method, "payment_method": "livraison",
+        "items": [{"variant_id": v, "quantity": q} for v, q in items], **extra,
+    })
 
 
 def phase1_accounts_and_shops():
@@ -212,6 +224,93 @@ def phase2_feed():
     check("impossible de supprimer la publication d'un autre",
           pending_seller.delete(f"/api/my/posts/{my_posts[0]['id']}").status_code == 404)
     check("suppression de sa publication", seller.delete(f"/api/my/posts/{my_posts[0]['id']}").status_code == 200)
+
+
+def phase3_orders():
+    admin = new_admin()
+    customer = app.test_client()
+    seller, shop = open_shop("077 33 44 55", "Épicerie Awa", admin)
+    other_seller, other_shop = open_shop("077 44 55 66", "Autre boutique", admin)
+    mine = new_product(seller, "Huile de palme", price=10000, stock=5)
+    official = next(p for p in customer.get("/api/products").get_json() if p["shop"]["official"] and p["total_stock"] > 0)
+    official_variant = next(v for v in official["variants"] if v["stock"] > 0)
+
+    # --- Un panier, une commande par boutique ---
+    r = place_order(customer, [(mine["variants"][0]["id"], 2), (official_variant["id"], 1)])
+    check("commande passée", r.status_code == 201, r.get_json())
+    orders = r.get_json()["orders"]
+    check("une commande par boutique", len(orders) == 2 and len({o["reference"] for o in orders}) == 2)
+    seller_order = next(o for o in orders if o["shop"]["slug"] == shop["slug"])
+    official_order = next(o for o in orders if o["shop"]["official"])
+    check("sous-total de la commande vendeur", seller_order["subtotal"] == 20000)
+    check("frais de livraison par commande", seller_order["delivery_fee"] > 0 and official_order["delivery_fee"] > 0)
+    check("commande vendeur pas encore prête", seller_order["ready_at"] is None)
+    check("commande officielle prête tout de suite", official_order["ready_at"] is not None)
+    check("suivi public avec la boutique",
+          customer.get(f"/api/orders/track/{seller_order['reference']}").get_json()["shop"]["slug"] == shop["slug"])
+
+    # --- Codes promo de la plateforme : boutique officielle seulement ---
+    r = place_order(customer, [(mine["variants"][0]["id"], 1)], promo_code="BIENVENUE10")
+    check("code promo refusé sans produit officiel", r.status_code == 400, r.get_json())
+    r = place_order(customer, [(mine["variants"][0]["id"], 1), (official_variant["id"], 1)], promo_code="BIENVENUE10")
+    promo_orders = r.get_json()["orders"]
+    check("remise seulement sur la commande officielle",
+          all((o["discount"] > 0) == o["shop"]["official"] for o in promo_orders), promo_orders)
+
+    # --- Le vendeur voit et prépare ses commandes ---
+    listed = seller.get("/api/my/orders").get_json()
+    check("le vendeur voit ses commandes", {o["reference"] for o in listed} >= {seller_order["reference"]})
+    check("jamais le code de livraison pour le vendeur", all("delivery_code" not in o for o in listed))
+    check("adresse exacte du client réservée au livreur",
+          all("customer_address" not in o and "latitude" not in o for o in listed))
+    check("pas les commandes des autres boutiques", all(o["shop"]["slug"] == shop["slug"] for o in listed))
+    to_prepare = seller.get("/api/my/shop").get_json()["orders_to_prepare"]
+    check("compteur des commandes à préparer", to_prepare == 2, to_prepare)
+    check("impossible de gérer la commande d'une autre boutique",
+          other_seller.put(f"/api/my/orders/{seller_order['id']}", json={"action": "ready"}).status_code == 404)
+
+    # --- Livreur : seulement les colis prêts, avec le point de retrait ---
+    courier = app.test_client()
+    courier.post("/api/courier/login", json={"phone": "0698765432", "password": "livre123"})
+    available = {o["reference"] for o in courier.get("/api/courier/deliveries").get_json()["available"]}
+    check("colis non préparé invisible pour les livreurs", seller_order["reference"] not in available)
+    check("colis officiel proposé aux livreurs", official_order["reference"] in available)
+    check("course impossible avant préparation",
+          courier.post(f"/api/courier/deliveries/{seller_order['id']}/accept").status_code == 400)
+    seller.put(f"/api/my/orders/{seller_order['id']}", json={"action": "ready"})
+    check("compteur mis à jour après préparation",
+          seller.get("/api/my/shop").get_json()["orders_to_prepare"] == to_prepare - 1)
+    deliveries = courier.get("/api/courier/deliveries").get_json()["available"]
+    ready = next((o for o in deliveries if o["reference"] == seller_order["reference"]), None)
+    check("colis prêt proposé aux livreurs", ready is not None)
+    check("le livreur sait où récupérer le colis", ready and ready["pickup"]["name"] == "Épicerie Awa")
+    check("course acceptée", courier.post(f"/api/courier/deliveries/{seller_order['id']}/accept").status_code == 200)
+    check("plus d'annulation une fois en livraison",
+          seller.put(f"/api/my/orders/{seller_order['id']}", json={"action": "cancel"}).status_code == 400)
+
+    # --- Refus d'une commande : stock remis ---
+    before = seller.get("/api/my/products").get_json()[0]["total_stock"]
+    extra = place_order(customer, [(mine["variants"][0]["id"], 1)]).get_json()["orders"][0]
+    seller.put(f"/api/my/orders/{extra['id']}", json={"action": "cancel"})
+    after = seller.get("/api/my/products").get_json()[0]["total_stock"]
+    check("commande refusée, stock remis", after == before, (before, after))
+
+    # --- Retrait en boutique chez le vendeur ---
+    seller.put("/api/my/shop", json={"address": "Marché Mont-Bouët, allée 3"})
+    pickup = place_order(customer, [(mine["variants"][0]["id"], 1)], method="pickup").get_json()["orders"][0]
+    tracked = customer.get(f"/api/orders/track/{pickup['reference']}").get_json()
+    check("retrait : le client voit l'adresse du vendeur", tracked["pickup_address"] == "Marché Mont-Bouët, allée 3")
+    check("adresse du vendeur absente de sa page publique",
+          "address" not in customer.get(f"/api/shops/{shop['slug']}").get_json())
+    check("retrait : pas de frais de livraison", pickup["delivery_fee"] == 0)
+    check("retrait : pas encore récupérable",
+          seller.put(f"/api/my/orders/{pickup['id']}", json={"action": "picked_up"}).status_code == 400)
+    r = seller.put(f"/api/my/orders/{pickup['id']}", json={"action": "ready"})
+    check("retrait : prête au comptoir", r.get_json()["status"] == "delivering")
+    r = seller.put(f"/api/my/orders/{pickup['id']}", json={"action": "picked_up"})
+    check("retrait : récupérée par le client", r.get_json()["status"] == "delivered")
+    check("admin : commande marquée prête à la place du vendeur",
+          admin.put(f"/api/admin/orders/{extra['id']}", json={"ready": True}).status_code == 200)
 
 
 def login_rate_limit():

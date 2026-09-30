@@ -42,7 +42,7 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
 - `cd frontend; npm run build` et `npx oxlint` (0 erreur ; quelques warnings
   `only-export-components` préexistants).
 - Backend : `.venv\Scripts\python backend\test_scenarios.py` (base temporaire neuve, jamais la
-  vraie) ; y ajouter les scénarios de chaque nouvelle fonctionnalité.
+  vraie, pont WhatsApp coupé) ; y ajouter les scénarios de chaque nouvelle fonctionnalité.
 - Vérifier le rendu mobile (390 px) : c'est l'usage principal.
 
 ## Conventions
@@ -55,13 +55,14 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
   et au cœur des favoris.
 - Nom affiché : paramètre `shop_name` (Admin > Paramètres), jamais en dur dans les composants
   (`useShop().shopName`). Valeur par défaut « 241 Shop ».
-- Navigation mobile : barre d'onglets (Boutique, Favoris, Panier, Commandes) + menu ☰
-  qui ne la répète pas (rayons, aide, mode sombre, espace livreur). La **boutique est la page
-  principale** (le logo y mène). L'accueil `/` est « à vue unique » : écran de bienvenue montré à
-  la première visite seulement (`src/welcome.js`, `localStorage` `shop_welcome_seen`), puis `/`
-  redirige vers `/boutique` ; il n'est dans aucun menu. L'offre du jour est en haut de la
-  boutique. Le rayon de la boutique vit dans l'adresse (`/boutique?cat=<id>`, tri `?tri=`). Pas
-  d'animation d'apparition au défilement (cases blanches sur les téléphones lents).
+- Navigation mobile : barre d'onglets (Fil, Explorer, Panier, Commandes, Compte) + menu ☰
+  qui ne la répète pas (rayons, aide, mode sombre, espace livreur). Le **fil d'actu `/fil` est la
+  page principale** (le logo et l'appli installée y mènent). L'accueil `/` est « à vue unique » :
+  écran de bienvenue montré à la première visite seulement (`src/welcome.js`, `localStorage`
+  `shop_welcome_seen`), puis `/` redirige vers `/fil` ; il n'est dans aucun menu. « Explorer » =
+  catalogue « Produits » (`/boutique`, offre du jour en haut, rayon dans l'adresse
+  `?cat=<id>`, tri `?tri=`) et annuaire « Boutiques » (`/boutiques`). Pas d'animation
+  d'apparition au défilement (cases blanches sur les téléphones lents).
 - **Aucun emoji sur le site** : uniquement des icônes SVG (`lucide-react`). Icône d'un rayon
   choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo),
   marqueurs des cartes Leaflet en SVG (`src/mapIcons.js`). Seul le message WhatsApp de nouvelle
@@ -138,11 +139,32 @@ vendeurs + nouveautés automatiques + abonnements (pas de « j'aime » ni de com
   admin « Boutiques » (validation) et « Comptes » (blocage, nouveau mot de passe).
 - Le catalogue s'appelle « Produits » (route `/boutique` inchangée) ; l'annuaire « Boutiques ».
 
-**Phases suivantes**
-- Phase 2 — fil d'actu : publications (photos, texte, produits liés), nouveautés automatiques,
-  abonnements en priorité ; « Explorer » ; barre du bas Fil / Explorer / Panier / Commandes / Compte.
-- Phase 3 — commandes multi-boutiques : une commande par boutique, espace « Commandes » du
-  vendeur, livreur qui récupère chez le vendeur (adresse de retrait, GPS de la boutique).
+**Phase 2 faite — fil d'actu**
+- Modèle `Post` (texte, 6 photos max, produits liés ; `kind` : `post` écrit par le vendeur,
+  `new_product` / `promo` créés tout seuls par `announce()` et regroupés sur 3 h ; `hidden` pour
+  la modération). Une publication dont tous les produits ont disparu n'est plus montrée.
+- `/api/feed?tab=&page=` : « Pour vous » (tout le monde, boutiques suivies remontées pendant
+  48 h) et « Abonnements » (`tab=following`, connecté). Pages `/fil`, onglet « Publications » de
+  la page boutique, `/vendeur/publications`.
+
+**Phase 3 faite — commandes multi-boutiques**
+- Un panier = **une commande par boutique** (`Order.shop_id`), chacune avec sa référence, son
+  suivi et ses frais de livraison (même seuil de livraison offerte par boutique). `POST
+  /api/orders` renvoie `{"orders": [...]}` ; la confirmation reçoit les références séparées par
+  des virgules. Côté client : `computeCart()` / `groupByShop()` (`src/cartMath.js`), identiques
+  au serveur. Les codes promo de la plateforme ne s'appliquent qu'à la boutique officielle.
+- `Order.ready_at` : le vendeur prépare le colis (« Colis prêt ») avant qu'il soit proposé aux
+  livreurs ; la boutique officielle (sans vendeur) est prête tout de suite. Retrait en boutique :
+  « Prête à retirer » puis « Remise au client », à l'adresse de la boutique
+  (`Order.to_dict()["pickup_address"]`). Le vendeur peut refuser tant qu'aucun livreur n'a pris
+  la course (stock remis) ; l'admin peut « Marquer prête ».
+- Vendeur : `/vendeur/commandes` (`/api/my/orders`, compteur `orders_to_prepare` dans
+  `/api/my/shop`) ; il ne voit ni le code de livraison ni l'adresse exacte du client
+  (`seller_order_dict`). Livreur : bloc « Récupérer chez » (`pickup` dans `courier_order_dict`)
+  et boutiques sur sa carte. L'adresse de retrait de la boutique se choisit dans les suggestions
+  de lieux (position GPS pour le livreur) ; elle n'est jamais sur la page publique.
+
+**Phase suivante**
 - Phase 4 — notifications, avis sur les boutiques, statistiques vendeur, signalements.
 
 ## À faire avant la mise en production

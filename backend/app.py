@@ -70,8 +70,10 @@ def notify_whatsapp_order(order):
         try:
             lines = [
                 f"🛒 *NOUVELLE COMMANDE {order.reference}*",
+                f"🏪 Boutique : {order.shop.name}" if order.shop else "",
                 f"👤 {order.customer_name} — {order.customer_phone}",
             ]
+            lines = [line for line in lines if line]
             if order.delivery_method == "pickup":
                 lines.append("🛍️ *RETRAIT EN BOUTIQUE*")
             else:
@@ -295,10 +297,47 @@ def create_app():
     MAX_CODE_FAILS = 5
 
     def courier_order_dict(order):
-        """Commande vue par un livreur : jamais le code de livraison."""
+        """Commande vue par un livreur : jamais le code de livraison ; où récupérer le colis."""
         data = order.to_dict()
         data.pop("delivery_code", None)
+        shop = order.shop
+        data["pickup"] = (
+            {
+                "name": shop.name,
+                "address": shop.address or "",
+                "zone": shop.zone or "",
+                "whatsapp": shop.whatsapp or "",
+                "latitude": shop.latitude,
+                "longitude": shop.longitude,
+            }
+            if shop
+            else None
+        )
         return data
+
+    # Ce que le vendeur n'a pas à connaître : le code confirme la remise par le livreur, et
+    # l'adresse exacte du client ne sert qu'au livreur (le vendeur garde nom, téléphone, quartier)
+    SELLER_HIDDEN = (
+        "delivery_code", "customer_email", "customer_address", "landmark",
+        "latitude", "longitude", "courier_rating", "courier_comment",
+    )
+
+    def seller_order_dict(order):
+        """Commande vue par son vendeur."""
+        data = order.to_dict()
+        for key in SELLER_HIDDEN:
+            data.pop(key, None)
+        return data
+
+    def restock(order):
+        """Remet en stock les articles d'une commande annulée."""
+        for item in order.items:
+            if item.variant_id:
+                db.session.execute(
+                    sa_update(Variant)
+                    .where(Variant.id == item.variant_id)
+                    .values(stock=Variant.stock + item.quantity)
+                )
 
     def generate_reference():
         while True:
@@ -542,23 +581,9 @@ def create_app():
             if not promo:
                 return jsonify({"error": "Code promo invalide"}), 400
 
-        order = Order(
-            reference=generate_reference(),
-            customer_name=name,
-            customer_email=email,
-            customer_phone=phone,
-            customer_address=address,
-            landmark=landmark,
-            zone=zone,
-            note=note,
-            latitude=latitude,
-            longitude=longitude,
-            payment_method=payment,
-            delivery_method=delivery_method,
-            delivery_code="".join(random.choices(string.digits, k=4)),
-            promo_code=promo.code if promo else None,
-        )
-        subtotal = 0.0
+        # Articles regroupés par boutique : une commande par boutique (le livreur passe chez
+        # chaque vendeur). Le code promo de la plateforme ne vaut que pour la boutique officielle.
+        groups = {}
         if not isinstance(items, list):
             return jsonify({"error": "Panier invalide"}), 400
         for item in items:
@@ -581,51 +606,82 @@ def create_app():
                 .values(stock=Variant.stock - qty)
             )
             if result.rowcount == 0:
+                db.session.rollback()
                 return jsonify(
                     {"error": f"Stock insuffisant pour {variant.product.name} - {variant.name}"}
                 ), 400
             db.session.refresh(variant)
-            order.items.append(
-                OrderItem(
-                    variant_id=variant.id,
-                    product_name=variant.product.name,
-                    variant_name=variant.name,
-                    quantity=qty,
-                    unit_price=variant.price,
-                )
-            )
-            subtotal += variant.price * qty
+            groups.setdefault(shop.id, {"shop": shop, "lines": []})["lines"].append((variant, qty))
 
-        discount = 0.0
-        free_ship = False
-        if promo:
-            error = promo.check(subtotal=subtotal, phone=phone)
-            if error:
-                db.session.rollback()
-                return jsonify({"error": error}), 400
-            if promo.type == "percent":
-                discount = subtotal * promo.value / 100
-            elif promo.type == "freeship":
-                free_ship = True
-        base = subtotal - discount
+        official_group = next((g for g in groups.values() if g["shop"].official), None)
+        if promo and not official_group:
+            db.session.rollback()
+            return jsonify(
+                {"error": "Ce code promo ne s'applique qu'aux produits de la boutique officielle"}
+            ), 400
         threshold = get_number("free_shipping_threshold")
         fee = zone_delivery_fee(zone)
-        delivery_fee = (
-            0.0
-            if delivery_method == "pickup"
-            or free_ship
-            or (threshold and base >= threshold)
-            else fee
-        )
-
-        order.subtotal = round(subtotal, 2)
-        order.discount = round(discount, 2)
-        order.delivery_fee = round(delivery_fee, 2)
-        order.total = round(base + delivery_fee, 2)
-        db.session.add(order)
+        orders = []
+        for group in groups.values():
+            shop = group["shop"]
+            subtotal = sum(v.price * q for v, q in group["lines"])
+            order_promo = promo if group is official_group else None
+            discount = 0.0
+            free_ship = False
+            if order_promo:
+                error = order_promo.check(subtotal=subtotal, phone=phone)
+                if error:
+                    db.session.rollback()
+                    return jsonify({"error": error}), 400
+                if order_promo.type == "percent":
+                    discount = subtotal * order_promo.value / 100
+                elif order_promo.type == "freeship":
+                    free_ship = True
+            base = subtotal - discount
+            delivery_fee = (
+                0.0
+                if delivery_method == "pickup" or free_ship or (threshold and base >= threshold)
+                else fee
+            )
+            order = Order(
+                reference=generate_reference(),
+                shop_id=shop.id,
+                customer_name=name,
+                customer_email=email,
+                customer_phone=phone,
+                customer_address=address,
+                landmark=landmark,
+                zone=zone,
+                note=note,
+                latitude=latitude,
+                longitude=longitude,
+                payment_method=payment,
+                delivery_method=delivery_method,
+                delivery_code="".join(random.choices(string.digits, k=4)),
+                promo_code=order_promo.code if order_promo else None,
+                # Boutique sans vendeur (officielle, gérée par l'admin) : prête tout de suite
+                ready_at=None if shop.owner_id else utcnow(),
+                subtotal=round(subtotal, 2),
+                discount=round(discount, 2),
+                delivery_fee=round(delivery_fee, 2),
+                total=round(base + delivery_fee, 2),
+            )
+            for variant, qty in group["lines"]:
+                order.items.append(
+                    OrderItem(
+                        variant_id=variant.id,
+                        product_name=variant.product.name,
+                        variant_name=variant.name,
+                        quantity=qty,
+                        unit_price=variant.price,
+                    )
+                )
+            db.session.add(order)
+            orders.append(order)
         db.session.commit()
-        notify_whatsapp_order(order)
-        return jsonify(order.to_dict()), 201
+        for order in orders:
+            notify_whatsapp_order(order)
+        return jsonify({"orders": [o.to_dict() for o in orders]}), 201
 
     @app.get("/api/orders/track/<reference>")
     def track_order(reference):
@@ -826,10 +882,12 @@ def create_app():
     def courier_deliveries(courier):
         # Un livreur non vérifié ou hors ligne ne voit pas les commandes (données clients).
         if courier.verified and courier.available:
+            # Seulement les colis préparés par leur vendeur (prêts à être récupérés)
             available = (
                 Order.query.filter_by(
                     status="pending", courier_id=None, delivery_method="delivery"
                 )
+                .filter(Order.ready_at.isnot(None))
                 .order_by(Order.created_at.desc())
                 .all()
             )
@@ -889,6 +947,7 @@ def create_app():
                 Order.status == "pending",
                 Order.courier_id.is_(None),
                 Order.delivery_method == "delivery",
+                Order.ready_at.isnot(None),
             )
             .values(
                 courier_id=courier.id,
@@ -1181,7 +1240,13 @@ def create_app():
     @app.get("/api/my/shop")
     @user_required
     def my_shop(user):
-        return jsonify({"shop": user.shop.to_dict(private=True) if user.shop else None})
+        if not user.shop:
+            return jsonify({"shop": None})
+        # Compteur de l'onglet « Commandes » : colis que le vendeur doit encore préparer
+        to_prepare = Order.query.filter(
+            Order.shop_id == user.shop.id, Order.status == "pending", Order.ready_at.is_(None)
+        ).count()
+        return jsonify({"shop": user.shop.to_dict(private=True), "orders_to_prepare": to_prepare})
 
     @app.post("/api/my/shop")
     @user_required
@@ -1263,6 +1328,49 @@ def create_app():
         db.session.delete(product)
         db.session.commit()
         return jsonify({"ok": True})
+
+    # ---------------- Espace vendeur : ses commandes ----------------
+
+    @app.get("/api/my/orders")
+    @seller_required
+    def my_orders(user, shop):
+        orders = Order.query.filter_by(shop_id=shop.id).order_by(Order.created_at.desc()).limit(100)
+        return jsonify([seller_order_dict(o) for o in orders])
+
+    @app.put("/api/my/orders/<int:order_id>")
+    @seller_required
+    def my_update_order(user, shop, order_id):
+        """ready : colis préparé (livraison : proposé aux livreurs ; retrait : prêt au comptoir) ·
+        picked_up : le client a retiré sa commande · cancel : commande refusée, stock remis."""
+        order = db.session.get(Order, order_id)
+        if not order or order.shop_id != shop.id:
+            return jsonify({"error": "Commande introuvable"}), 404
+        action = (request.get_json(force=True) or {}).get("action")
+        now = utcnow()
+        if action == "ready":
+            if order.status != "pending":
+                return jsonify({"error": "Cette commande n'est plus en attente"}), 400
+            order.ready_at = order.ready_at or now
+            if order.delivery_method == "pickup":
+                order.status = "delivering"  # « prête à retirer » pour le client
+                order.accepted_at = now
+        elif action == "picked_up":
+            if order.delivery_method != "pickup" or order.status != "delivering":
+                return jsonify({"error": "Commande pas encore prête"}), 400
+            order.status = "delivered"
+            order.delivered_at = now
+        elif action == "cancel":
+            cancellable = order.status == "pending" or (
+                order.delivery_method == "pickup" and order.status == "delivering"
+            )
+            if not cancellable or order.courier_id:
+                return jsonify({"error": "Trop tard : la commande est déjà en livraison"}), 400
+            restock(order)
+            order.status = "cancelled"
+        else:
+            return jsonify({"error": "Action inconnue"}), 400
+        db.session.commit()
+        return jsonify(seller_order_dict(order))
 
     # ---------------- Fil d'actu ----------------
 
@@ -1900,18 +2008,17 @@ def create_app():
         if not order:
             return jsonify({"error": "Commande introuvable"}), 404
         data = request.get_json(force=True)
+        if data.get("ready"):
+            # L'admin peut signaler un colis prêt à la place du vendeur
+            order.ready_at = order.ready_at or utcnow()
+            if "status" not in data:
+                db.session.commit()
+                return jsonify(order.to_dict())
         status = data.get("status")
         if status not in ORDER_STATUSES:
             return jsonify({"error": "Statut invalide"}), 400
         if status == "cancelled" and order.status != "cancelled":
-            # Remettre en stock les articles de la commande annulée
-            for item in order.items:
-                if item.variant_id:
-                    db.session.execute(
-                        sa_update(Variant)
-                        .where(Variant.id == item.variant_id)
-                        .values(stock=Variant.stock + item.quantity)
-                    )
+            restock(order)
         elif order.status == "cancelled" and status != "cancelled":
             # Réactivation : reprendre le stock, si disponible
             for item in order.items:
@@ -2122,6 +2229,15 @@ def create_app():
         Product.query.filter(Product.shop_id.is_(None)).update(
             {"shop_id": official.id}, synchronize_session=False
         )
+        # Commandes d'avant le hub : boutique officielle, déjà prêtes pour les livreurs
+        Order.query.filter(Order.shop_id.is_(None)).update(
+            {"shop_id": official.id, "ready_at": Order.created_at}, synchronize_session=False
+        )
+        # Véhicules enregistrés avec un emoji (« 🛵 Scooter ») avant qu'ils soient retirés du site
+        for courier in DeliveryPerson.query.all():
+            cleaned = re.sub(r"^\W+", "", courier.vehicle or "")
+            if cleaned != (courier.vehicle or ""):
+                courier.vehicle = cleaned
         db.session.commit()
 
     return app
@@ -2147,6 +2263,8 @@ def _migrate_schema():
         ("delivery_persons", "verified", "verified BOOLEAN NOT NULL DEFAULT 0"),
         ("delivery_persons", "bonus_total", "bonus_total FLOAT NOT NULL DEFAULT 0"),
         ("products", "shop_id", "shop_id INTEGER REFERENCES shops(id)"),
+        ("orders", "shop_id", "shop_id INTEGER REFERENCES shops(id)"),
+        ("orders", "ready_at", "ready_at DATETIME"),
     ]
     for table, column, ddl in additions:
         cols = [r[1] for r in db.session.execute(db.text(f"PRAGMA table_info({table})"))]

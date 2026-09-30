@@ -21,13 +21,15 @@ import {
   ShieldCheck,
   Star,
   StickyNote,
+  Store,
   TriangleAlert,
   User,
 } from "lucide-react";
 import { api } from "../api";
-import { formatDate, formatPrice } from "../format";
+import { formatDate, formatPhone, formatPrice } from "../format";
 import { useShop } from "../context/ShopContext";
 import CourierMap from "../components/CourierMap";
+import { WhatsAppIcon, whatsappUrl } from "../whatsapp";
 
 const VEHICLES = ["Scooter", "Moto", "Vélo", "Voiture"];
 
@@ -325,7 +327,7 @@ function CourierDashboard({ courier, onLogout }) {
             )}
           </h2>
           {geoError && (
-            <p className="mb-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+            <p className="mb-3 flex items-center gap-2 rounded-lg bg-accent-50 px-3 py-2 text-xs text-accent-900 dark:bg-accent-950 dark:text-accent-200">
               <TriangleAlert size={15} className="shrink-0" />
               Activez la géolocalisation pour afficher votre position et les itinéraires.
             </p>
@@ -510,6 +512,16 @@ function DeliveryCard({ order, myZone, currency, children }) {
       : "https://www.google.com/maps/search/?api=1&query=" +
         encodeURIComponent(`${order.customer_address} ${order.zone}, Libreville, Gabon`);
 
+  const pickup = order.pickup;
+  const pickupMapsUrl = !pickup
+    ? null
+    : pickup.latitude != null && pickup.longitude != null
+      ? `https://www.google.com/maps/search/?api=1&query=${pickup.latitude},${pickup.longitude}`
+      : pickup.address
+        ? "https://www.google.com/maps/search/?api=1&query=" +
+          encodeURIComponent(`${pickup.address} ${pickup.zone}, Libreville, Gabon`)
+        : null;
+
   return (
     <div className="mb-3 rounded-xl border border-gray-200 p-4 transition hover:border-brand-400 dark:border-slate-700">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -518,7 +530,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
           className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold uppercase ${
             myZoneMatch
               ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-              : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
+              : "bg-accent-100 text-accent-900 dark:bg-accent-950 dark:text-accent-200"
           }`}
         >
           {myZoneMatch && <MapPin size={11} />}
@@ -526,7 +538,43 @@ function DeliveryCard({ order, myZone, currency, children }) {
           {order.zone}
         </span>
       </div>
+      {/* 1. Récupérer le colis chez le vendeur, 2. le livrer au client */}
+      {pickup && (
+        <div className="mb-3 flex flex-col gap-1 rounded-lg bg-brand-50 p-3 text-sm dark:bg-brand-950/60">
+          <p className="flex items-center gap-1.5 font-semibold text-brand-800 dark:text-brand-200">
+            <Store size={14} /> Récupérer chez {pickup.name}
+          </p>
+          <p className="flex items-start gap-1.5 text-gray-600 dark:text-slate-300">
+            <MapPin size={14} className="mt-0.5 shrink-0" />
+            {pickupMapsUrl ? (
+              <a
+                href={pickupMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-brand-600 dark:text-brand-400"
+              >
+                {pickup.address || pickup.zone}
+                {pickup.address && pickup.zone ? ` (${pickup.zone})` : ""}
+                <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
+              </a>
+            ) : (
+              <span>{pickup.zone || "Adresse à demander au vendeur"}</span>
+            )}
+          </p>
+          {pickup.whatsapp && (
+            <a
+              href={whatsappUrl(pickup.whatsapp, `Bonjour, je suis le livreur de la commande ${order.reference}.`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-fit items-center gap-1.5 font-semibold text-brand-600 dark:text-brand-400"
+            >
+              <WhatsAppIcon size={14} /> Contacter le vendeur
+            </a>
+          )}
+        </div>
+      )}
       <div className="mb-3 flex flex-col gap-1.5 text-sm muted">
+        {pickup && <span className="text-xs font-semibold tracking-wide uppercase">Livrer à</span>}
         <span className="flex items-center gap-1.5">
           <User size={14} />
           <b className="text-gray-800 dark:text-gray-200">{order.customer_name}</b> ·{" "}
@@ -534,7 +582,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
             href={`tel:${order.customer_phone.replace(/\s/g, "")}`}
             className="font-semibold text-brand-600 dark:text-brand-400"
           >
-            {order.customer_phone}
+            {formatPhone(order.customer_phone)}
           </a>
         </span>
         <span className="flex items-center gap-1.5">
@@ -571,7 +619,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
         </p>
       )}
       {/* Aucun paiement en ligne n'existe : toute commande est à encaisser. */}
-      <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+      <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-accent-100 px-3 py-2 text-xs font-bold text-accent-900 dark:bg-accent-950 dark:text-accent-200">
         <Banknote size={14} />
         À encaisser auprès du client : {formatPrice(order.total, currency)}
       </p>

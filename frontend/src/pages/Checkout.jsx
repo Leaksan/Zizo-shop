@@ -3,11 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Banknote, Bike, CheckCircle2, ChevronDown, MapPin, Package, Store } from "lucide-react";
 import { api } from "../api";
 import { formatPrice } from "../format";
-import { computeTotals, feeForZone } from "../cartMath";
+import { computeCart, feeForZone } from "../cartMath";
 import { useCart } from "../context/CartContext";
 import { useShop } from "../context/ShopContext";
 import AddressInput from "../components/AddressInput";
 import DeliveryMap from "../components/DeliveryMap";
+import ShopAvatar from "../components/ShopAvatar";
 import { normalize } from "../libreville";
 import { rememberOrder } from "../myOrders";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
@@ -15,7 +16,7 @@ import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 const STORAGE_KEY = "shop_client";
 
 export default function Checkout() {
-  const { items, subtotal, promo, clearCart } = useCart();
+  const { items, promo, clearCart } = useCart();
   const shop = useShop();
   const { currency, zones, shopPhone, pickupAddress } = shop;
   const navigate = useNavigate();
@@ -76,13 +77,17 @@ export default function Checkout() {
     }
   };
 
-  const totals = computeTotals(
-    subtotal,
+  // Une commande par boutique, chacune avec ses frais (même calcul que le serveur)
+  const cart = computeCart(
+    items,
     promo,
     deliveryMethod === "pickup"
       ? { deliveryFee: 0, freeShippingThreshold: 0 }
       : { ...shop, deliveryFee: feeForZone(shop, form.zone) }
   );
+  // Un code sans effet (pas de produit officiel, minimum non atteint) n'est pas envoyé :
+  // le serveur refuserait toute la commande
+  const usablePromo = promo && !cart.promoNotApplicable && !cart.promoBlocked ? promo : null;
 
   if (items.length === 0) {
     return (
@@ -137,12 +142,12 @@ export default function Checkout() {
     setSubmitting(true);
     setError("");
     try {
-      const order = await api.post("/orders", {
+      const { orders } = await api.post("/orders", {
         ...form,
         delivery_method: deliveryMethod,
         latitude: deliveryMethod === "delivery" ? (position?.[0] ?? null) : null,
         longitude: deliveryMethod === "delivery" ? (position?.[1] ?? null) : null,
-        promo_code: promo?.code || null,
+        promo_code: usablePromo?.code || null,
         items: items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
       });
       localStorage.setItem(
@@ -156,9 +161,9 @@ export default function Checkout() {
           zone: form.zone,
         })
       );
-      rememberOrder(order);
+      orders.forEach(rememberOrder);
       clearCart();
-      navigate(`/order-confirmation/${order.reference}`);
+      navigate(`/order-confirmation/${orders.map((o) => o.reference).join(",")}`);
     } catch (e2) {
       setError(e2.message);
     } finally {
@@ -231,12 +236,22 @@ export default function Checkout() {
                 <Store size={16} />
                 Retrait gratuit en boutique
               </p>
-              <p className="mt-1 flex items-start gap-1.5">
-                <MapPin size={15} className="mt-0.5 shrink-0" />
-                {pickupAddress}
-              </p>
+              {/* Chaque vendeur remet ses articles : son adresse s'affiche dans le suivi */}
+              {cart.groups.map((group) => (
+                <p key={group.shop?.id ?? 0} className="mt-1 flex items-start gap-1.5">
+                  <MapPin size={15} className="mt-0.5 shrink-0" />
+                  <span>
+                    {cart.groups.length > 1 && group.shop && <b>{group.shop.name} : </b>}
+                    {!group.shop || group.shop.official
+                      ? pickupAddress
+                      : "adresse de la boutique indiquée dans le suivi de la commande"}
+                  </span>
+                </p>
+              ))}
               <p className="mt-1 text-xs opacity-80">
-                Vous recevrez votre numéro de commande — présentez-le lors du retrait.
+                {cart.groups.length > 1
+                  ? "Vous recevrez un numéro par boutique : présentez-le au vendeur lors du retrait."
+                  : "Vous recevrez votre numéro de commande : présentez-le lors du retrait."}
               </p>
             </div>
           ) : (
@@ -370,7 +385,7 @@ export default function Checkout() {
           {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <button type="submit" disabled={submitting} className="btn-primary flex items-center justify-center gap-2 py-3">
             <CheckCircle2 size={18} />
-            {submitting ? "Envoi…" : `Confirmer la commande — ${formatPrice(totals.total, currency)}`}
+            {submitting ? "Envoi…" : `Confirmer la commande — ${formatPrice(cart.total, currency)}`}
           </button>
           <p className="-mt-1 flex items-center justify-center gap-1.5 text-xs muted">
             <Banknote size={14} /> Aucun paiement maintenant : vous payez à la réception.
@@ -398,45 +413,72 @@ export default function Checkout() {
             </span>
           </span>
           <span className="flex items-center gap-1.5">
-            {formatPrice(totals.total, currency)}
+            {formatPrice(cart.total, currency)}
             <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
           </span>
         </summary>
-        <ul className="mt-3 flex flex-col gap-2 text-sm">
-          {items.map((i) => (
-            <li key={i.variant_id} className="flex justify-between gap-2">
-              <span className="text-gray-600 dark:text-slate-300">
-                {i.product_name} ({i.variant_name}) × {i.quantity}
-              </span>
-              <span className="font-medium">{formatPrice(i.unit_price * i.quantity, currency)}</span>
-            </li>
+        <div className="mt-3 flex flex-col gap-3 text-sm">
+          {cart.groups.map((group) => (
+            <div key={group.shop?.id ?? 0}>
+              {cart.groups.length > 1 && group.shop && (
+                <p className="mb-1 flex items-center justify-between gap-2 text-xs font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <ShopAvatar shop={group.shop} className="h-5 w-5 text-[10px]" />
+                    {group.shop.name}
+                  </span>
+                  <span className="font-normal muted">
+                    Livraison : {group.deliveryFee === 0 ? "offerte" : formatPrice(group.deliveryFee, currency)}
+                  </span>
+                </p>
+              )}
+              <ul className="flex flex-col gap-2">
+                {group.items.map((i) => (
+                  <li key={i.variant_id} className="flex justify-between gap-2">
+                    <span className="text-gray-600 dark:text-slate-300">
+                      {i.product_name} ({i.variant_name}) × {i.quantity}
+                    </span>
+                    <span className="font-medium">{formatPrice(i.unit_price * i.quantity, currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+          {cart.groups.length > 1 && (
+            <p className="text-xs muted">
+              {cart.groups.length} commandes, une par boutique : chacune a sa référence et son suivi.
+            </p>
+          )}
+        </div>
         <div className="mt-3 flex flex-col gap-1 border-t border-gray-200 pt-3 text-sm dark:border-slate-700">
           <div className="flex justify-between muted">
             <span>Sous-total</span>
-            <span>{formatPrice(totals.subtotal, currency)}</span>
+            <span>{formatPrice(cart.subtotal, currency)}</span>
           </div>
-          {totals.promoBlocked && (
-            <p className="text-xs text-amber-600">
-              Code {promo.code} : valable dès {formatPrice(promo.min_order, currency)} d'achat.
+          {cart.promoNotApplicable && (
+            <p className="text-xs text-accent-700 dark:text-accent-400">
+              Code {promo.code} : valable seulement sur les produits de la boutique officielle (non appliqué).
             </p>
           )}
-          {totals.discount > 0 && (
+          {cart.promoBlocked && (
+            <p className="text-xs text-accent-700 dark:text-accent-400">
+              Code {promo.code} : valable dès {formatPrice(promo.min_order, currency)} d'achat dans la boutique officielle (non appliqué).
+            </p>
+          )}
+          {cart.discount > 0 && (
             <div className="flex justify-between font-semibold text-green-600">
               <span>Remise ({promo.code})</span>
-              <span>−{formatPrice(totals.discount, currency)}</span>
+              <span>−{formatPrice(cart.discount, currency)}</span>
             </div>
           )}
           <div className="flex justify-between muted">
             <span>Livraison</span>
             <span>
-              {totals.deliveryFee === 0 ? "Offerte" : formatPrice(totals.deliveryFee, currency)}
+              {cart.deliveryFee === 0 ? "Offerte" : formatPrice(cart.deliveryFee, currency)}
             </span>
           </div>
           <div className="flex justify-between border-t border-dashed border-gray-300 pt-2 text-base font-bold dark:border-slate-600">
             <span>Total à payer</span>
-            <span>{formatPrice(totals.total, currency)}</span>
+            <span>{formatPrice(cart.total, currency)}</span>
           </div>
         </div>
       </details>

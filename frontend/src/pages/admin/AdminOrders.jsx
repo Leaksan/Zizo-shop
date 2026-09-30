@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Banknote, Bike, ChevronDown, ChevronUp, Compass, StickyNote, Store } from "lucide-react";
+import { Banknote, Bike, Check, ChevronDown, ChevronUp, Clock, Compass, StickyNote, Store } from "lucide-react";
 import { api } from "../../api";
 import { formatDate, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
 import { StatusBadge, statusLabel } from "./AdminDashboard";
 import { usePolling } from "../../hooks";
+import ShopAvatar from "../../components/ShopAvatar";
 
 const FILTER_STATUSES = [
   { value: "pending", label: "En attente / préparation" },
@@ -36,10 +37,11 @@ export default function AdminOrders() {
   useEffect(load, [filter]);
   usePolling(() => load(true), 15000, [filter]);
 
-  const updateStatus = async (order, status) => {
-    const updated = await api.put(`/admin/orders/${order.id}`, { status });
+  const updateOrder = async (order, payload) => {
+    const updated = await api.put(`/admin/orders/${order.id}`, payload);
     setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)));
   };
+  const updateStatus = (order, status) => updateOrder(order, { status });
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,12 +71,18 @@ export default function AdminOrders() {
               >
                 <span className="font-semibold">{o.reference}</span>
                 <span className="text-gray-700 dark:text-slate-300">{o.customer_name}</span>
+                {o.shop && (
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-slate-300">
+                    <ShopAvatar shop={o.shop} className="h-5 w-5 text-[10px]" />
+                    {o.shop.name}
+                  </span>
+                )}
                 {o.delivery_method === "pickup" ? (
                   <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300">
                     <Store size={11} /> Retrait
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+                  <span className="flex items-center gap-1 rounded-full bg-accent-100 px-2 py-0.5 text-xs font-bold text-accent-900 dark:bg-accent-950 dark:text-accent-200">
                     <Bike size={11} /> {o.zone}
                   </span>
                 )}
@@ -171,6 +179,28 @@ export default function AdminOrders() {
                           : "Carte — NON encaissé, à faire payer"}
                       </p>
                     </div>
+                    {/* Hub : le vendeur prépare le colis, puis il est proposé aux livreurs */}
+                    {o.delivery_method === "delivery" && o.status === "pending" && (
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        {o.ready_at ? (
+                          <span className="flex items-center gap-1.5 text-green-700 dark:text-green-300">
+                            <Check size={15} /> Colis prêt ({formatDate(o.ready_at)}) : visible des livreurs
+                          </span>
+                        ) : (
+                          <>
+                            <span className="flex items-center gap-1.5 text-yellow-800 dark:text-yellow-200">
+                              <Clock size={15} /> En préparation chez le vendeur
+                            </span>
+                            <button
+                              onClick={() => updateOrder(o, { ready: true })}
+                              className="btn-outline px-3 py-1.5 text-xs"
+                            >
+                              Marquer prête
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                     <label className="block max-w-xs">
                       <span className="mb-1 block text-sm font-semibold text-gray-700 dark:text-slate-300">
                         Changer le statut

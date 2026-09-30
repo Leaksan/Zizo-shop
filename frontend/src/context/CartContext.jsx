@@ -47,6 +47,8 @@ export function CartProvider({ children }) {
                 variant_name: v.name,
                 unit_price: v.price,
                 image_url: p.image_url,
+                category: p.category,
+                shop: p.shop,
                 stock: v.stock,
               };
             })
@@ -78,7 +80,9 @@ export function CartProvider({ children }) {
           variant_name: variant.name,
           unit_price: variant.price,
           image_url: product.image_url,
-          emoji: product.emoji,
+          category: product.category,
+          // Boutique du produit : le panier est découpé en une commande par boutique
+          shop: product.shop,
           stock: variant.stock,
           quantity,
         },
@@ -103,7 +107,10 @@ export function CartProvider({ children }) {
   };
 
   const applyPromo = async (code) => {
-    const subtotalNow = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+    // Les codes de la plateforme ne portent que sur les produits de la boutique officielle
+    const subtotalNow = items
+      .filter((i) => i.shop?.official)
+      .reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
     const result = await api.post("/promo/validate", { code, subtotal: subtotalNow });
     setPromo(result);
     return result;

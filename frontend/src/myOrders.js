@@ -1,7 +1,7 @@
 // Commandes passées (ou suivies) depuis ce téléphone : le client les retrouve dans
 // « Commandes » sans compte ni numéro à retaper. Rien n'est envoyé au serveur.
 const STORAGE_KEY = "shop_orders";
-const MAX_ORDERS = 10;
+const MAX_ORDERS = 20; // un panier multi-boutiques donne plusieurs commandes
 
 export function getMyOrders() {
   try {
@@ -20,6 +20,7 @@ export function rememberOrder(order) {
     total: order.total,
     items_count: (order.items || []).reduce((n, i) => n + (i.quantity || 0), 0),
     delivery_method: order.delivery_method,
+    shop_name: order.shop?.name || "",
   };
   const list = [entry, ...getMyOrders().filter((o) => o.reference !== entry.reference)];
   try {

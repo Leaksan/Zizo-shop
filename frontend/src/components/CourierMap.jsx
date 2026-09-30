@@ -3,7 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Bike } from "lucide-react";
 import { LIBREVILLE_CENTER } from "../libreville";
-import { courierIcon, destinationIcon, ROUTE_COLOR } from "../mapIcons";
+import { courierIcon, destinationIcon, pickupIcon, ROUTE_COLOR } from "../mapIcons";
 import { fetchRoute } from "../routing";
 
 export default function CourierMap({ courierPos, deliveries }) {
@@ -60,6 +60,22 @@ export default function CourierMap({ courierPos, deliveries }) {
       L.marker(pos, { icon: destinationIcon() })
         .addTo(destLayerRef.current)
         .bindTooltip(`${d.reference} · ${d.customer_name} (${d.zone})`);
+    });
+
+    // Boutiques où récupérer les colis (une seule pastille par boutique)
+    const shops = new Map();
+    deliveries.forEach((d) => {
+      const p = d.pickup;
+      if (p?.latitude == null || p?.longitude == null) return;
+      const key = `${p.latitude},${p.longitude}`;
+      shops.set(key, { ...p, refs: [...(shops.get(key)?.refs || []), d.reference] });
+    });
+    shops.forEach((p) => {
+      const pos = [p.latitude, p.longitude];
+      bounds.push(pos);
+      L.marker(pos, { icon: pickupIcon() })
+        .addTo(destLayerRef.current)
+        .bindTooltip(`Récupérer chez ${p.name} · ${p.refs.join(", ")}`);
     });
 
     if (courierPos && targets.length > 0) {

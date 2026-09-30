@@ -450,6 +450,11 @@ class Order(db.Model):
     promo_code = db.Column(db.String(40), nullable=True)
     courier_id = db.Column(db.Integer, db.ForeignKey("delivery_persons.id"), nullable=True)
     courier = db.relationship("DeliveryPerson")
+    # Hub : une commande par boutique. ready_at : le vendeur a préparé le colis, les livreurs
+    # peuvent venir le chercher (immédiat pour une boutique gérée par l'admin).
+    shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), nullable=True)
+    shop = db.relationship("Shop")
+    ready_at = db.Column(db.DateTime, nullable=True)
     courier_rating = db.Column(db.Integer, nullable=True)
     courier_comment = db.Column(db.Text, default="")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -484,6 +489,12 @@ class Order(db.Model):
             "created_at": self.created_at.isoformat(),
             "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None,
             "delivered_at": self.delivered_at.isoformat() if self.delivered_at else None,
+            "ready_at": self.ready_at.isoformat() if self.ready_at else None,
+            "shop": self.shop.summary() if self.shop else None,
+            # Retrait en boutique : le client (qui a la référence) doit savoir où aller
+            "pickup_address": (
+                self.shop.address or "" if self.shop and self.delivery_method == "pickup" else None
+            ),
         }
         if with_items:
             data["items"] = [i.to_dict() for i in self.items]
