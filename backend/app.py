@@ -1716,8 +1716,7 @@ def create_app():
     @app.get("/api/shops/<slug>/posts")
     def shop_posts(slug):
         """Publications écrites par le vendeur (onglet « Publications » de sa page). Les
-        anciennes nouveautés automatiques ne sont plus montrées : l'Explorer met lui-même en
-        avant promos et nouveaux articles."""
+        anciennes nouveautés automatiques du fil d'actu (retiré) ne sont plus montrées."""
         shop = visible_shop(slug)
         if not shop:
             return jsonify({"error": "Boutique introuvable"}), 404

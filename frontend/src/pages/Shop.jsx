@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   ArrowDownNarrowWide,
   Check,
+  Flame,
   LayoutGrid,
   RotateCcw,
   Search,
@@ -10,7 +11,6 @@ import {
   Sparkles,
   Star,
   Store,
-  Tag,
   X,
 } from "lucide-react";
 import { api } from "../api";
@@ -47,22 +47,23 @@ const newest = (a, b) => parseDate(b.created_at) - parseDate(a.created_at);
 const popularity = (a, b) =>
   (b.real_reviews_count || 0) - (a.real_reviews_count || 0) || b.reviews_count - a.reviews_count;
 
-// « Pour vous » (tri par défaut) : ce que le fil d'actu mettait en avant, directement dans les
-// produits. Promos, puis nouveautés, puis articles des boutiques suivies, puis tout le reste.
-// Dans les promos et les nouveautés, les boutiques suivies passent devant ; épuisés à la fin.
+// « Pour vous » (tri par défaut) : liquidation, puis nouveautés, puis articles des boutiques
+// suivies, puis tout le reste. Les simples promos ne sont pas regroupées : elles restent
+// parsemées dans les produits. Dans la liquidation et les nouveautés, les boutiques suivies
+// passent devant ; les articles épuisés vont à la fin.
 function priorityGroups(list, followed) {
   const now = Date.now();
   const isNew = (p) => p.badge === "Nouveau" || now - parseDate(p.created_at) < NEW_DAYS * DAY_MS;
-  const groups = { promos: [], nouveautes: [], suivies: [], autres: [] };
+  const groups = { liquidation: [], nouveautes: [], suivies: [], autres: [] };
   for (const p of list) {
     const available = p.total_stock > 0;
-    if (available && p.promo_percent > 0) groups.promos.push(p);
+    if (available && p.clearance) groups.liquidation.push(p);
     else if (available && isNew(p)) groups.nouveautes.push(p);
     else if (available && followed.has(p.shop_id)) groups.suivies.push(p);
     else groups.autres.push(p);
   }
   const followedFirst = (a, b) => followed.has(b.shop_id) - followed.has(a.shop_id);
-  groups.promos.sort((a, b) => followedFirst(a, b) || b.promo_percent - a.promo_percent || newest(a, b));
+  groups.liquidation.sort((a, b) => followedFirst(a, b) || b.promo_percent - a.promo_percent || newest(a, b));
   groups.nouveautes.sort((a, b) => followedFirst(a, b) || newest(a, b));
   groups.suivies.sort(newest);
   groups.autres.sort((a, b) => (b.total_stock > 0) - (a.total_stock > 0) || popularity(a, b) || newest(a, b));
@@ -70,7 +71,7 @@ function priorityGroups(list, followed) {
 }
 
 const SECTIONS = [
-  { key: "promos", icon: Tag, title: "Promos", iconCls: "text-accent-600 dark:text-accent-400" },
+  { key: "liquidation", icon: Flame, title: "Liquidation", iconCls: "text-accent-600 dark:text-accent-400" },
   { key: "nouveautes", icon: Sparkles, title: "Nouveautés", iconCls: "text-brand-600 dark:text-brand-400" },
   { key: "suivies", icon: Store, title: "De vos boutiques", iconCls: "text-brand-600 dark:text-brand-400" },
   { key: "autres", icon: LayoutGrid, title: "Autres produits", iconCls: "text-gray-400 dark:text-slate-500" },

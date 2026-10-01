@@ -7,7 +7,7 @@ const HIDDEN_ON = [/^\/products\//, /^\/checkout/, /^\/livreur/];
 
 // Barre d'onglets mobile : les actions principales toujours à portée de pouce.
 // Pas d'onglet « Accueil » : l'accueil n'est vu qu'une fois, l'Explorer est la page principale
-// (promos, nouveautés et boutiques suivies en tête des produits, puis l'annuaire des boutiques).
+// (liquidation, nouveautés et boutiques suivies en tête des produits, puis l'annuaire des boutiques).
 const TABS = [
   { to: "/boutique", icon: Compass, label: "Explorer", also: /^\/boutiques/ },
   { to: "/cart", icon: ShoppingCart, label: "Panier", cart: true },

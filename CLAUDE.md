@@ -3,8 +3,8 @@
 Boutique en ligne avec livraison à Libreville : catalogue, panier, commande avec
 carte, suivi du livreur en temps réel, espace livreur, admin, PWA. **Devenue un hub
 multi-vendeurs** (branche `hub-vendeurs`, pas encore fusionnée) : comptes, boutiques de vendeurs
-validées par l'admin, Explorer qui met en avant promos, nouveautés et boutiques suivies, une
-commande par boutique, notifications — voir « Hub vendeurs » plus bas.
+validées par l'admin, Explorer qui met en avant liquidation, nouveautés et boutiques suivies,
+une commande par boutique, notifications — voir « Hub vendeurs » plus bas.
 Tout le produit (interface, messages, commits) est en **français**.
 
 ## Architecture
@@ -65,9 +65,11 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
   `shop_welcome_seen`), puis `/` redirige vers `/boutique` ; il n'est dans aucun menu.
 - Explorer (`src/pages/Shop.jsx`) : offre du jour en haut, rayon dans l'adresse (`?cat=<id>`),
   tri `?tri=`. Tri par défaut **« Pour vous »** (`priorityGroups()`), en sections dans cet ordre :
-  **Promos**, **Nouveautés** (ajoutées il y a moins de 14 jours, ou badge « Nouveau »), **De vos
-  boutiques** (boutiques suivies, `/api/me/follows`), puis **Autres produits**. Dans les promos et
-  les nouveautés, les boutiques suivies passent devant ; les articles épuisés vont à la fin. Pas
+  **Liquidation** (`clearance`), **Nouveautés** (ajoutées il y a moins de 14 jours, ou badge
+  « Nouveau »), **De vos boutiques** (boutiques suivies, `/api/me/follows`), puis **Autres
+  produits**. Les simples promos (prix barré) ne sont **pas** regroupées : elles restent
+  parsemées dans les produits (choix du propriétaire). Dans la liquidation et les nouveautés,
+  les boutiques suivies passent devant ; les articles épuisés vont à la fin. Pas
   d'animation d'apparition au défilement (cases blanches sur les téléphones lents).
 - **Aucun emoji sur le site** : uniquement des icônes SVG (`lucide-react`). Icône d'un rayon
   choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo),
@@ -126,7 +128,7 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
 Décisions du propriétaire : commande sur la plateforme (paiement à la livraison, livreurs de la
 plateforme) ; boutiques ouvertes librement mais **visibles seulement après validation par
 l'admin** ; comptes **téléphone + mot de passe** (pas de SMS) ; pas de page de fil d'actu :
-ses avantages (promos, nouveautés, boutiques suivies) sont dans l'Explorer (décision du
+l'Explorer montre d'abord la liquidation, les nouveautés puis les boutiques suivies (décision du
 2026-10-01) ; pas de « j'aime » ni de commentaires.
 
 **Phase 1 faite — comptes et boutiques**
@@ -148,7 +150,7 @@ ses avantages (promos, nouveautés, boutiques suivies) sont dans l'Explorer (dé
 
 **Phase 2 faite, puis revue — publications et boutiques suivies**
 - Le fil d'actu (page `/fil`, `/api/feed`, nouveautés automatiques) a été retiré le 2026-10-01 :
-  l'Explorer met lui-même en avant promos, nouveautés et articles des boutiques suivies.
+  l'Explorer met lui-même en avant liquidation, nouveautés et articles des boutiques suivies.
 - Modèle `Post` : publications écrites par le vendeur (texte, 6 photos max, produits liés ;
   `hidden` pour la modération), sur sa page (onglet « Publications »,
   `/api/shops/<slug>/posts`) et dans `/vendeur/publications`. Les anciennes nouveautés

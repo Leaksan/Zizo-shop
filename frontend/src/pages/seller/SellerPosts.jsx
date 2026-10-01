@@ -160,8 +160,8 @@ export default function SellerPosts() {
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-bold">Mes publications</h2>
         <p className="-mt-3 text-xs muted">
-          Elles s'affichent sur la page de votre boutique (onglet « Publications »). Vos promos et vos
-          nouveaux produits, eux, remontent tout seuls en tête de l'Explorer.
+          Elles s'affichent sur la page de votre boutique (onglet « Publications »). Vos nouveaux
+          produits et vos articles en liquidation, eux, remontent tout seuls en tête de l'Explorer.
         </p>
         {posts === null ? (
           <div className="skeleton h-40" />

@@ -110,8 +110,8 @@ export default function SellerDashboard() {
         <div className="card flex flex-col gap-2 p-4 text-sm">
           <p className="font-semibold">Vos premières ventes s'afficheront ici.</p>
           <p className="muted">
-            Des photos claires et des prix justes font la différence. Vos nouveautés et vos promos
-            remontent en tête de l'Explorer : c'est là que les clients les voient d'abord.
+            Des photos claires et des prix justes font la différence. Vos nouveautés remontent en
+            tête de l'Explorer pendant deux semaines : c'est là que les clients les voient d'abord.
           </p>
           <div className="mt-1 flex flex-wrap gap-2">
             <Link to="/vendeur/produits/nouveau" className="btn-primary px-4 py-2 text-sm">

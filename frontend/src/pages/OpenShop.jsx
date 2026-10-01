@@ -14,7 +14,7 @@ export default function OpenShop() {
   if (user.shop) return <Navigate to="/vendeur" replace />;
 
   const perks = [
-    { icon: Users, text: "Vos promos et nouveautés en tête de l'Explorer, votre page dans l'annuaire" },
+    { icon: Users, text: "Vos nouveautés en tête de l'Explorer, votre page dans l'annuaire" },
     { icon: Truck, text: "Livraison partout à Libreville par nos livreurs, paiement à la livraison" },
     { icon: BadgeCheck, text: "Boutique vérifiée par notre équipe avant sa mise en ligne" },
   ];

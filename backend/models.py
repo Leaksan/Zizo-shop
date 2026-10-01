@@ -332,7 +332,7 @@ post_products = db.Table(
 )
 
 # post : écrite par le vendeur · new_product / promo : anciennes nouveautés automatiques du fil
-# d'actu (plus créées ni montrées : l'Explorer met lui-même en avant promos et nouveautés)
+# d'actu (retiré : plus créées ni montrées)
 POST_KINDS = ("post", "new_product", "promo")
 MAX_POST_IMAGES = 6
 
