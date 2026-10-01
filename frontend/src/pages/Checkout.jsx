@@ -8,7 +8,7 @@ import { computeCart, feeForZone } from "../cartMath";
 import { useCart } from "../context/CartContext";
 import { useShop } from "../context/ShopContext";
 import AddressInput from "../components/AddressInput";
-import DeliveryMap from "../components/DeliveryMap";
+import LocationPicker from "../components/LocationPicker";
 import ShopAvatar from "../components/ShopAvatar";
 import { normalize } from "../libreville";
 import { rememberOrder } from "../myOrders";
@@ -43,7 +43,6 @@ export default function Checkout() {
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [coordText, setCoordText] = useState({ lat: "", lng: "" });
   // Récapitulatif replié sur mobile (le total reste visible), ouvert sur grand écran
   const [wide] = useState(() => window.matchMedia("(min-width: 768px)").matches);
 
@@ -55,28 +54,6 @@ export default function Checkout() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zones.length]);
-
-  const applyPosition = (pos) => {
-    setPosition(pos);
-    setCoordText(pos ? { lat: String(pos[0]), lng: String(pos[1]) } : { lat: "", lng: "" });
-  };
-
-  const handleCoordInput = (key) => (e) => {
-    const next = { ...coordText, [key]: e.target.value };
-    setCoordText(next);
-    const lat = parseFloat(next.lat);
-    const lng = parseFloat(next.lng);
-    if (
-      !Number.isNaN(lat) &&
-      !Number.isNaN(lng) &&
-      lat >= -90 &&
-      lat <= 90 &&
-      lng >= -180 &&
-      lng <= 180
-    ) {
-      setPosition([lat, lng]);
-    }
-  };
 
   // Une commande par boutique, chacune avec ses frais (même calcul que le serveur)
   const cart = computeCart(
@@ -115,27 +92,32 @@ export default function Checkout() {
     );
   };
 
+  // Suggestion choisie : elle complète l'adresse et le quartier (la position, elle, vient du
+  // téléphone : une suggestion ne dit pas où est la porte)
   const handlePickPlace = (place) => {
     setForm((f) => ({
       ...f,
       customer_address: place.name,
       zone: matchZone(place.zone) || f.zone,
     }));
-    applyPosition([place.lat, place.lng]);
   };
 
-  const handleMapClick = async (lat, lng) => {
-    applyPosition([lat, lng]);
+  // Position du téléphone : si l'adresse est encore vide, on propose celle du lieu
+  const pickPosition = async (pos) => {
+    setPosition(pos);
+    if (!pos || form.customer_address.trim()) return;
     try {
-      const result = await api.get(`/geocode/reverse?lat=${lat}&lng=${lng}`);
+      const result = await api.get(`/geocode/reverse?lat=${pos.latitude}&lng=${pos.longitude}`);
       if (result.name) {
         setForm((f) => ({
           ...f,
-          customer_address: result.name,
+          customer_address: f.customer_address.trim() ? f.customer_address : result.name,
           zone: matchZone(result.zone) || f.zone,
         }));
       }
-    } catch {}
+    } catch {
+      // pas d'adresse trouvée : le client l'écrit lui-même
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -146,8 +128,8 @@ export default function Checkout() {
       const { orders } = await api.post("/orders", {
         ...form,
         delivery_method: deliveryMethod,
-        latitude: deliveryMethod === "delivery" ? (position?.[0] ?? null) : null,
-        longitude: deliveryMethod === "delivery" ? (position?.[1] ?? null) : null,
+        latitude: deliveryMethod === "delivery" ? (position?.latitude ?? null) : null,
+        longitude: deliveryMethod === "delivery" ? (position?.longitude ?? null) : null,
         promo_code: usablePromo?.code || null,
         items: items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
       });
@@ -271,50 +253,12 @@ export default function Checkout() {
                 </span>
               </label>
               <div>
-                <span className="label">Confirmez l'emplacement sur la carte (cliquez pour ajuster le repère)</span>
-                <DeliveryMap
-                  position={position}
-                  onPick={handleMapClick}
+                <span className="label">Votre position (conseillé)</span>
+                <LocationPicker
+                  value={position}
+                  onChange={pickPosition}
+                  hint="Le livreur et la boutique l'ouvrent dans Google Maps pour vous trouver. Votre téléphone vous demande l'autorisation."
                 />
-                <details className="mt-2 rounded-lg bg-gray-50 px-3 py-2 dark:bg-slate-800/60">
-                  <summary className="cursor-pointer text-xs font-semibold text-gray-600 dark:text-slate-300">
-                    Saisie manuelle des coordonnées GPS (optionnel)
-                  </summary>
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium muted">Latitude</span>
-                      <input
-                        type="number"
-                        step="any"
-                        min="-90"
-                        max="90"
-                        value={coordText.lat}
-                        onChange={handleCoordInput("lat")}
-                        placeholder="Ex. 0.3921"
-                        className="input"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-medium muted">Longitude</span>
-                      <input
-                        type="number"
-                        step="any"
-                        min="-180"
-                        max="180"
-                        value={coordText.lng}
-                        onChange={handleCoordInput("lng")}
-                        placeholder="Ex. 9.4536"
-                        className="input"
-                      />
-                    </label>
-                  </div>
-                  {position && (
-                    <p className="mt-1 flex items-center gap-1 text-xs text-green-600">
-                      <MapPin size={13} />
-                      Position enregistrée : {position[0].toFixed(5)}, {position[1].toFixed(5)}
-                    </p>
-                  )}
-                </details>
               </div>
               <label className="block">
                 <span className="label">Quartier / zone de livraison *</span>

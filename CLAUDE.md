@@ -1,7 +1,7 @@
 # 241 Shop (ex-Zizo Shop) — boutique en ligne (Libreville, Gabon)
 
-Boutique en ligne avec livraison à Libreville : catalogue, panier, commande avec
-carte, suivi du livreur en temps réel, espace livreur, admin, PWA. **Devenue un hub
+Boutique en ligne avec livraison à Libreville : catalogue, panier, commande avec la
+position du client (Google Maps), suivi du livreur, espace livreur, admin, PWA. **Devenue un hub
 multi-vendeurs** (branche `hub-vendeurs`, pas encore fusionnée) : comptes, boutiques de vendeurs
 validées par l'admin, Explorer qui met en avant liquidation, nouveautés et boutiques suivies,
 une commande par boutique, notifications — voir « Hub vendeurs » plus bas.
@@ -13,7 +13,8 @@ Tout le produit (interface, messages, commits) est en **français**.
   `seed.py` = données de démo, lancé à chaque démarrage mais ignoré si la base a des produits).
   Migrations maison dans `_migrate_schema()` (ajout de colonnes) : ajouter une ligne à la liste
   pour chaque nouvelle colonne.
-- `frontend/` — React 19 + Vite + Tailwind v4 + Leaflet. Pages dans `src/pages/`,
+- `frontend/` — React 19 + Vite + Tailwind v4 (plus de Leaflet : les lieux s'ouvrent dans
+  Google Maps, voir « Lieux »). Pages dans `src/pages/`,
   admin dans `src/pages/admin/`, pages secondaires chargées à la demande (`React.lazy` dans `App.jsx`).
 - `whatsapp-bridge/` — pont local (whatsapp-web.js) qui poste les nouvelles commandes dans un
   groupe WhatsApp. Config dans `whatsapp-bridge/.env` (non versionné, modèle `.env.example`,
@@ -74,9 +75,16 @@ base, réglage `admin_password` ; un ancien mot de passe en clair est chiffré �
   les boutiques suivies passent devant ; les articles épuisés vont à la fin. Pas
   d'animation d'apparition au défilement (cases blanches sur les téléphones lents).
 - **Aucun emoji sur le site** : uniquement des icônes SVG (`lucide-react`). Icône d'un rayon
-  choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo),
-  marqueurs des cartes Leaflet en SVG (`src/mapIcons.js`). Seul le message WhatsApp de nouvelle
-  commande (`notify_whatsapp_order`, backend) garde des emojis : il n'est pas affiché sur le site.
+  choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo).
+  Seul le message WhatsApp de nouvelle commande (`notify_whatsapp_order`, backend) garde des
+  emojis : il n'est pas affiché sur le site.
+- **Lieux** : aucune carte dans le site. Toute position s'ouvre dans **Google Maps**
+  (`src/maps.js` : `mapsUrl` pour voir un lieu, `directionsUrl` pour un itinéraire, avec une étape
+  possible). La position GPS vient du téléphone, avec son autorisation (`LocationPicker`,
+  « Utiliser ma position ») : le client au paiement, le vendeur sur place pour sa boutique ; le
+  livreur partage la sienne pendant ses courses (le client la voit dans Google Maps). Sans
+  position, le lien cherche l'adresse écrite à Libreville. La localisation du navigateur ne marche
+  qu'en https (ou sur `localhost`) : pas avec le lien du réseau local `http://192.168…`.
 - **Photos envoyées** : toujours par `src/components/CropFileInput.jsx`, jamais un
   `<input type="file">` direct. Le client recadre d'abord la photo (glisser, pincer, curseur ;
   dézoomer garde toute la photo avec des bords blancs), puis le site envoie un JPEG déjà réduit.
@@ -189,10 +197,11 @@ l'Explorer montre d'abord la liquidation, les nouveautés puis les boutiques sui
   (`Order.to_dict()["pickup_address"]`). Le vendeur peut refuser tant qu'aucun livreur n'a pris
   la course (stock remis) ; l'admin peut « Marquer prête ».
 - Vendeur : `/vendeur/commandes` (`/api/my/orders`, compteur `orders_to_prepare` dans
-  `/api/my/shop`) ; il ne voit ni le code de livraison ni l'adresse exacte du client
-  (`seller_order_dict`). Livreur : bloc « Récupérer chez » (`pickup` dans `courier_order_dict`)
-  et boutiques sur sa carte. L'adresse de retrait de la boutique se choisit dans les suggestions
-  de lieux (position GPS pour le livreur) ; elle n'est jamais sur la page publique.
+  `/api/my/shop`) ; il ne voit pas le code de livraison (`seller_order_dict`), mais il voit
+  l'adresse et la position du client pour l'ouvrir dans Google Maps (choix du propriétaire,
+  2026-10-01). Livreur : bloc « Récupérer chez » (`pickup` dans `courier_order_dict`) et
+  itinéraires Google Maps (vers la boutique, vers le client, ou les deux à la suite). La
+  position de la boutique se prend sur place ; son adresse n'est jamais sur la page publique.
 
 **Phase 4 faite — notifications, avis, statistiques, signalements**
 - `Notification` (par compte ; `notify()`, `order_event()`, `shop_status_notice()` dans `app.py`,

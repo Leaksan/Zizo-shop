@@ -6,6 +6,7 @@ import { formatDate, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
 import { StatusBadge, statusLabel } from "./AdminDashboard";
 import { usePolling } from "../../hooks";
+import { hasCoords, mapsUrl } from "../../maps";
 import ShopAvatar from "../../components/ShopAvatar";
 
 const FILTER_STATUSES = [
@@ -211,6 +212,14 @@ export default function AdminOrders() {
                           <p className="whitespace-pre-line text-gray-600 dark:text-slate-300">
                             {o.customer_address} ({o.zone})
                           </p>
+                          <a
+                            href={mapsUrl({ latitude: o.latitude, longitude: o.longitude, address: o.customer_address, zone: o.zone })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                          >
+                            {hasCoords(o) ? "Position du client sur Google Maps" : "Chercher l'adresse sur Google Maps"}
+                          </a>
                           {o.landmark && (
                             <p className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-slate-300">
                               <Compass size={14} className="shrink-0" /> Repère : {o.landmark}

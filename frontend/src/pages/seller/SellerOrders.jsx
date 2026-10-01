@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { Bike, Check, Hand, MapPin, Phone, ShoppingBag, StickyNote, Store, X } from "lucide-react";
+import { Bike, Check, ExternalLink, Hand, MapPin, Phone, ShoppingBag, StickyNote, Store, X } from "lucide-react";
 import { api } from "../../api";
 import { formatPhone, formatPrice, timeAgo } from "../../format";
 import { useShop } from "../../context/ShopContext";
 import { usePolling } from "../../hooks";
+import { hasCoords, mapsUrl } from "../../maps";
 import { WhatsAppIcon, whatsappUrl } from "../../whatsapp";
 
 const TODO = "bg-yellow-100 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-200";
@@ -173,6 +174,24 @@ function OrderCard({ order: o, currency, busy, onAction }) {
             <WhatsAppIcon size={14} /> WhatsApp
           </a>
         </p>
+        {!pickup && o.customer_address && (
+          <div className="flex items-start gap-1.5">
+            <MapPin size={14} className="mt-0.5 shrink-0 text-gray-400" />
+            <span className="min-w-0">
+              {o.customer_address} <span className="muted">({o.zone})</span>
+              {o.landmark && <span className="block text-xs muted">Repère : {o.landmark}</span>}
+              <a
+                href={mapsUrl({ latitude: o.latitude, longitude: o.longitude, address: o.customer_address, zone: o.zone })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-0.5 flex w-fit items-center gap-1 text-xs font-semibold text-brand-600 dark:text-brand-400"
+              >
+                {hasCoords(o) ? "Position du client sur Google Maps" : "Chercher l'adresse sur Google Maps"}
+                <ExternalLink size={12} />
+              </a>
+            </span>
+          </div>
+        )}
         {o.note && (
           <p className="flex items-start gap-1.5 rounded-lg bg-gray-50 p-2 text-xs text-gray-600 dark:bg-slate-900 dark:text-slate-300">
             <StickyNote size={13} className="mt-0.5 shrink-0" /> {o.note}

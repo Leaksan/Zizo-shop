@@ -24,12 +24,12 @@ import {
   XCircle,
 } from "lucide-react";
 import { api } from "../api";
-import { formatDate, formatPrice, parseDate } from "../format";
+import { formatDate, formatPrice, parseDate, timeAgo } from "../format";
+import { directionsUrl, distanceKm, hasCoords, mapsUrl } from "../maps";
 import { getMyOrders, rememberOrder } from "../myOrders";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import ShopAvatar from "../components/ShopAvatar";
-import TrackingMap from "../components/TrackingMap";
 import { CourierRatingForm, ProductReviewForm } from "../components/ReviewForms";
 
 const STATUS_INFO = {
@@ -338,12 +338,20 @@ function OrderTracking({ order, currency, onRefresh }) {
     ? PREPARING_INFO
     : (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] || STATUS_INFO.pending;
   const rank = { pending: 1, delivering: 2, delivered: 3 }[order.status] || 0;
-  const destPos =
-    order.latitude != null && order.longitude != null ? [order.latitude, order.longitude] : null;
-  const courierPos =
-    order.courier?.lat != null && order.courier?.lng != null
-      ? [order.courier.lat, order.courier.lng]
-      : null;
+  // Lieux ouverts dans Google Maps : l'adresse de livraison, le livreur, la boutique (retrait)
+  const destination = {
+    latitude: order.latitude,
+    longitude: order.longitude,
+    address: order.customer_address,
+    zone: order.zone,
+  };
+  const courierPlace = order.courier ? { latitude: order.courier.lat, longitude: order.courier.lng } : null;
+  const shopPlace = {
+    latitude: order.pickup_latitude,
+    longitude: order.pickup_longitude,
+    address: pickupAddress,
+  };
+  const courierKm = distanceKm(courierPlace, destination);
   const steps = isPickup
     ? [
         { label: "Commande confirmée", date: order.created_at, icon: Check, done: rank >= 1 },
@@ -399,6 +407,16 @@ function OrderTracking({ order, currency, onRefresh }) {
               <MapPin size={15} className="mt-0.5 shrink-0" />
               {pickupAddress}
             </p>
+            {directionsUrl(shopPlace) && (
+              <a
+                href={directionsUrl(shopPlace)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+              >
+                Itinéraire dans Google Maps <ExternalLink size={13} />
+              </a>
+            )}
             <p className="mt-1 text-xs muted">
               Présentez votre numéro de commande <b>{order.reference}</b> au comptoir pour récupérer
               votre article.
@@ -447,12 +465,27 @@ function OrderTracking({ order, currency, onRefresh }) {
         ))}
       </div>
 
-      {order.status === "delivering" && (courierPos || destPos) && (
-        <div className="mb-6">
-          <TrackingMap courierPos={courierPos} destPos={destPos} />
-          <p className="mt-2 text-center text-xs muted">
-            La position du livreur se met à jour automatiquement.
-          </p>
+      {/* Livreur en route : sa position s'ouvre dans Google Maps */}
+      {!isPickup && order.status === "delivering" && (
+        <div className="mb-6 flex flex-col items-center gap-1.5">
+          {hasCoords(courierPlace) ? (
+            <>
+              <a
+                href={mapsUrl(courierPlace)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary flex w-full items-center justify-center gap-2 py-3 sm:w-auto sm:px-6"
+              >
+                <Bike size={18} /> Voir mon livreur sur Google Maps
+              </a>
+              <p className="text-center text-xs muted">
+                Position {order.courier.position_at ? timeAgo(order.courier.position_at) : "récente"}
+                {courierKm != null && ` · à environ ${courierKm.toFixed(1).replace(".", ",")} km de chez vous`}
+              </p>
+            </>
+          ) : (
+            <p className="text-center text-sm muted">Le livreur n'a pas encore partagé sa position.</p>
+          )}
         </div>
       )}
 
@@ -485,19 +518,15 @@ function OrderTracking({ order, currency, onRefresh }) {
               pickupAddress
             ) : (
               <>
-                {order.latitude != null && order.longitude != null ? (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-brand-600 hover:underline dark:text-brand-400"
-                  >
-                    {order.customer_address}
-                    <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
-                  </a>
-                ) : (
-                  order.customer_address
-                )}{" "}
+                <a
+                  href={mapsUrl(destination)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-600 hover:underline dark:text-brand-400"
+                >
+                  {order.customer_address}
+                  <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
+                </a>{" "}
                 ({order.zone})
                 {order.landmark && (
                   <span className="mt-0.5 flex items-center justify-end gap-1 text-xs muted">

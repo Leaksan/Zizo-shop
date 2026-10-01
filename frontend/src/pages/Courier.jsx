@@ -10,8 +10,8 @@ import {
   Inbox,
   KeyRound,
   LogOut,
-  Map,
   MapPin,
+  Navigation,
   Moon,
   Package,
   PackageOpen,
@@ -28,7 +28,7 @@ import {
 import { api } from "../api";
 import { formatDate, formatPhone, formatPrice } from "../format";
 import { useShop } from "../context/ShopContext";
-import CourierMap from "../components/CourierMap";
+import { directionsUrl, mapsUrl } from "../maps";
 import { WhatsAppIcon, whatsappUrl } from "../whatsapp";
 import { play } from "../sounds";
 
@@ -323,26 +323,20 @@ function CourierDashboard({ courier, onLogout }) {
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
-      {data && inProgressCount > 0 && (
-        <section className="card p-5">
-          <h2 className="mb-4 flex items-center gap-2 font-bold">
-            <Map size={20} className="text-brand-600 dark:text-brand-400" />
-            Carte des livraisons en cours
-            {myPos && (
-              <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300">
-                Position partagée
-              </span>
-            )}
-          </h2>
-          {geoError && (
-            <p className="mb-3 flex items-center gap-2 rounded-lg bg-accent-50 px-3 py-2 text-xs text-accent-900 dark:bg-accent-950 dark:text-accent-200">
-              <TriangleAlert size={15} className="shrink-0" />
-              Activez la géolocalisation pour afficher votre position et les itinéraires.
+      {data && inProgressCount > 0 &&
+        (myPos ? (
+          <p className="flex items-center gap-2 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+            <Navigation size={16} className="shrink-0" />
+            Position partagée : vos clients vous voient arriver sur Google Maps.
+          </p>
+        ) : (
+          geoError && (
+            <p className="flex items-start gap-2 rounded-xl bg-accent-50 px-4 py-3 text-sm text-accent-900 dark:bg-accent-950 dark:text-accent-200">
+              <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+              Activez la localisation du téléphone pour ce site : vos clients verront où vous êtes.
             </p>
-          )}
-          <CourierMap courierPos={myPos} deliveries={data.in_progress} />
-        </section>
-      )}
+          )
+        ))}
 
       {data && (
         <>
@@ -514,21 +508,17 @@ function CompleteForm({ onSubmit }) {
 function DeliveryCard({ order, myZone, currency, children }) {
   const myZoneMatch = order.zone === myZone;
   const itemCount = order.items.reduce((s, a) => s + a.quantity, 0);
-  const mapsUrl =
-    order.latitude != null && order.longitude != null
-      ? `https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`
-      : "https://www.google.com/maps/search/?api=1&query=" +
-        encodeURIComponent(`${order.customer_address} ${order.zone}, Libreville, Gabon`);
-
+  // Lieux ouverts dans Google Maps (position GPS si connue, sinon l'adresse écrite)
+  const customer = {
+    latitude: order.latitude,
+    longitude: order.longitude,
+    address: order.customer_address,
+    zone: order.zone,
+  };
   const pickup = order.pickup;
-  const pickupMapsUrl = !pickup
-    ? null
-    : pickup.latitude != null && pickup.longitude != null
-      ? `https://www.google.com/maps/search/?api=1&query=${pickup.latitude},${pickup.longitude}`
-      : pickup.address
-        ? "https://www.google.com/maps/search/?api=1&query=" +
-          encodeURIComponent(`${pickup.address} ${pickup.zone}, Libreville, Gabon`)
-        : null;
+  const pickupPlace = pickup && (pickup.latitude != null || pickup.address) ? pickup : null;
+  const linkCls =
+    "flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-950";
 
   return (
     <div className="mb-3 rounded-xl border border-gray-200 p-4 transition hover:border-brand-400 dark:border-slate-700">
@@ -554,9 +544,9 @@ function DeliveryCard({ order, myZone, currency, children }) {
           </p>
           <p className="flex items-start gap-1.5 text-gray-600 dark:text-slate-300">
             <MapPin size={14} className="mt-0.5 shrink-0" />
-            {pickupMapsUrl ? (
+            {pickupPlace ? (
               <a
-                href={pickupMapsUrl}
+                href={mapsUrl(pickupPlace)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-brand-600 dark:text-brand-400"
@@ -600,7 +590,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
         <span className="flex items-center gap-1.5">
           <MapPin size={14} />
           <a
-            href={mapsUrl}
+            href={mapsUrl(customer)}
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-brand-600 dark:text-brand-400"
@@ -626,6 +616,32 @@ function DeliveryCard({ order, myZone, currency, children }) {
           « {order.note} »
         </p>
       )}
+      {/* Itinéraires dans Google Maps, depuis là où se trouve le livreur */}
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        {pickupPlace && (
+          <a href={directionsUrl(pickupPlace)} target="_blank" rel="noopener noreferrer" className={linkCls}>
+            <Store size={14} /> Vers la boutique
+          </a>
+        )}
+        <a
+          href={directionsUrl(customer)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${linkCls} ${pickupPlace ? "" : "col-span-2"}`}
+        >
+          <User size={14} /> Vers le client
+        </a>
+        {pickupPlace && (
+          <a
+            href={directionsUrl(customer, pickupPlace)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="col-span-2 flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-700"
+          >
+            <Navigation size={14} /> Itinéraire complet : boutique puis client
+          </a>
+        )}
+      </div>
       {/* Aucun paiement en ligne n'existe : toute commande est à encaisser. */}
       <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-accent-100 px-3 py-2 text-xs font-bold text-accent-900 dark:bg-accent-950 dark:text-accent-200">
         <Banknote size={14} />

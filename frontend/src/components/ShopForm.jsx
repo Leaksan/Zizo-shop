@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { ImagePlus } from "lucide-react";
 import { api } from "../api";
-import { normalize } from "../libreville";
 import { useShop } from "../context/ShopContext";
-import AddressInput from "./AddressInput";
+import LocationPicker from "./LocationPicker";
 import CropFileInput from "./CropFileInput";
 import ShopAvatar from "./ShopAvatar";
 
@@ -22,9 +21,6 @@ export default function ShopForm({ initial, submitLabel, onSubmit, onPhotoChange
     latitude: initial?.latitude ?? null,
     longitude: initial?.longitude ?? null,
   });
-  // Lieu choisi dans les suggestions : sa position GPS guide le livreur (carte). Elle reste
-  // valable tant que l'adresse commence par ce lieu (ex. « Glass, immeuble bleu »).
-  const [picked, setPicked] = useState(initial?.latitude != null ? initial.address || "" : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState("");
@@ -129,30 +125,27 @@ export default function ShopForm({ initial, submitLabel, onSubmit, onPhotoChange
       </div>
       <label className="block">
         <span className="label">Adresse de retrait</span>
-        <AddressInput
+        <input
           value={form.address}
-          required={false}
+          onChange={set("address")}
+          className="input"
           placeholder="Où le livreur récupère vos colis (ex. Marché Mont-Bouët, allée 3)"
-          onChange={(value) => {
-            const keep = picked && value.startsWith(picked);
-            setForm((f) => ({ ...f, address: value, ...(keep ? {} : { latitude: null, longitude: null }) }));
-            if (!keep) setPicked("");
-          }}
-          onPick={(place) => {
-            setPicked(place.name);
-            setForm((f) => ({
-              ...f,
-              address: place.name,
-              latitude: place.lat,
-              longitude: place.lng,
-              zone: (place.zone && zones.find((z) => normalize(z) === normalize(place.zone).trim())) || f.zone,
-            }));
-          }}
         />
         <span className="mt-1 block text-xs muted">
           Communiquée aux livreurs, et aux clients qui choisissent le retrait en boutique.
         </span>
       </label>
+      <div>
+        <span className="label">Position de la boutique (conseillé)</span>
+        <LocationPicker
+          value={form.latitude != null ? { latitude: form.latitude, longitude: form.longitude } : null}
+          onChange={(pos) =>
+            setForm((f) => ({ ...f, latitude: pos?.latitude ?? null, longitude: pos?.longitude ?? null }))
+          }
+          label="Utiliser ma position (je suis à la boutique)"
+          hint="Les livreurs et vos clients l'ouvrent dans Google Maps pour venir jusqu'à vous."
+        />
+      </div>
 
       {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
       <button type="submit" disabled={busy || Boolean(uploading)} className="btn-primary py-3 text-base">

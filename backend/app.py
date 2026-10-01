@@ -88,6 +88,10 @@ def notify_whatsapp_order(order):
                 lines.append(f"📍 {order.customer_address} ({order.zone})")
                 if order.landmark:
                     lines.append(f"🧭 Repère : {order.landmark}")
+                if order.latitude is not None and order.longitude is not None:
+                    lines.append(
+                        f"🗺️ https://www.google.com/maps/search/?api=1&query={order.latitude},{order.longitude}"
+                    )
             lines.append(
                 "🧾 "
                 + " · ".join(f"{i.product_name} ({i.variant_name}) ×{i.quantity}" for i in order.items)
@@ -299,12 +303,9 @@ def create_app():
         )
         return data
 
-    # Ce que le vendeur n'a pas à connaître : le code confirme la remise par le livreur, et
-    # l'adresse exacte du client ne sert qu'au livreur (le vendeur garde nom, téléphone, quartier)
-    SELLER_HIDDEN = (
-        "delivery_code", "customer_email", "customer_address", "landmark",
-        "latitude", "longitude", "courier_rating", "courier_comment",
-    )
+    # Ce que le vendeur n'a pas à connaître : le code confirme la remise par le livreur. Il voit
+    # l'adresse et la position du client (à ouvrir dans Google Maps), comme le livreur.
+    SELLER_HIDDEN = ("delivery_code", "customer_email", "courier_rating", "courier_comment")
 
     def seller_order_dict(order):
         """Commande vue par son vendeur."""

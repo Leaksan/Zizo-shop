@@ -1,5 +1,3 @@
-export const LIBREVILLE_CENTER = [0.4162, 9.4673];
-
 export const LIBREVILLE_PLACES = [
   { name: "Centre-ville, Libreville", zone: "Centre-ville", lat: 0.3921, lng: 9.4536 },
   { name: "Marché Mont-Bouët", zone: "Mont-Bouët", lat: 0.3953, lng: 9.4564 },

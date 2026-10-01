@@ -560,6 +560,8 @@ class Order(db.Model):
             "pickup_address": (
                 self.shop.address or "" if self.shop and self.delivery_method == "pickup" else None
             ),
+            "pickup_latitude": self.shop.latitude if self.shop and self.delivery_method == "pickup" else None,
+            "pickup_longitude": self.shop.longitude if self.shop and self.delivery_method == "pickup" else None,
         }
         if with_items:
             data["items"] = [i.to_dict() for i in self.items]
@@ -572,6 +574,7 @@ class Order(db.Model):
                     "zone": self.courier.zone,
                     "lat": self.courier.last_lat,
                     "lng": self.courier.last_lng,
+                    "position_at": self.courier.position_at.isoformat() if self.courier.position_at else None,
                 }
                 if self.courier
                 else None

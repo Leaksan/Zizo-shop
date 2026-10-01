@@ -237,8 +237,9 @@ def phase3_orders():
     listed = seller.get("/api/my/orders").get_json()
     check("le vendeur voit ses commandes", {o["reference"] for o in listed} >= {seller_order["reference"]})
     check("jamais le code de livraison pour le vendeur", all("delivery_code" not in o for o in listed))
-    check("adresse exacte du client réservée au livreur",
-          all("customer_address" not in o and "latitude" not in o for o in listed))
+    seen = next(o for o in listed if o["reference"] == seller_order["reference"])
+    check("le vendeur voit l'adresse du client (Google Maps)", seen["customer_address"] == "Carrefour Léon Mba"
+          and "latitude" in seen)
     check("pas les commandes des autres boutiques", all(o["shop"]["slug"] == shop["slug"] for o in listed))
     to_prepare = seller.get("/api/my/shop").get_json()["orders_to_prepare"]
     check("compteur des commandes à préparer", to_prepare == 2, to_prepare)
@@ -276,6 +277,10 @@ def phase3_orders():
     pickup = place_order(customer, [(mine["variants"][0]["id"], 1)], method="pickup").get_json()["orders"][0]
     tracked = customer.get(f"/api/orders/track/{pickup['reference']}").get_json()
     check("retrait : le client voit l'adresse du vendeur", tracked["pickup_address"] == "Marché Mont-Bouët, allée 3")
+    seller.put("/api/my/shop", json={"latitude": 0.4123, "longitude": 9.4567})
+    tracked = customer.get(f"/api/orders/track/{pickup['reference']}").get_json()
+    check("retrait : position de la boutique pour l'itinéraire",
+          tracked["pickup_latitude"] == 0.4123 and tracked["pickup_longitude"] == 9.4567, tracked)
     check("adresse du vendeur absente de sa page publique",
           "address" not in customer.get(f"/api/shops/{shop['slug']}").get_json())
     check("retrait : pas de frais de livraison", pickup["delivery_fee"] == 0)
