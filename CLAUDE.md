@@ -75,6 +75,11 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
   choisie d'après son nom (`src/categoryIcons.js`, aussi utilisée pour les produits sans photo),
   marqueurs des cartes Leaflet en SVG (`src/mapIcons.js`). Seul le message WhatsApp de nouvelle
   commande (`notify_whatsapp_order`, backend) garde des emojis : il n'est pas affiché sur le site.
+- **Photos envoyées** : toujours par `src/components/CropFileInput.jsx`, jamais un
+  `<input type="file">` direct. Le client recadre d'abord la photo (glisser, pincer, curseur ;
+  dézoomer garde toute la photo avec des bords blancs), puis le site envoie un JPEG déjà réduit.
+  Produits, publications et avis : carré ; logo de boutique : carré avec aperçu rond ;
+  couverture de boutique : 3:1 (1600 px). Plusieurs photos : recadrées l'une après l'autre.
 - Dates : l'API les envoie en UTC **sans fuseau** ; côté site, toujours `parseDate` / `formatDate`
   (`src/format.js`), jamais `new Date(iso)` directement (1 h de décalage à Libreville sinon).
 - Devise : **XAF** (franc CFA d'Afrique centrale), jamais XOF. Montants en FCFA sans décimales.

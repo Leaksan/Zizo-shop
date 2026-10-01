@@ -4,6 +4,7 @@ import { api } from "../api";
 import { normalize } from "../libreville";
 import { useShop } from "../context/ShopContext";
 import AddressInput from "./AddressInput";
+import CropFileInput from "./CropFileInput";
 import ShopAvatar from "./ShopAvatar";
 
 // Informations d'une boutique : création (« Ouvrir ma boutique ») et modification (espace vendeur)
@@ -28,9 +29,8 @@ export default function ShopForm({ initial, submitLabel, onSubmit }) {
   const [uploading, setUploading] = useState("");
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
-  const upload = (key) => async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Photo déjà recadrée par CropFileInput
+  const upload = (key) => async ([file]) => {
     setUploading(key);
     setError("");
     try {
@@ -40,7 +40,6 @@ export default function ShopForm({ initial, submitLabel, onSubmit }) {
       setError(err.message);
     } finally {
       setUploading("");
-      e.target.value = "";
     }
   };
 
@@ -67,7 +66,7 @@ export default function ShopForm({ initial, submitLabel, onSubmit }) {
             <ImagePlus size={14} />
             {uploading === "cover_url" ? "Envoi…" : "Photo de couverture"}
           </span>
-          <input type="file" accept="image/*" onChange={upload("cover_url")} className="hidden" />
+          <CropFileInput aspect={3} maxWidth={1600} onCropped={upload("cover_url")} />
         </label>
         <div className="flex items-center gap-3 px-4 pb-4">
           <label className="relative -mt-8 cursor-pointer rounded-full ring-4 ring-white dark:ring-slate-800">
@@ -75,7 +74,7 @@ export default function ShopForm({ initial, submitLabel, onSubmit }) {
             <span className="absolute -right-1 -bottom-1 rounded-full bg-brand-600 p-1.5 text-white shadow">
               <ImagePlus size={12} />
             </span>
-            <input type="file" accept="image/*" onChange={upload("logo_url")} className="hidden" />
+            <CropFileInput aspect={1} round maxWidth={600} onCropped={upload("logo_url")} />
           </label>
           <p className="pt-2 text-xs muted">
             {uploading === "logo_url" ? "Envoi du logo…" : "Touchez les images pour ajouter votre logo et une couverture."}

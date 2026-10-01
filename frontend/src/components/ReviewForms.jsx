@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bike, Camera, CheckCircle2, Send, Star } from "lucide-react";
 import { api } from "../api";
+import CropFileInput from "./CropFileInput";
 import Rating from "./Rating";
 
 export function StarInput({ value, onChange }) {
@@ -80,7 +81,11 @@ export function ProductReviewForm({ order, item, onDone }) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [photo, setPhoto] = useState(null);
+  const [preview, setPreview] = useState("");
   const [status, setStatus] = useState("");
+
+  // Aperçu de la photo recadrée (adresse temporaire libérée quand elle change)
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -130,14 +135,15 @@ export function ProductReviewForm({ order, item, onDone }) {
         className="input mt-2"
       />
       <div className="mt-2 flex flex-wrap items-center gap-3">
+        {preview && <img src={preview} alt="Votre photo" className="h-10 w-10 rounded-lg object-cover" />}
         <label className="btn-outline flex cursor-pointer items-center gap-1.5">
           <Camera size={14} />
-          {photo ? photo.name.slice(0, 24) : "Ajouter une photo"}
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="hidden"
-            onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+          {photo ? "Changer la photo" : "Ajouter une photo"}
+          <CropFileInput
+            onCropped={([file]) => {
+              setPhoto(file);
+              setPreview(URL.createObjectURL(file));
+            }}
           />
         </label>
         <button type="submit" disabled={status === "sending"} className="btn-primary text-xs">

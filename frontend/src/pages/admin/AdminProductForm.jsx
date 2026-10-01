@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Flame, FolderOpen, ImagePlus, X } from "lucide-react";
 import { api } from "../../api";
+import CropFileInput from "../../components/CropFileInput";
 
 const emptyVariant = () => ({ name: "", price: "", old_price: "", stock: 0, sku: "" });
 const BADGES = ["", "Promo", "Nouveau", "Top vente"];
@@ -49,9 +50,8 @@ export default function AdminProductForm({ mode = "admin" }) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Photo déjà recadrée au carré par CropFileInput
+  const handleFile = async ([file]) => {
     setUploading(true);
     setError("");
     try {
@@ -204,13 +204,7 @@ export default function AdminProductForm({ mode = "admin" }) {
                 <label className="btn-outline inline-flex w-fit cursor-pointer items-center gap-2 px-4 py-2 text-sm">
                   {!uploading && <FolderOpen size={16} />}
                   {uploading ? "Envoi en cours…" : "Choisir une image"}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    onChange={handleFile}
-                    disabled={uploading}
-                    className="hidden"
-                  />
+                  <CropFileInput aspect={1} disabled={uploading} onCropped={handleFile} />
                 </label>
                 <input
                   value={form.image_url}
@@ -219,8 +213,8 @@ export default function AdminProductForm({ mode = "admin" }) {
                   className="input"
                 />
                 <p className="text-xs muted">
-                  L'image est redimensionnée automatiquement (max 900 px) et recadrée au carré à
-                  l'affichage. JPG, PNG, WebP ou GIF, 8 Mo max.
+                  Vous recadrez la photo au carré avant l'envoi : c'est ainsi qu'elle s'affiche sur
+                  les cartes produit. Elle est aussi allégée (900 px max).
                 </p>
               </div>
             </div>

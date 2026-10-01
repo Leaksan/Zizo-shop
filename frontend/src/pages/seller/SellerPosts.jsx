@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { Check, EyeOff, ImagePlus, Send, X } from "lucide-react";
 import { api } from "../../api";
+import CropFileInput from "../../components/CropFileInput";
 import PostCard from "../../components/PostCard";
 import ProductVisual from "../../components/ProductVisual";
 
@@ -29,10 +30,8 @@ export default function SellerPosts() {
       .catch(() => {});
   }, []);
 
-  const addPhotos = async (e) => {
-    const files = [...(e.target.files || [])].slice(0, MAX_IMAGES - images.length);
-    e.target.value = "";
-    if (!files.length) return;
+  // Photos déjà recadrées (carrées, comme dans les publications) par CropFileInput
+  const addPhotos = async (files) => {
     setUploading(true);
     setError("");
     try {
@@ -145,7 +144,12 @@ export default function SellerPosts() {
           >
             <ImagePlus size={16} />
             {uploading ? "Envoi…" : "Photos"}
-            <input type="file" accept="image/*" multiple onChange={addPhotos} className="hidden" />
+            <CropFileInput
+              multiple
+              limit={MAX_IMAGES - images.length}
+              disabled={uploading || images.length >= MAX_IMAGES}
+              onCropped={addPhotos}
+            />
           </label>
           <span className="flex-1 text-xs muted">{images.length}/{MAX_IMAGES}</span>
           <button type="submit" disabled={busy || uploading} className="btn-primary inline-flex items-center gap-1.5 px-4 py-2">
