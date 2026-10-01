@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Banknote, Bike, Check, ChevronDown, ChevronUp, Clock, Compass, StickyNote, Store } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Banknote, Bike, Check, ChevronDown, ChevronUp, Clock, Compass, Search, StickyNote, Store } from "lucide-react";
 import { api } from "../../api";
 import { formatDate, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -16,38 +17,86 @@ const FILTER_STATUSES = [
 
 const STATUS_VALUES = ["pending", "delivering", "delivered", "cancelled"];
 
+const MAX_SHOWN = 200; // le serveur renvoie les 200 commandes les plus récentes
+
 export default function AdminOrders() {
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
-  const [filter, setFilter] = useState("");
+  // Statut demandé par un lien (tableau de bord : ?statut=pending)
+  const [filter, setFilter] = useState(() =>
+    FILTER_STATUSES.some((s) => s.value === searchParams.get("statut")) ? searchParams.get("statut") : ""
+  );
+  const [shops, setShops] = useState([]);
+  const [shopId, setShopId] = useState("");
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const { currency } = useShop();
+
+  useEffect(() => {
+    api.get("/admin/shops").then(setShops).catch(() => {});
+  }, []);
+
+  // Recherche lancée après 300 ms sans frappe
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const load = (silent = false) => {
     if (!silent) setLoading(true);
-    const params = filter ? `?status=${filter}` : "";
+    const params = new URLSearchParams();
+    if (filter) params.set("status", filter);
+    if (shopId) params.set("shop", shopId);
+    if (query) params.set("search", query);
     api
-      .get(`/admin/orders${params}`)
+      .get(`/admin/orders?${params}`)
       .then(setOrders)
+      .catch((e) => !silent && setError(e.message))
       .finally(() => {
         if (!silent) setLoading(false);
       });
   };
 
-  useEffect(load, [filter]);
-  usePolling(() => load(true), 15000, [filter]);
+  useEffect(load, [filter, shopId, query]);
+  usePolling(() => load(true), 15000, [filter, shopId, query]);
 
   const updateOrder = async (order, payload) => {
-    const updated = await api.put(`/admin/orders/${order.id}`, payload);
-    setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)));
+    setError("");
+    try {
+      const updated = await api.put(`/admin/orders/${order.id}`, payload);
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? updated : o)));
+    } catch (e) {
+      setError(e.message);
+    }
   };
-  const updateStatus = (order, status) => updateOrder(order, { status });
+  const updateStatus = (order, status) => {
+    if (
+      status === "cancelled" &&
+      !window.confirm(`Annuler la commande ${order.reference} ? Les articles seront remis en stock.`)
+    )
+      return;
+    updateOrder(order, { status });
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Commandes</h1>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="input w-auto">
+      <h1 className="text-2xl font-bold">Commandes</h1>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Référence, nom ou téléphone…"
+            aria-label="Rechercher une commande"
+            className="input pl-9"
+          />
+        </div>
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Statut" className="input sm:w-56">
           <option value="">Tous les statuts</option>
           {FILTER_STATUSES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -55,13 +104,23 @@ export default function AdminOrders() {
             </option>
           ))}
         </select>
+        <select value={shopId} onChange={(e) => setShopId(e.target.value)} aria-label="Boutique" className="input sm:w-56">
+          <option value="">Toutes les boutiques</option>
+          {shops.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
 
       <div className="card">
         {loading ? (
           <p className="p-4 text-sm muted">Chargement…</p>
         ) : orders.length === 0 ? (
-          <p className="p-4 text-sm muted">Aucune commande.</p>
+          <p className="p-4 text-sm muted">{query || filter || shopId ? "Aucune commande ne correspond." : "Aucune commande."}</p>
         ) : (
           orders.map((o) => (
             <div key={o.id} className="border-b border-gray-100 last:border-0 dark:border-slate-700">
@@ -224,6 +283,9 @@ export default function AdminOrders() {
           ))
         )}
       </div>
+      {orders.length >= MAX_SHOWN && (
+        <p className="text-center text-xs muted">Les {MAX_SHOWN} commandes les plus récentes : affinez la recherche.</p>
+      )}
     </div>
   );
 }

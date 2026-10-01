@@ -644,7 +644,17 @@ DEFAULT_SETTINGS = {
     "zones": json.dumps(LIBREVILLE_ZONES, ensure_ascii=False),
     # Frais par zone ({"Owendo": 3000, ...}) ; une zone absente = delivery_fee
     "zone_fees": "{}",
+    # Sons du site coupés pour tout le monde par l'admin (liste JSON de SOUND_KEYS)
+    "sounds_off": "[]",
 }
+
+# Petits sons du site (fabriqués par le navigateur) : mêmes clés que frontend/src/sounds.js
+SOUND_KEYS = ("panier", "retrait", "favori", "commande", "promo", "suivre", "notification", "vente", "course")
+
+
+def is_password_hash(value):
+    """Empreinte de mot de passe (werkzeug), par opposition à un ancien mot de passe en clair."""
+    return (value or "").startswith(("pbkdf2:", "scrypt:"))
 
 GABON_TZ = timezone(timedelta(hours=1))  # heure de Libreville (UTC+1, sans heure d'été)
 

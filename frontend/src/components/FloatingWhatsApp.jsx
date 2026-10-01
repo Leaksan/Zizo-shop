@@ -4,7 +4,7 @@ import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 
 // Pages où le bouton flottant cachait un bouton d'action : elles ont déjà leur
 // propre lien WhatsApp (fiche produit, commande) ou une barre « Commander » (panier).
-const HIDDEN_ON = [/^\/products\//, /^\/cart/, /^\/checkout/, /^\/order-confirmation/, /^\/livreur/, /^\/vendeur/];
+const HIDDEN_ON = [/^\/products\//, /^\/cart/, /^\/checkout/, /^\/order-confirmation/, /^\/livreur/, /^\/vendeur/, /^\/parametres/];
 
 export default function FloatingWhatsApp() {
   const { shopPhone, shopName } = useShop();

@@ -30,6 +30,7 @@ const SellerPosts = lazy(() => import("./pages/seller/SellerPosts"));
 const SellerOrders = lazy(() => import("./pages/seller/SellerOrders"));
 const SellerDashboard = lazy(() => import("./pages/seller/SellerDashboard"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const Settings = lazy(() => import("./pages/Settings"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -100,6 +101,7 @@ export default function App() {
                   <Route path="/livreur" element={<Courier />} />
                   <Route path="/compte" element={<Account />} />
                   <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/parametres" element={<Settings />} />
                   <Route path="/boutiques" element={<Shops />} />
                   <Route path="/b/:slug" element={<ShopPage />} />
                   <Route path="/vendeur/ouvrir" element={<OpenShop />} />

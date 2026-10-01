@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "../api";
+import { play } from "../sounds";
 
 const CartContext = createContext(null);
 
@@ -64,6 +65,7 @@ export function CartProvider({ children }) {
   }, [promo]);
 
   const addItem = (product, variant, quantity = 1) => {
+    play("panier");
     setItems((prev) => {
       const existing = prev.find((i) => i.variant_id === variant.id);
       if (existing) {
@@ -91,6 +93,7 @@ export function CartProvider({ children }) {
   };
 
   const updateQuantity = (variantId, quantity) => {
+    if (quantity <= 0) play("retrait");
     setItems((prev) =>
       quantity <= 0
         ? prev.filter((i) => i.variant_id !== variantId)
@@ -98,8 +101,10 @@ export function CartProvider({ children }) {
     );
   };
 
-  const removeItem = (variantId) =>
+  const removeItem = (variantId) => {
+    play("retrait");
     setItems((prev) => prev.filter((i) => i.variant_id !== variantId));
+  };
 
   const clearCart = () => {
     setItems([]);
@@ -113,6 +118,7 @@ export function CartProvider({ children }) {
       .reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
     const result = await api.post("/promo/validate", { code, subtotal: subtotalNow });
     setPromo(result);
+    play("promo");
     return result;
   };
 

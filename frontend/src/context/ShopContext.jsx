@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { api } from "../api";
+import { setSiteSoundsOff } from "../sounds";
 
 const ShopContext = createContext(null);
 
@@ -19,7 +20,10 @@ export function ShopProvider({ children }) {
   const reload = () => {
     api
       .get("/settings/public")
-      .then((s) => setSettings({ ...DEFAULTS, ...s }))
+      .then((s) => {
+        setSettings({ ...DEFAULTS, ...s });
+        setSiteSoundsOff(s.sounds_off); // sons coupés par l'admin pour tout le monde
+      })
       .catch(() => {});
   };
 
@@ -35,6 +39,8 @@ export function ShopProvider({ children }) {
     zones: settings.zones || [],
     zoneFees: settings.zone_fees || {},
     clearanceCount: Number(settings.clearance_count) || 0,
+    lowStockThreshold: Number(settings.low_stock_threshold) || 5,
+    siteSoundsOff: settings.sounds_off || [],
     reload,
   };
 

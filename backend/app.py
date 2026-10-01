@@ -19,6 +19,7 @@ from flask_cors import CORS
 from PIL import Image
 from sqlalchemy import update as sa_update
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import (
     GABON_TZ,
@@ -26,6 +27,7 @@ from models import (
     REPORT_REASONS,
     REPORT_TARGETS,
     SHOP_STATUSES,
+    SOUND_KEYS,
     Category,
     DeliveryPerson,
     Follow,
@@ -50,6 +52,7 @@ from models import (
     get_zone_fees,
     zone_delivery_fee,
     get_zones,
+    is_password_hash,
     set_setting,
     DEFAULT_SETTINGS,
     LIBREVILLE_ZONES,
@@ -525,6 +528,13 @@ def create_app():
             [{"id": c.id, "name": c.name, "product_count": counts.get(c.id, 0)} for c in cats]
         )
 
+    def sounds_off():
+        try:
+            keys = _json_std.loads(get_setting("sounds_off") or "[]")
+        except ValueError:
+            return []
+        return [k for k in keys if k in SOUND_KEYS]
+
     @app.get("/api/settings/public")
     def public_settings():
         return jsonify(
@@ -540,6 +550,7 @@ def create_app():
                 "zone_fees": get_zone_fees(),
                 # Le lien « Liquidation » n'est affiché que s'il y a quelque chose à voir
                 "clearance_count": public_products().filter(Product.clearance.is_(True)).count(),
+                "sounds_off": sounds_off(),
             }
         )
 
@@ -1470,6 +1481,22 @@ def create_app():
     STATS_DAYS = 30
     CHART_DAYS = 14
 
+    def local_day(dt):
+        """Jour de Libreville d'une date UTC sans fuseau (relue depuis SQLite)."""
+        return dt.replace(tzinfo=timezone.utc).astimezone(GABON_TZ).date()
+
+    def daily_series(orders, amount):
+        """Commandes et montant par jour sur les CHART_DAYS derniers jours (heure de Libreville)."""
+        today = datetime.now(GABON_TZ).date()
+        series = []
+        for back in range(CHART_DAYS - 1, -1, -1):
+            day = today - timedelta(days=back)
+            same_day = [o for o in orders if local_day(o.created_at) == day]
+            series.append(
+                {"date": day.isoformat(), "orders": len(same_day), "amount": round(sum(amount(o) for o in same_day))}
+            )
+        return series
+
     @app.get("/api/my/stats")
     @seller_required
     def my_stats(user, shop):
@@ -1481,21 +1508,7 @@ def create_app():
         def amount(order):
             return order.subtotal - (order.discount or 0)
 
-        def local_day(dt):
-            return dt.replace(tzinfo=timezone.utc).astimezone(GABON_TZ).date()
-
-        today = datetime.now(GABON_TZ).date()
-        days = []
-        for back in range(CHART_DAYS - 1, -1, -1):
-            day = today - timedelta(days=back)
-            same_day = [o for o in live if local_day(o.created_at) == day]
-            days.append(
-                {
-                    "date": day.isoformat(),
-                    "orders": len(same_day),
-                    "amount": round(sum(amount(o) for o in same_day)),
-                }
-            )
+        days = daily_series(live, amount)
 
         top = {}
         for order in live:
@@ -1863,14 +1876,28 @@ def create_app():
 
     # ---------------- Admin : auth ----------------
 
+    def check_admin_password(supplied):
+        """Mot de passe admin, enregistré chiffré. Un ancien mot de passe en clair (base créée
+        avant) est accepté une dernière fois puis remplacé par son empreinte."""
+        stored = get_setting("admin_password")
+        if is_password_hash(stored):
+            return check_password_hash(stored, supplied)
+        if stored and hmac.compare_digest(supplied.encode(), stored.encode()):
+            set_setting("admin_password", generate_password_hash(supplied))
+            db.session.commit()
+            return True
+        return False
+
     @app.post("/api/admin/login")
     def admin_login():
         data = request.get_json(force=True)
-        expected = get_setting("admin_password")
-        supplied = str(data.get("password") or "")
-        if hmac.compare_digest(supplied.encode(), expected.encode()):
+        key = f"admin-ip:{request.remote_addr}"
+        if login_blocked(key):
+            return jsonify({"error": "Trop d'essais : réessayez dans un quart d'heure"}), 429
+        if check_admin_password(str(data.get("password") or "")):
             session["admin"] = True
             return jsonify({"ok": True})
+        record_login_fail(key)
         return jsonify({"error": "Mot de passe incorrect"}), 401
 
     @app.post("/api/admin/logout")
@@ -1887,34 +1914,71 @@ def create_app():
     @app.get("/api/admin/stats")
     @admin_required
     def admin_stats():
-        orders = Order.query.all()
-        revenue = sum(o.total for o in orders if o.status != "cancelled")
+        """Tableau de bord : ce qui attend une action, l'activité des 30 derniers jours, et les
+        compteurs des pastilles du menu."""
+        since = utcnow() - timedelta(days=STATS_DAYS)
+        recent_orders = Order.query.filter(Order.created_at >= since).all()
+        live = [o for o in recent_orders if o.status != "cancelled"]
+        delivered = [o for o in live if o.status == "delivered"]
+        today = datetime.now(GABON_TZ).date()
         threshold = int(get_number("low_stock_threshold", 5))
-        low_stock = Variant.query.filter(Variant.stock <= threshold).count()
-        recent = Order.query.order_by(Order.created_at.desc()).limit(5).all()
+
+        # Meilleures boutiques du mois : ventes livrées (articles, hors frais de livraison)
+        per_shop = {}
+        for order in delivered:
+            line = per_shop.setdefault(order.shop_id, {"amount": 0, "orders": 0})
+            line["amount"] += order.subtotal - (order.discount or 0)
+            line["orders"] += 1
+        top_shops = []
+        for shop_id, line in sorted(per_shop.items(), key=lambda kv: -kv[1]["amount"])[:5]:
+            shop = db.session.get(Shop, shop_id) if shop_id else None
+            if shop:
+                top_shops.append({**shop.summary(), "amount": round(line["amount"]), "orders": line["orders"]})
+
+        pending = Order.query.filter_by(status="pending")
+        recent = Order.query.order_by(Order.created_at.desc()).limit(6).all()
         return jsonify(
             {
-                "total_products": Product.query.count(),
-                "total_orders": len(orders),
-                "pending_orders": Order.query.filter_by(
-                    status="pending", delivery_method="delivery"
-                ).count(),
-                "pickup_pending": Order.query.filter_by(
-                    status="pending", delivery_method="pickup"
-                ).count(),
-                "active_deliveries": Order.query.filter_by(status="delivering").count(),
-                "revenue": round(revenue, 2),
-                "total_categories": Category.query.count(),
-                "total_couriers": DeliveryPerson.query.count(),
+                # À traiter
                 "pending_shops": Shop.query.filter_by(status="pending").count(),
                 # Contenus signalés à traiter (un même contenu peut l'être plusieurs fois)
                 "open_reports": db.session.query(Report.target, Report.target_id)
                 .filter(Report.status == "open")
                 .distinct()
                 .count(),
+                "couriers_to_verify": DeliveryPerson.query.filter_by(verified=False).count(),
+                "stock_requests": db.session.query(StockRequest.variant_id).distinct().count(),
+                # Colis prêts qu'aucun livreur n'a encore pris
+                "waiting_courier": pending.filter(
+                    Order.delivery_method == "delivery",
+                    Order.ready_at.isnot(None),
+                    Order.courier_id.is_(None),
+                ).count(),
+                # Commandes que les vendeurs doivent encore préparer
+                "preparing": pending.filter(Order.ready_at.is_(None)).count(),
+                "pending_orders": pending.filter(Order.delivery_method == "delivery").count(),
+                "pickup_pending": pending.filter(Order.delivery_method == "pickup").count(),
+                "active_deliveries": Order.query.filter_by(status="delivering").count(),
+                "low_stock_variants": Variant.query.join(Product, Variant.product_id == Product.id)
+                .filter(Product.active.is_(True), Variant.stock <= threshold)
+                .count(),
+                # Activité des 30 derniers jours
+                "period_days": STATS_DAYS,
+                "orders_30d": len(live),
+                "orders_today": sum(1 for o in live if local_day(o.created_at) == today),
+                "sales_30d": round(sum(o.total for o in delivered)),
+                "to_collect": round(sum(o.total for o in live if o.status != "delivered")),
+                "avg_basket_30d": round(sum(o.total for o in live) / len(live)) if live else 0,
+                "new_users_30d": User.query.filter(User.created_at >= since).count(),
+                "days": daily_series(live, lambda o: o.total),
+                "top_shops": top_shops,
+                # Totaux
+                "total_orders": Order.query.count(),
+                "total_products": Product.query.count(),
+                "total_categories": Category.query.count(),
+                "total_couriers": DeliveryPerson.query.count(),
                 "total_shops": Shop.query.count(),
                 "total_users": User.query.count(),
-                "low_stock_variants": low_stock,
                 "recent_orders": [o.to_dict(with_items=False) for o in recent],
             }
         )
@@ -2273,6 +2337,7 @@ def create_app():
                     "variant_id": r.variant_id,
                     "product_name": r.variant.product.name,
                     "variant_name": r.variant.name,
+                    "shop": r.variant.product.shop.summary() if r.variant.product.shop else None,
                     "current_stock": r.variant.stock,
                     "count": 0,
                     "phones": [],
@@ -2311,11 +2376,24 @@ def create_app():
     @app.get("/api/admin/orders")
     @admin_required
     def admin_list_orders():
+        """Commandes (les 200 plus récentes) : filtre par statut, par boutique, recherche par
+        référence, nom ou téléphone du client."""
         status = request.args.get("status")
+        shop_id = request.args.get("shop", type=int)
+        search = request.args.get("search", "").strip()
         query = Order.query
         if status:
             query = query.filter_by(status=status)
-        orders = query.order_by(Order.created_at.desc()).all()
+        if shop_id:
+            query = query.filter_by(shop_id=shop_id)
+        if search:
+            conditions = [Order.reference.ilike(f"%{search}%"), Order.customer_name.ilike(f"%{search}%")]
+            digits = re.sub(r"\D", "", search)
+            if len(digits) >= 3:
+                # Téléphone enregistré tel que tapé (« 066 12 34 56 ») : comparer sans espaces
+                conditions.append(db.func.replace(Order.customer_phone, " ", "").contains(digits))
+            query = query.filter(db.or_(*conditions))
+        orders = query.order_by(Order.created_at.desc()).limit(200).all()
         return jsonify([o.to_dict() for o in orders])
 
     @app.put("/api/admin/orders/<int:order_id>")
@@ -2396,6 +2474,7 @@ def create_app():
         data = {k: get_setting(k) for k in SETTINGS_KEYS}
         data["zones"] = get_zones()
         data["zone_fees"] = get_zone_fees()
+        data["sounds_off"] = sounds_off()
         return jsonify(data)
 
     @app.put("/api/admin/settings")
@@ -2404,6 +2483,10 @@ def create_app():
         import json as _json
 
         data = request.get_json(force=True)
+        if "currency" in data and data["currency"] != "XAF":
+            return jsonify({"error": "Devise : seul le franc CFA d'Afrique centrale (XAF) est utilisé"}), 400
+        if data.get("new_password") and len(str(data["new_password"])) < 8:
+            return jsonify({"error": "Mot de passe admin : 8 caractères minimum"}), 400
         for key in NUMERIC_SETTINGS:
             if key in data:
                 try:
@@ -2416,6 +2499,14 @@ def create_app():
         for key in SETTINGS_KEYS:
             if key in data:
                 set_setting(key, data[key])
+        if "pickup_address" in data:
+            # Retrait en boutique officielle : c'est l'adresse donnée au client et au livreur
+            official = Shop.query.filter_by(official=True).first()
+            if official:
+                official.address = str(data["pickup_address"] or "").strip()
+        if "sounds_off" in data:
+            keys = [k for k in (data["sounds_off"] or []) if k in SOUND_KEYS]
+            set_setting("sounds_off", _json.dumps(keys))
         if "zone_fees" in data:
             fees = {}
             for zone_name, value in (data["zone_fees"] or {}).items():
@@ -2443,7 +2534,7 @@ def create_app():
                 _json.dumps({z: f for z, f in current.items() if z in zones}, ensure_ascii=False),
             )
         if data.get("new_password"):
-            set_setting("admin_password", data["new_password"])
+            set_setting("admin_password", generate_password_hash(str(data["new_password"])))
         db.session.commit()
         return jsonify({"ok": True})
 

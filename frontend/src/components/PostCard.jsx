@@ -5,6 +5,7 @@ import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import { formatPrice, timeAgo } from "../format";
+import { play } from "../sounds";
 import ProductVisual from "./ProductVisual";
 import ReportButton from "./ReportButton";
 import ShopAvatar from "./ShopAvatar";
@@ -32,6 +33,7 @@ export default function PostCard({ post, onFollow, onDelete }) {
     setBusy(true);
     try {
       await api.post(`/shops/${shop.slug}/follow`);
+      play("suivre");
       onFollow?.(shop.slug);
     } finally {
       setBusy(false);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Flame, Pencil, Plus, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Flame, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { api } from "../../api";
 import { formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -23,11 +23,27 @@ const MODES = {
   },
 };
 
+// Filtres rapides (le tableau de bord de l'admin envoie ?filtre=stock)
+const FILTERS = [
+  { key: "", label: "Tous" },
+  { key: "rupture", label: "Épuisés" },
+  { key: "stock", label: "Stock faible" },
+  { key: "masques", label: "Masqués" },
+  { key: "liquidation", label: "Liquidation" },
+];
+
 export default function AdminProducts({ mode = "admin" }) {
   const cfg = MODES[mode];
+  const [searchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { currency } = useShop();
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState(() =>
+    FILTERS.some((f) => f.key === searchParams.get("filtre")) ? searchParams.get("filtre") : ""
+  );
+  const [shopId, setShopId] = useState("");
+  const { currency, lowStockThreshold } = useShop();
 
   const load = (silent = false) => {
     if (!silent) setLoading(true);
@@ -44,16 +60,42 @@ export default function AdminProducts({ mode = "admin" }) {
   useEffect(load, [mode]);
   usePolling(() => load(true), 30000, [mode]);
 
-  const toggleActive = async (p) => {
-    await api.put(`${cfg.api}/${p.id}`, { active: !p.active });
-    load(true);
+  const run = async (action) => {
+    setError("");
+    try {
+      await action();
+      load(true);
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
-  const remove = async (p) => {
+  const toggleActive = (p) => run(() => api.put(`${cfg.api}/${p.id}`, { active: !p.active }));
+
+  const remove = (p) => {
     if (!window.confirm(`Supprimer « ${p.name} » définitivement ?`)) return;
-    await api.del(`${cfg.api}/${p.id}`);
-    load(true);
+    run(() => api.del(`${cfg.api}/${p.id}`));
   };
+
+  // Boutiques présentes dans la liste (admin) : pour filtrer sans autre requête
+  const shops = cfg.showShop
+    ? [...new Map(products.filter((p) => p.shop).map((p) => [p.shop.id, p.shop])).values()].sort((a, b) =>
+        a.name.localeCompare(b.name, "fr")
+      )
+    : [];
+  const q = search.trim().toLowerCase();
+  const tests = {
+    rupture: (p) => p.total_stock === 0,
+    stock: (p) => p.variants.some((v) => v.stock <= lowStockThreshold),
+    masques: (p) => !p.active,
+    liquidation: (p) => p.clearance,
+  };
+  const shown = products.filter(
+    (p) =>
+      (!q || p.name.toLowerCase().includes(q) || (p.category || "").toLowerCase().includes(q)) &&
+      (!filter || tests[filter](p)) &&
+      (!shopId || String(p.shop?.id) === shopId)
+  );
 
   const price = (p) =>
     p.price_min === p.price_max
@@ -93,6 +135,54 @@ export default function AdminProducts({ mode = "admin" }) {
         </Link>
       </div>
 
+      {products.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nom ou rayon…"
+                aria-label="Rechercher un produit"
+                className="input pl-9"
+              />
+            </div>
+            {shops.length > 1 && (
+              <select value={shopId} onChange={(e) => setShopId(e.target.value)} aria-label="Boutique" className="input sm:w-56">
+                <option value="">Toutes les boutiques</option>
+                {shops.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+            {FILTERS.map((f) => {
+              const n = f.key ? products.filter(tests[f.key]).length : products.length;
+              return (
+                <button
+                  key={f.key || "tous"}
+                  onClick={() => setFilter(f.key)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                    filter === f.key
+                      ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
+                      : "border-gray-200 text-gray-600 dark:border-slate-600 dark:text-slate-300"
+                  }`}
+                >
+                  {f.label} <span className="opacity-60">{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
+
       {loading ? (
         <div className="skeleton h-40" />
       ) : products.length === 0 ? (
@@ -100,11 +190,13 @@ export default function AdminProducts({ mode = "admin" }) {
           <p className="font-semibold">Aucun produit pour l'instant</p>
           <p className="mt-1 text-sm muted">Ajoutez votre premier produit : photo, prix, stock.</p>
         </div>
+      ) : shown.length === 0 ? (
+        <p className="card p-6 text-center text-sm muted">Aucun produit ne correspond.</p>
       ) : (
         <>
           {/* Téléphone : cartes (le tableau obligerait à défiler de côté) */}
           <ul className="flex flex-col gap-2 md:hidden">
-            {products.map((p) => (
+            {shown.map((p) => (
               <li key={p.id} className="card flex items-center gap-3 p-3">
                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg">
                   <ProductVisual product={p} width={160} />
@@ -147,7 +239,7 @@ export default function AdminProducts({ mode = "admin" }) {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {shown.map((p) => (
                   <tr key={p.id} className="border-b border-gray-100 last:border-0 dark:border-slate-700">
                     <td className="p-4">
                       <div className="flex items-center gap-3">

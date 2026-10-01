@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { play } from "../sounds";
 
 const FavoritesContext = createContext(null);
 const STORAGE_KEY = "shop_favorites";
@@ -16,10 +17,12 @@ export function FavoritesProvider({ children }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
   }, [favorites]);
 
-  const toggle = (productId) =>
+  const toggle = (productId) => {
+    if (!favorites.includes(productId)) play("favori");
     setFavorites((prev) =>
       prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]
     );
+  };
 
   const clearAll = () => setFavorites([]);
 

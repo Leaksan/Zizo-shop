@@ -5,6 +5,7 @@ import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
 import { timeAgo } from "../format";
+import { play } from "../sounds";
 import PostCard from "../components/PostCard";
 import ProductCard from "../components/ProductCard";
 import ProductVisual from "../components/ProductVisual";
@@ -107,6 +108,7 @@ export default function ShopPage() {
       const r = shop.is_following
         ? await api.del(`/shops/${slug}/follow`)
         : await api.post(`/shops/${slug}/follow`);
+      if (r.following) play("suivre");
       setShop({ ...shop, is_following: r.following, followers_count: r.followers_count });
     } finally {
       setBusy(false);

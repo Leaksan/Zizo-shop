@@ -10,6 +10,8 @@ En production (Render > Shell, dans le dossier /app) :
 import getpass
 import sys
 
+from werkzeug.security import generate_password_hash
+
 from app import app
 from models import db, set_setting
 
@@ -23,7 +25,7 @@ def main():
     if getpass.getpass("Retapez-le pour confirmer : ") != password:
         sys.exit("Les deux saisies sont différentes. Rien n'a été changé.")
     with app.app_context():
-        set_setting("admin_password", password)
+        set_setting("admin_password", generate_password_hash(password))  # jamais en clair
         db.session.commit()
     print("Mot de passe admin changé. Connectez-vous sur /admin avec le nouveau mot de passe.")
 

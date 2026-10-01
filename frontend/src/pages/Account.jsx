@@ -211,6 +211,11 @@ function Profile({ user }) {
           <span className="flex-1">Mes favoris</span>
           <ChevronRight size={16} className="text-gray-400" />
         </Link>
+        <Link to="/parametres" className={rowCls}>
+          <Settings size={18} className="text-brand-600 dark:text-brand-400" />
+          <span className="flex-1">Sons et affichage</span>
+          <ChevronRight size={16} className="text-gray-400" />
+        </Link>
       </nav>
 
       <section>

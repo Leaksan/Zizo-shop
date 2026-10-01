@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet } from "react-router-dom";
 import {
   Ban,
@@ -18,6 +18,7 @@ import ShopAvatar from "../../components/ShopAvatar";
 import ShopPhotoButton from "../../components/ShopPhotoButton";
 import { SHOP_STATUS } from "../../shopStatus";
 import { usePolling } from "../../hooks";
+import { play } from "../../sounds";
 
 const TABS = [
   { to: "/vendeur/tableau", icon: LayoutDashboard, label: "Tableau de bord" },
@@ -32,14 +33,18 @@ export default function SellerLayout() {
   const { user, loading, refresh } = useAuth();
   const [shop, setShop] = useState(null);
   const [counts, setCounts] = useState({});
+  const lastToPrepare = useRef(null);
 
   const reload = useCallback(
     () =>
       api
         .get("/my/shop")
         .then((r) => {
+          const toPrepare = r.orders_to_prepare || 0;
+          if (lastToPrepare.current !== null && toPrepare > lastToPrepare.current) play("vente");
+          lastToPrepare.current = toPrepare;
           setShop(r.shop);
-          setCounts({ orders_to_prepare: r.orders_to_prepare || 0 });
+          setCounts({ orders_to_prepare: toPrepare });
         })
         .catch(() => {}),
     []

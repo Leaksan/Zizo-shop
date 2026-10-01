@@ -72,7 +72,9 @@ export default function AdminUsers() {
                 <p className="font-semibold">
                   {u.name}
                   {!u.active && (
-                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Bloqué</span>
+                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-950 dark:text-red-300">
+                      Bloqué
+                    </span>
                   )}
                 </p>
                 <p className="text-sm muted">
@@ -93,7 +95,13 @@ export default function AdminUsers() {
                   <KeyRound size={14} /> Mot de passe
                 </button>
                 <button
-                  onClick={() => update(u, { active: !u.active })}
+                  onClick={() =>
+                    (!u.active ||
+                      window.confirm(
+                        `Bloquer le compte de ${u.name} ? Il ne pourra plus se connecter${u.shop ? " ni gérer sa boutique" : ""}.`
+                      )) &&
+                    update(u, { active: !u.active })
+                  }
                   className={u.active ? "btn-danger" : "btn-outline"}
                 >
                   {u.active ? "Bloquer" : "Débloquer"}

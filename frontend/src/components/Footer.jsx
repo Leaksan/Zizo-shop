@@ -51,6 +51,11 @@ export default function Footer() {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/parametres" className="transition hover:text-brand-600">
+                    Paramètres (sons, affichage)
+                  </Link>
+                </li>
+                <li>
                   <Link to="/vendeur/ouvrir" className="transition hover:text-brand-600">
                     Vendre sur la plateforme
                   </Link>

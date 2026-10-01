@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import { usePolling } from "../hooks";
+import { play } from "../sounds";
 
 // Compte client / vendeur (téléphone + mot de passe, session côté serveur)
 const AuthContext = createContext(null);
@@ -10,6 +11,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined);
   // Notifications non lues : pastille de la cloche, vérifiée à chaque minute
   const [unread, setUnread] = useState(0);
+  const lastUnread = useRef(null);
   const loggedIn = Boolean(user);
 
   const refresh = useCallback(
@@ -25,16 +27,27 @@ export function AuthProvider({ children }) {
     () =>
       api
         .get("/me/notifications/count")
-        .then((r) => setUnread(r.unread))
+        .then((r) => {
+          if (lastUnread.current !== null && r.unread > lastUnread.current) play("notification");
+          lastUnread.current = r.unread;
+          setUnread(r.unread);
+        })
         .catch(() => {}),
     []
   );
+
+  // Notifications lues (page « Notifications ») : la prochaine hausse fera de nouveau sonner
+  const markRead = useCallback((n) => {
+    lastUnread.current = n;
+    setUnread(n);
+  }, []);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   useEffect(() => {
+    lastUnread.current = null; // nouveau compte : pas de son pour les notifications déjà là
     if (loggedIn) refreshUnread();
     else setUnread(0);
   }, [loggedIn, refreshUnread]);
@@ -47,7 +60,7 @@ export function AuthProvider({ children }) {
     loading: user === undefined,
     refresh,
     unread,
-    setUnread,
+    setUnread: markRead,
     refreshUnread,
     login: async (phone, password) => setUser(await api.post("/auth/login", { phone, password })),
     register: async (form) => setUser(await api.post("/auth/register", form)),

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Banknote, Bike, CheckCircle2, ChevronDown, MapPin, Package, Store } from "lucide-react";
 import { api } from "../api";
+import { play } from "../sounds";
 import { formatPrice } from "../format";
 import { computeCart, feeForZone } from "../cartMath";
 import { useCart } from "../context/CartContext";
@@ -163,6 +164,7 @@ export default function Checkout() {
       );
       orders.forEach(rememberOrder);
       clearCart();
+      play("commande");
       navigate(`/order-confirmation/${orders.map((o) => o.reference).join(",")}`);
     } catch (e2) {
       setError(e2.message);

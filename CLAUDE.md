@@ -34,9 +34,11 @@ cd whatsapp-bridge; npm install; cd ..
 .\start.ps1   # backend :5000, frontend :5173, pont WhatsApp :3100
 ```
 
-Admin : `/admin` (mot de passe démo `admin123` sur une base neuve ; il est stocké dans la base,
-réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend\reset_admin_password.py`
-(en prod : Render > Shell, `python reset_admin_password.py`). Livreur démo : `0698765432` / `livre123`.
+Admin : `/admin` (mot de passe démo `admin123` sur une base neuve ; il est stocké **chiffré** dans la
+base, réglage `admin_password` ; un ancien mot de passe en clair est chiffré à la première connexion ;
+8 essais ratés par quart d'heure au plus). Mot de passe oublié :
+`.venv\Scripts\python backend\reset_admin_password.py` (en prod : Render > Shell,
+`python reset_admin_password.py`). Livreur démo : `0698765432` / `livre123`.
 
 ## Vérifications avant de pousser
 
@@ -84,6 +86,16 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
   boutique et dans l'en-tête de l'espace vendeur), enregistré tout de suite ; dans « Ma boutique »
   aussi, une photo changée est enregistrée sans attendre « Enregistrer ». Logo et couverture :
   uniquement des photos envoyées sur la plateforme (`/uploads/…`).
+- **Sons** : `src/sounds.js` (Web Audio, aucun fichier) ; `play("panier")` après une action.
+  Clés : panier, retrait, favori, commande, promo, suivre, notification, vente (vendeur et admin),
+  course (livreur), les mêmes que `SOUND_KEYS` (`backend/models.py`) : en ajouter une = les deux
+  listes. Coupés pour tout le site dans Admin > Paramètres (`sounds_off`), ou son par son sur
+  l'appareil dans `/parametres` (`localStorage` `shop_sounds`). Les sons qui arrivent sans geste
+  (nouvelle commande, notification, course) ne jouent qu'après un premier toucher de la page.
+- Admin : tableau de bord « À traiter » (boutiques, signalements, colis sans livreur, livreurs à
+  vérifier, demandes de stock, stock faible : chaque ligne mène à la page filtrée), menu rangé
+  par rubrique avec pastilles (actualisées chaque minute), devise fixée en XAF, adresse de retrait
+  des Paramètres = adresse de la boutique officielle.
 - Dates : l'API les envoie en UTC **sans fuseau** ; côté site, toujours `parseDate` / `formatDate`
   (`src/format.js`), jamais `new Date(iso)` directement (1 h de décalage à Libreville sinon).
 - Devise : **XAF** (franc CFA d'Afrique centrale), jamais XOF. Montants en FCFA sans décimales.

@@ -58,6 +58,7 @@ def run():
     phase2_posts()
     phase3_orders()
     phase4_notifications_reviews_reports()
+    admin_section()
     login_rate_limit()
 
 
@@ -404,12 +405,62 @@ def phase4_notifications_reviews_reports():
     check("signalement classé sans suite", r.get_json()["resolved"] == 1)
 
 
+def admin_section():
+    admin = new_admin()
+    seller, shop = open_shop("077 12 12 12", "Atelier Mbolo", admin)
+    product = new_product(seller, "Panier tressé", price=8000, stock=6)
+    customer = app.test_client()
+    order = place_order(customer, [(product["variants"][0]["id"], 1)]).get_json()["orders"][0]
+
+    # --- Tableau de bord : ce qui attend une action, l'activité du mois ---
+    stats = admin.get("/api/admin/stats").get_json()
+    check("tableau de bord : commandes à préparer", stats["preparing"] >= 1, stats)
+    check("tableau de bord : 14 jours d'activité", len(stats["days"]) == 14 and stats["days"][-1]["orders"] >= 1)
+    check("tableau de bord : livreurs et demandes à traiter",
+          "couriers_to_verify" in stats and "stock_requests" in stats and "waiting_courier" in stats)
+    check("tableau de bord réservé à l'admin", customer.get("/api/admin/stats").status_code in (401, 403))
+
+    # --- Commandes : recherche et filtre par boutique ---
+    found = admin.get(f"/api/admin/orders?search={order['reference'].lower()}").get_json()
+    check("recherche par référence", [o["reference"] for o in found] == [order["reference"]], found)
+    found = admin.get("/api/admin/orders?search=0661 23456").get_json()
+    check("recherche par téléphone, espaces ignorés", order["reference"] in {o["reference"] for o in found})
+    found = admin.get(f"/api/admin/orders?shop={shop['id']}").get_json()
+    check("filtre par boutique", found and all(o["shop"]["slug"] == shop["slug"] for o in found))
+
+    # --- Paramètres ---
+    check("devise autre que XAF refusée", admin.put("/api/admin/settings", json={"currency": "XOF"}).status_code == 400)
+    admin.put("/api/admin/settings", json={"pickup_address": "Carrefour Rio, Libreville"})
+    official = next(s for s in admin.get("/api/admin/shops").get_json() if s["official"])
+    check("adresse de retrait = adresse de la boutique officielle", official["address"] == "Carrefour Rio, Libreville")
+    admin.put("/api/admin/settings", json={"sounds_off": ["panier", "inconnu", "vente"]})
+    public = app.test_client().get("/api/settings/public").get_json()
+    check("sons coupés par l'admin, clés inconnues ignorées", public["sounds_off"] == ["panier", "vente"], public["sounds_off"])
+    admin.put("/api/admin/settings", json={"sounds_off": []})
+
+    # --- Mot de passe admin : 8 caractères minimum, enregistré chiffré ---
+    check("mot de passe admin trop court refusé",
+          admin.put("/api/admin/settings", json={"new_password": "court"}).status_code == 400)
+    admin.put("/api/admin/settings", json={"new_password": "nouveau-mdp-2026"})
+    with app.app_context():
+        from models import get_setting
+        stored = get_setting("admin_password")
+    check("mot de passe admin jamais en clair", stored.startswith(("pbkdf2:", "scrypt:")) and "nouveau" not in stored)
+    check("connexion avec le nouveau mot de passe",
+          app.test_client().post("/api/admin/login", json={"password": "nouveau-mdp-2026"}).status_code == 200)
+    check("ancien mot de passe refusé",
+          app.test_client().post("/api/admin/login", json={"password": "admin123"}).status_code == 401)
+    admin.put("/api/admin/settings", json={"new_password": "admin123"})  # pour les autres scénarios
+
+
 def login_rate_limit():
     # En dernier : bloque l'adresse IP de test pendant un quart d'heure
     spam = app.test_client()
     codes = [spam.post("/api/auth/login", json={"phone": "066554433", "password": f"x{i}"}).status_code
              for i in range(9)]
     check("trop d'essais de connexion bloqués", codes[-1] == 429, codes)
+    codes = [spam.post("/api/admin/login", json={"password": f"x{i}"}).status_code for i in range(9)]
+    check("trop d'essais de connexion admin bloqués", codes[-1] == 429, codes)
 
 
 try:

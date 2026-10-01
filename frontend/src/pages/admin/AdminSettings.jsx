@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, Volume2, X } from "lucide-react";
 import { api } from "../../api";
 import { useShop } from "../../context/ShopContext";
+import Switch from "../../components/Switch";
+import { play, SOUNDS } from "../../sounds";
 
 export default function AdminSettings() {
   const { reload } = useShop();
@@ -17,6 +19,8 @@ export default function AdminSettings() {
   });
   // [{ name, fee }] — fee vide = frais de livraison par défaut
   const [zoneRows, setZoneRows] = useState([]);
+  // Sons coupés pour tout le site (chaque visiteur peut aussi couper les siens)
+  const [soundsOff, setSoundsOff] = useState([]);
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -26,6 +30,7 @@ export default function AdminSettings() {
       .get("/admin/settings")
       .then((s) => {
         setForm(s);
+        setSoundsOff(s.sounds_off || []);
         setZoneRows(
           (s.zones || []).map((name) => ({
             name,
@@ -47,7 +52,6 @@ export default function AdminSettings() {
         shop_name: form.shop_name,
         shop_phone: form.shop_phone,
         pickup_address: form.pickup_address,
-        currency: form.currency,
         low_stock_threshold: form.low_stock_threshold,
         delivery_fee: form.delivery_fee,
         free_shipping_threshold: form.free_shipping_threshold,
@@ -56,6 +60,7 @@ export default function AdminSettings() {
         zone_fees: Object.fromEntries(
           zoneRows.filter((z) => z.name.trim()).map((z) => [z.name.trim(), z.fee])
         ),
+        sounds_off: soundsOff,
         ...(newPassword ? { new_password: newPassword } : {}),
       });
       setMessage("Paramètres enregistrés.");
@@ -90,27 +95,23 @@ export default function AdminSettings() {
           </span>
         </label>
         <label className="block">
-          <span className="label">Adresse de retrait en boutique (click &amp; collect)</span>
+          <span className="label">Adresse de retrait de la boutique officielle</span>
           <input
             value={form.pickup_address}
             onChange={set("pickup_address")}
             className="input"
             placeholder="Ex. Centre-ville, près du Marché Mont-Bouët"
           />
+          <span className="mt-1 block text-xs muted">
+            Donnée aux clients qui retirent une commande de la boutique officielle, et aux livreurs.
+            Chaque vendeur indique la sienne dans sa boutique.
+          </span>
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
+          <div>
             <span className="label">Devise</span>
-            <select value={form.currency} onChange={set("currency")} className="input">
-              <option value="EUR">EUR (€)</option>
-              <option value="USD">USD ($)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="CHF">CHF</option>
-              <option value="MAD">MAD</option>
-              <option value="XAF">XAF (FCFA — Gabon, Afrique centrale)</option>
-              <option value="XOF">XOF (FCFA — Afrique de l'Ouest)</option>
-            </select>
-          </label>
+            <p className="input bg-gray-50 text-gray-600 dark:bg-slate-900 dark:text-slate-300">Franc CFA (XAF)</p>
+          </div>
           <label className="block">
             <span className="label">Seuil d'alerte stock faible</span>
             <input
@@ -208,6 +209,39 @@ export default function AdminSettings() {
         </div>
 
         <hr className="border-gray-200 dark:border-slate-700" />
+        <h2 className="font-semibold">Sons du site</h2>
+        <p className="-mt-2 text-xs muted">
+          Un son coupé ici ne joue pour personne. Chaque visiteur peut en plus couper les siens dans
+          « Paramètres » (menu du site).
+        </p>
+        <ul className="flex flex-col divide-y divide-gray-100 dark:divide-slate-700">
+          {SOUNDS.map((sound) => {
+            const on = !soundsOff.includes(sound.key);
+            return (
+              <li key={sound.key} className="flex items-center gap-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => play(sound.key, { force: true })}
+                  className="rounded-lg p-2 text-brand-600 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950"
+                  aria-label={`Écouter : ${sound.label}`}
+                  title="Écouter"
+                >
+                  <Volume2 size={18} />
+                </button>
+                <span className="flex-1 text-sm">{sound.label}</span>
+                <Switch
+                  checked={on}
+                  label={sound.label}
+                  onChange={(value) =>
+                    setSoundsOff((list) => (value ? list.filter((k) => k !== sound.key) : [...list, sound.key]))
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
+
+        <hr className="border-gray-200 dark:border-slate-700" />
         <h2 className="font-semibold">Sécurité</h2>
         <label className="block">
           <span className="label">Nouveau mot de passe admin (vide = inchangé)</span>
@@ -215,8 +249,11 @@ export default function AdminSettings() {
             type="password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
+            minLength={8}
+            autoComplete="new-password"
             className="input"
           />
+          <span className="mt-1 block text-xs muted">8 caractères minimum. Il est enregistré chiffré.</span>
         </label>
         {message && <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{message}</p>}
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}

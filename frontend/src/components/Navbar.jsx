@@ -13,6 +13,7 @@ import {
   Moon,
   Package,
   Search,
+  Settings,
   ShoppingBag,
   ShoppingCart,
   Store,
@@ -336,6 +337,12 @@ function MobileMenu({ onClose }) {
               </span>
               {theme === "dark" ? "Mode clair" : "Mode sombre"}
             </button>
+            <Link to="/parametres" onClick={onClose} className={itemCls(pathname === "/parametres")}>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+                <Settings size={20} />
+              </span>
+              Paramètres (sons, affichage)
+            </Link>
             <Link
               to="/livreur"
               onClick={onClose}

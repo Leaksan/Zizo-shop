@@ -13,7 +13,7 @@ const TABS = [
   { to: "/cart", icon: ShoppingCart, label: "Panier", cart: true },
   { to: "/suivi", icon: Package, label: "Commandes" },
   // L'espace vendeur, les favoris et les notifications font partie du compte : l'onglet reste allumé
-  { to: "/compte", icon: UserRound, label: "Compte", also: /^\/(vendeur|favoris|notifications)/ },
+  { to: "/compte", icon: UserRound, label: "Compte", also: /^\/(vendeur|favoris|notifications|parametres)/ },
 ];
 
 export default function BottomNav() {

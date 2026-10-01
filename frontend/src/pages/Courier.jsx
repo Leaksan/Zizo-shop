@@ -30,6 +30,7 @@ import { formatDate, formatPhone, formatPrice } from "../format";
 import { useShop } from "../context/ShopContext";
 import CourierMap from "../components/CourierMap";
 import { WhatsAppIcon, whatsappUrl } from "../whatsapp";
+import { play } from "../sounds";
 
 const VEHICLES = ["Scooter", "Moto", "Vélo", "Voiture"];
 
@@ -171,10 +172,17 @@ function CourierDashboard({ courier, onLogout }) {
   const [activeTab, setActiveTab] = useState("dispos");
   const { currency } = useShop();
 
+  const lastAvailable = useRef(null);
+
   const load = useCallback(() => {
     api
       .get("/courier/deliveries")
-      .then(setData)
+      .then((d) => {
+        const n = d.available.length;
+        if (lastAvailable.current !== null && n > lastAvailable.current) play("course");
+        lastAvailable.current = n;
+        setData(d);
+      })
       .catch((e) => setError(e.message));
   }, []);
 
