@@ -55,7 +55,7 @@ export default function SellerDashboard() {
       icon: Users,
       label: "Abonnés",
       value: stats.followers,
-      sub: stats.new_followers > 0 ? `+${stats.new_followers} ce mois-ci` : "Publiez pour en gagner",
+      sub: stats.new_followers > 0 ? `+${stats.new_followers} ce mois-ci` : "Ils voient vos articles en premier",
     },
   ];
 
@@ -110,8 +110,8 @@ export default function SellerDashboard() {
         <div className="card flex flex-col gap-2 p-4 text-sm">
           <p className="font-semibold">Vos premières ventes s'afficheront ici.</p>
           <p className="muted">
-            Des photos claires et des prix justes font la différence. Publiez vos arrivages dans le fil
-            pour vous faire connaître.
+            Des photos claires et des prix justes font la différence. Vos nouveautés et vos promos
+            remontent en tête de l'Explorer : c'est là que les clients les voient d'abord.
           </p>
           <div className="mt-1 flex flex-wrap gap-2">
             <Link to="/vendeur/produits/nouveau" className="btn-primary px-4 py-2 text-sm">

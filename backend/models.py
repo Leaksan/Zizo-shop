@@ -44,9 +44,6 @@ class Product(db.Model):
     # Publications du fil qui montrent ce produit (liens retirés si le produit est supprimé)
     posts = db.relationship("Post", secondary="post_products", back_populates="products")
 
-    def has_promo(self):
-        return any(v.old_price and v.old_price > v.price for v in self.variants)
-
     def to_dict(self, with_variants=True):
         data = {
             "id": self.id,
@@ -334,7 +331,8 @@ post_products = db.Table(
     db.Column("product_id", db.Integer, db.ForeignKey("products.id"), primary_key=True),
 )
 
-# post : écrite par le vendeur · new_product / promo : nouveautés automatiques
+# post : écrite par le vendeur · new_product / promo : anciennes nouveautés automatiques du fil
+# d'actu (plus créées ni montrées : l'Explorer met lui-même en avant promos et nouveautés)
 POST_KINDS = ("post", "new_product", "promo")
 MAX_POST_IMAGES = 6
 

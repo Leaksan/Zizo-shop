@@ -11,7 +11,6 @@ import {
   Heart,
   Menu,
   Moon,
-  Newspaper,
   Package,
   Search,
   ShoppingBag,
@@ -62,7 +61,6 @@ export default function Navbar() {
 
   // Ordinateur : liens texte. Mobile : barre d'onglets en bas + menu ☰ (sans doublons)
   const links = [
-    { to: "/fil", icon: Newspaper, label: "Fil d'actu" },
     { to: "/boutique", icon: ShoppingBag, label: "Produits" },
     { to: "/boutiques", icon: Store, label: "Boutiques" },
     clearanceCount > 0 && { to: "/liquidation", icon: Flame, label: "Liquidation" },
@@ -77,7 +75,7 @@ export default function Navbar() {
     }`;
 
   // Ouvert depuis un lien partagé (pas d'historique) : retour à la boutique plutôt qu'hors du site
-  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/fil"));
+  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate("/boutique"));
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-200/80 bg-white/80 backdrop-blur-lg dark:border-slate-700/80 dark:bg-slate-900/80">
@@ -88,7 +86,7 @@ export default function Navbar() {
               <ChevronLeft size={24} />
             </button>
           )}
-          <Link to="/fil" className="min-w-0 shrink" aria-label="Fil d'actu">
+          <Link to="/boutique" className="min-w-0 shrink" aria-label="Accueil : les produits">
             <Logo />
           </Link>
         </div>
@@ -222,7 +220,7 @@ function MobileMenu({ onClose }) {
           {/* Tablette : pas de barre d'onglets en bas, le menu reprend les pages principales */}
           <div className="mb-4 hidden flex-col md:flex">
             {[
-              { to: "/fil", icon: Newspaper, label: "Fil d'actu" },
+              { to: "/boutique", icon: ShoppingBag, label: "Produits" },
               { to: "/suivi", icon: Package, label: "Mes commandes" },
               { to: "/compte", icon: UserRound, label: "Mon compte" },
             ].map((l) => (

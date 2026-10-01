@@ -55,7 +55,7 @@ export default function Landing() {
       <header className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-5 pt-5">
         <Logo />
         <Link
-          to="/fil"
+          to="/boutique"
           className="rounded-lg px-3 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 dark:text-brand-400 dark:hover:bg-brand-950"
         >
           Passer
@@ -114,10 +114,10 @@ export default function Landing() {
           )}
 
           <Link
-            to="/fil"
+            to="/boutique"
             className="btn-primary group mt-8 flex w-full items-center justify-center gap-2 py-3.5 text-base sm:inline-flex sm:w-auto sm:px-8"
           >
-            Découvrir les boutiques
+            Découvrir les produits
             <ArrowRight size={18} className="transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>

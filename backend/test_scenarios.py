@@ -8,7 +8,6 @@ import os
 import shutil
 import sys
 import tempfile
-from datetime import timedelta
 
 TMP = tempfile.mkdtemp(prefix="241shop-tests-")
 os.environ["SHOP_DB"] = os.path.join(TMP, "test.db")
@@ -19,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import seed  # noqa: E402  (crée l'app sur la base temporaire)
 from app import app  # noqa: E402
-from models import Post, db  # noqa: E402
+from models import db  # noqa: E402
 
 passed = 0
 
@@ -56,7 +55,7 @@ def new_product(client, name, price=10000, stock=5, api="/api/my/products", **ex
 def run():
     seed.run()
     phase1_accounts_and_shops()
-    phase2_feed()
+    phase2_posts()
     phase3_orders()
     phase4_notifications_reviews_reports()
     login_rate_limit()
@@ -159,22 +158,18 @@ def phase1_accounts_and_shops():
     check("compte bloqué déconnecté", seller.get("/api/auth/me").get_json()["user"] is None)
 
 
-def phase2_feed():
+def phase2_posts():
     admin = new_admin()
     visitor, fan = app.test_client(), app.test_client()
     seller, shop = open_shop("077 22 33 44", "Mode Libreville", admin)
+    product = new_product(seller, "Robe pagne")
+    check("plus de nouveautés automatiques",
+          visitor.get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"] == [])
+    check("plus de fil d'actu", visitor.get("/api/feed").status_code == 404)
 
-    # --- Nouveautés automatiques, regroupées ---
-    a = new_product(seller, "Robe pagne")
-    b = new_product(seller, "Chemise wax")
-    posts = visitor.get("/api/feed").get_json()["posts"]
-    mine = [p for p in posts if p["shop"]["slug"] == shop["slug"]]
-    check("nouveaux produits regroupés en une publication", len(mine) == 1 and mine[0]["kind"] == "new_product")
-    check("les deux produits dans la publication", {p["name"] for p in mine[0]["products"]} == {"Robe pagne", "Chemise wax"})
-
-    # --- Publication du vendeur ---
+    # --- Publication du vendeur, sur la page de sa boutique ---
     r = seller.post("/api/my/posts", json={
-        "text": "Arrivage du jour !", "product_ids": [a["id"]],
+        "text": "Arrivage du jour !", "product_ids": [product["id"]],
         "images": ["/uploads/photo.jpg", "https://pistage.example/pixel.png"],
     })
     check("publication créée", r.status_code == 201, r.get_json())
@@ -182,46 +177,25 @@ def phase2_feed():
     check("produit d'une autre boutique refusé",
           seller.post("/api/my/posts", json={"text": "x", "product_ids": [1]}).status_code == 400)
     check("publication vide refusée", seller.post("/api/my/posts", json={"text": "  "}).status_code == 400)
-    posts = visitor.get("/api/feed").get_json()["posts"]
-    check("la publication est en tête du fil", posts[0]["text"] == "Arrivage du jour !")
+    posts = visitor.get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"]
+    check("publication sur la page de la boutique", [p["text"] for p in posts] == ["Arrivage du jour !"], posts)
 
-    # --- Promo automatique ---
-    seller.put(f"/api/my/products/{b['id']}", json={
-        "variants": [{"id": b["variants"][0]["id"], "name": "Standard", "price": 8000, "old_price": 10000, "stock": 5}],
-    })
-    kinds = [p["kind"] for p in visitor.get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"]]
-    check("promo annoncée automatiquement", "promo" in kinds, kinds)
-
-    # --- Boutiques suivies en priorité ---
-    official = next(s for s in visitor.get("/api/shops").get_json() if s["official"])
-    admin_product = new_product(admin, "Produit officiel", api="/api/admin/products")
-    with app.app_context():
-        # La publication officielle date d'hier : seul l'abonnement peut la faire passer devant
-        old = Post.query.filter_by(shop_id=official["id"]).order_by(Post.id.desc()).first()
-        old.created_at -= timedelta(hours=24)
-        db.session.commit()
-    check("publication officielle créée", admin_product["shop"]["official"])
-    check("abonnements : compte requis", visitor.get("/api/feed?tab=following").status_code == 401)
+    # --- Boutiques suivies ---
     fan.post("/api/auth/register", json={"name": "Fan", "phone": "066 77 88 99", "password": "secret1"})
-    fan.post(f"/api/shops/{official['slug']}/follow")
-    first_for_fan = fan.get("/api/feed").get_json()["posts"][0]["shop"]["slug"]
-    first_for_visitor = visitor.get("/api/feed").get_json()["posts"][0]["shop"]["slug"]
-    check("boutique suivie remontée dans le fil", first_for_fan == official["slug"], first_for_fan)
-    check("fil anonyme : le plus récent d'abord", first_for_visitor == shop["slug"], first_for_visitor)
-    following = fan.get("/api/feed?tab=following").get_json()["posts"]
-    check("onglet abonnements : seulement les boutiques suivies",
-          following and all(p["shop"]["slug"] == official["slug"] for p in following))
+    fan.post(f"/api/shops/{shop['slug']}/follow")
+    check("abonnement indiqué sur les publications",
+          fan.get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"][0]["following"])
+    check("boutique suivie dans le compte", [s["slug"] for s in fan.get("/api/me/follows").get_json()] == [shop["slug"]])
 
     # --- Produit retiré, boutique en attente, suppression ---
-    seller.put(f"/api/my/products/{a['id']}", json={"active": False})
-    grouped = next(p for p in visitor.get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"] if p["kind"] == "new_product")
-    check("produit masqué retiré de la publication", [p["name"] for p in grouped["products"]] == ["Chemise wax"])
+    seller.put(f"/api/my/products/{product['id']}", json={"active": False})
+    post = visitor.get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"][0]
+    check("produit masqué retiré de la publication", post["products"] == [], post)
     pending_seller, pending_shop = open_shop("077 55 66 77", "Pas encore validée")
-    new_product(pending_seller, "Produit caché")
-    slugs = {p["shop"]["slug"] for p in visitor.get("/api/feed").get_json()["posts"]}
-    check("boutique en attente absente du fil", pending_shop["slug"] not in slugs)
+    check("boutique en attente : publications invisibles",
+          visitor.get(f"/api/shops/{pending_shop['slug']}/posts").status_code == 404)
     my_posts = seller.get("/api/my/posts").get_json()
-    check("le vendeur voit ses publications", len(my_posts) >= 3)
+    check("le vendeur voit ses publications", len(my_posts) == 1, my_posts)
     check("impossible de supprimer la publication d'un autre",
           pending_seller.delete(f"/api/my/posts/{my_posts[0]['id']}").status_code == 404)
     check("suppression de sa publication", seller.delete(f"/api/my/posts/{my_posts[0]['id']}").status_code == 200)
@@ -404,14 +378,14 @@ def phase4_notifications_reviews_reports():
     check("admin : aperçu de la publication", groups[0]["post"]["text"] == "Arrivage de robes !")
     r = admin.put("/api/admin/reports", json={"target": "post", "target_id": post["id"], "action": "hide_post"})
     check("publication masquée, signalements traités", r.get_json()["resolved"] == 2, r.get_json())
-    feed = {p["id"] for p in app.test_client().get("/api/feed").get_json()["posts"]}
-    check("publication masquée absente du fil", post["id"] not in feed)
+    shown = {p["id"] for p in app.test_client().get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"]}
+    check("publication masquée invisible", post["id"] not in shown)
     check("vendeur prévenu de la modération", any("masquée par la modération" in t for t in texts(seller)))
     check("plus rien à traiter", admin.get("/api/admin/stats").get_json()["open_reports"] == 0)
     check("signalements traités consultables", len(admin.get("/api/admin/reports?status=done").get_json()) == 1)
     admin.put("/api/admin/reports", json={"target": "post", "target_id": post["id"], "action": "restore_post"})
-    feed = {p["id"] for p in app.test_client().get("/api/feed").get_json()["posts"]}
-    check("publication rétablie", post["id"] in feed)
+    shown = {p["id"] for p in app.test_client().get(f"/api/shops/{shop['slug']}/posts").get_json()["posts"]}
+    check("publication rétablie", post["id"] in shown)
     witness.post("/api/reports", json={"target": "shop", "target_id": shop["id"], "reason": "contrefacon"})
     admin.put("/api/admin/reports", json={"target": "shop", "target_id": shop["id"], "action": "suspend_shop",
                                           "note": "Contrefaçons"})

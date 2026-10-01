@@ -16,7 +16,7 @@ export function parseDate(iso) {
   return new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`);
 }
 
-// « il y a 3 h » : dates du fil d'actu
+// « il y a 3 h » : publications, notifications, commandes du vendeur
 export function timeAgo(iso) {
   const date = parseDate(iso);
   if (!date) return "";

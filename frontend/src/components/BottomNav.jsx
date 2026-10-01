@@ -1,15 +1,14 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Compass, Newspaper, Package, ShoppingCart, UserRound } from "lucide-react";
+import { Compass, Package, ShoppingCart, UserRound } from "lucide-react";
 import { useCart } from "../context/CartContext";
 
 // Pages qui ont leur propre barre d'action en bas, ou qu'on garde sans distraction
 const HIDDEN_ON = [/^\/products\//, /^\/checkout/, /^\/livreur/];
 
 // Barre d'onglets mobile : les actions principales toujours à portée de pouce.
-// Pas d'onglet « Accueil » : l'accueil n'est vu qu'une fois, le fil d'actu est la page principale.
+// Pas d'onglet « Accueil » : l'accueil n'est vu qu'une fois, l'Explorer est la page principale
+// (promos, nouveautés et boutiques suivies en tête des produits, puis l'annuaire des boutiques).
 const TABS = [
-  { to: "/fil", icon: Newspaper, label: "Fil" },
-  // Explorer : les produits et l'annuaire des boutiques
   { to: "/boutique", icon: Compass, label: "Explorer", also: /^\/boutiques/ },
   { to: "/cart", icon: ShoppingCart, label: "Panier", cart: true },
   { to: "/suivi", icon: Package, label: "Commandes" },
@@ -27,7 +26,7 @@ export default function BottomNav() {
       <div className="h-16 md:hidden" aria-hidden="true" />
       <nav
         aria-label="Navigation principale"
-        className="bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95"
+        className="bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95"
       >
         {TABS.map((t) => (
           <NavLink

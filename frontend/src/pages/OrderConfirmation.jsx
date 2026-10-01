@@ -76,7 +76,7 @@ export default function OrderConfirmation() {
           <MapPin size={17} />
           {several ? "Voir mes commandes" : "Suivre ma commande"}
         </Link>
-        <Link to="/fil" className="btn-outline w-full px-6 py-2.5 text-center text-sm sm:w-auto">
+        <Link to="/boutique" className="btn-outline w-full px-6 py-2.5 text-center text-sm sm:w-auto">
           Continuer mes achats
         </Link>
       </div>

@@ -6,7 +6,6 @@ import FloatingWhatsApp from "./components/FloatingWhatsApp";
 import BottomNav from "./components/BottomNav";
 import ScrollToTop from "./components/ScrollToTop";
 import Shop from "./pages/Shop";
-import Feed from "./pages/Feed";
 import { welcomeSeen } from "./welcome";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -53,7 +52,7 @@ function PageLoader() {
 // Accueil « à vue unique » : décidé une fois à l'arrivée sur /, pas à chaque rendu
 function WelcomeGate() {
   const [seen] = useState(welcomeSeen);
-  return seen ? <Navigate to="/fil" replace /> : <Landing />;
+  return seen ? <Navigate to="/boutique" replace /> : <Landing />;
 }
 
 export default function App() {
@@ -88,7 +87,8 @@ export default function App() {
               <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
                 <Suspense fallback={<PageLoader />}>
                 <Routes>
-                  <Route path="/fil" element={<Feed />} />
+                  {/* Ancien fil d'actu (liens partagés, appli installée) : l'Explorer le remplace */}
+                  <Route path="/fil" element={<Navigate to="/boutique" replace />} />
                   <Route path="/boutique" element={<Shop />} />
                   <Route path="/products/:id" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />

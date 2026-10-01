@@ -1,13 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowDownNarrowWide, Check, RotateCcw, Search, SlidersHorizontal, Star, X } from "lucide-react";
+import {
+  ArrowDownNarrowWide,
+  Check,
+  LayoutGrid,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  Store,
+  Tag,
+  X,
+} from "lucide-react";
 import { api } from "../api";
+import { useAuth } from "../context/AuthContext";
 import DealOfDay from "../components/DealOfDay";
 import ExploreTabs from "../components/ExploreTabs";
 import ProductCard from "../components/ProductCard";
+import { parseDate } from "../format";
 import { usePolling } from "../hooks";
 
 const SORTS = [
+  { value: "pour-vous", label: "Pour vous" },
   { value: "pop", label: "Populaire" },
   { value: "prix-asc", label: "Prix croissant" },
   { value: "prix-desc", label: "Prix décroissant" },
@@ -24,8 +39,58 @@ const RATING_OPTIONS = [
 
 const EMPTY_FILTERS = { minPrice: "", maxPrice: "", inStock: false, promoOnly: false, minRating: 0 };
 
+// « Nouveauté » : ajouté il y a moins de deux semaines (ou badge « Nouveau » posé par l'admin)
+const NEW_DAYS = 14;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const newest = (a, b) => parseDate(b.created_at) - parseDate(a.created_at);
+const popularity = (a, b) =>
+  (b.real_reviews_count || 0) - (a.real_reviews_count || 0) || b.reviews_count - a.reviews_count;
+
+// « Pour vous » (tri par défaut) : ce que le fil d'actu mettait en avant, directement dans les
+// produits. Promos, puis nouveautés, puis articles des boutiques suivies, puis tout le reste.
+// Dans les promos et les nouveautés, les boutiques suivies passent devant ; épuisés à la fin.
+function priorityGroups(list, followed) {
+  const now = Date.now();
+  const isNew = (p) => p.badge === "Nouveau" || now - parseDate(p.created_at) < NEW_DAYS * DAY_MS;
+  const groups = { promos: [], nouveautes: [], suivies: [], autres: [] };
+  for (const p of list) {
+    const available = p.total_stock > 0;
+    if (available && p.promo_percent > 0) groups.promos.push(p);
+    else if (available && isNew(p)) groups.nouveautes.push(p);
+    else if (available && followed.has(p.shop_id)) groups.suivies.push(p);
+    else groups.autres.push(p);
+  }
+  const followedFirst = (a, b) => followed.has(b.shop_id) - followed.has(a.shop_id);
+  groups.promos.sort((a, b) => followedFirst(a, b) || b.promo_percent - a.promo_percent || newest(a, b));
+  groups.nouveautes.sort((a, b) => followedFirst(a, b) || newest(a, b));
+  groups.suivies.sort(newest);
+  groups.autres.sort((a, b) => (b.total_stock > 0) - (a.total_stock > 0) || popularity(a, b) || newest(a, b));
+  return groups;
+}
+
+const SECTIONS = [
+  { key: "promos", icon: Tag, title: "Promos", iconCls: "text-accent-600 dark:text-accent-400" },
+  { key: "nouveautes", icon: Sparkles, title: "Nouveautés", iconCls: "text-brand-600 dark:text-brand-400" },
+  { key: "suivies", icon: Store, title: "De vos boutiques", iconCls: "text-brand-600 dark:text-brand-400" },
+  { key: "autres", icon: LayoutGrid, title: "Autres produits", iconCls: "text-gray-400 dark:text-slate-500" },
+];
+
+function ProductGrid({ products }) {
+  return (
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} />
+      ))}
+    </div>
+  );
+}
+
 export default function Shop() {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
+  // Boutiques suivies : leurs articles remontent dans « Pour vous »
+  const [followed, setFollowed] = useState(() => new Set());
   const [categories, setCategories] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
   // Le rayon vit dans l'adresse (?cat=) : le menu ☰, les puces et le bouton
@@ -41,7 +106,7 @@ export default function Shop() {
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get("q") || "");
   const [sort, setSort] = useState(() =>
-    SORTS.some((s) => s.value === searchParams.get("tri")) ? searchParams.get("tri") : "pop"
+    SORTS.some((s) => s.value === searchParams.get("tri")) ? searchParams.get("tri") : "pour-vous"
   );
   const searchInput = useRef(null);
   const wantsFocus = searchParams.get("focus") === "1";
@@ -53,6 +118,17 @@ export default function Shop() {
   useEffect(() => {
     api.get("/categories").then(setCategories).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setFollowed(new Set());
+      return;
+    }
+    api
+      .get("/me/follows")
+      .then((shops) => setFollowed(new Set(shops.map((s) => s.id))))
+      .catch(() => {});
+  }, [user]);
 
   // Loupe de l'en-tête (?focus=1) : placer le curseur dans la recherche, même si on
   // était déjà sur cette page
@@ -100,7 +176,7 @@ export default function Shop() {
     setCategory(null);
   };
 
-  const displayed = useMemo(() => {
+  const filtered = useMemo(() => {
     let list = [...products];
 
     if (filters.inStock) list = list.filter((p) => p.total_stock > 0);
@@ -114,18 +190,25 @@ export default function Shop() {
         (p) =>
           (p.real_reviews_count > 0 ? p.real_rating : p.rating) >= filters.minRating
       );
+    return list;
+  }, [products, filters]);
 
+  const groups = useMemo(
+    () => (sort === "pour-vous" ? priorityGroups(filtered, followed) : null),
+    [sort, filtered, followed]
+  );
+
+  const displayed = useMemo(() => {
+    if (sort === "pour-vous") return filtered;
     const comparators = {
       pop: (a, b) => b.reviews_count - a.reviews_count,
       "prix-asc": (a, b) => a.price_min - b.price_min,
       "prix-desc": (a, b) => b.price_min - a.price_min,
       promos: (a, b) => b.promo_percent - a.promo_percent,
-      nouveautes: (a, b) =>
-        (b.badge === "Nouveau") - (a.badge === "Nouveau") ||
-        new Date(b.created_at) - new Date(a.created_at),
+      nouveautes: (a, b) => (b.badge === "Nouveau") - (a.badge === "Nouveau") || newest(a, b),
     };
-    return list.sort(comparators[sort]);
-  }, [products, sort, filters]);
+    return [...filtered].sort(comparators[sort]);
+  }, [filtered, sort]);
 
   // Puces récapitulatives des filtres actifs (faciles à retirer d'un clic)
   const activeChips = [];
@@ -398,12 +481,24 @@ export default function Shop() {
             </button>
           )}
         </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {displayed.map((p) => (
-            <ProductCard key={p.id} product={p} />
+      ) : groups ? (
+        <div className="flex flex-col gap-8">
+          {SECTIONS.filter((section) => groups[section.key].length > 0).map((section, _, shown) => (
+            <section key={section.key} className="flex flex-col gap-3">
+              {/* Seulement « le reste » (ex. une recherche) : pas de titre, la grille suffit */}
+              {(shown.length > 1 || section.key !== "autres") && (
+                <h2 className="flex items-center gap-2 text-lg font-bold">
+                  <section.icon size={19} className={section.iconCls} />
+                  {section.title}
+                  <span className="text-sm font-medium muted">{groups[section.key].length}</span>
+                </h2>
+              )}
+              <ProductGrid products={groups[section.key]} />
+            </section>
           ))}
         </div>
+      ) : (
+        <ProductGrid products={displayed} />
       )}
     </div>
   );
