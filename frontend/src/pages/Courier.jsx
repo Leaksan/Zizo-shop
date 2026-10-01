@@ -29,6 +29,8 @@ import { api } from "../api";
 import { formatDate, formatPhone, formatPrice } from "../format";
 import { useShop } from "../context/ShopContext";
 import { directionsUrl, mapsUrl } from "../maps";
+import { zoneName } from "../cities";
+import ZoneOptions from "../components/ZoneOptions";
 import { WhatsAppIcon, whatsappUrl } from "../whatsapp";
 import { play } from "../sounds";
 
@@ -131,12 +133,11 @@ function CourierAuth({ onLogin }) {
                 </select>
               </label>
               <label className="block">
-                <span className="label">Zone préférée</span>
+                <span className="label">Ville et quartier</span>
                 <select value={form.zone || zones[0] || ""} onChange={set("zone")} className="input">
-                  {zones.map((z) => (
-                    <option key={z}>{z}</option>
-                  ))}
+                  <ZoneOptions zones={zones} />
                 </select>
+                <span className="mt-1 block text-xs muted">Vous verrez les courses de votre ville.</span>
               </label>
             </div>
           )}
@@ -533,7 +534,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
         >
           {myZoneMatch && <MapPin size={11} />}
           {myZoneMatch ? "Votre zone · " : ""}
-          {order.zone}
+          {zoneName(order.zone)}
         </span>
       </div>
       {/* 1. Récupérer le colis chez le vendeur, 2. le livrer au client */}
@@ -556,7 +557,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
                 <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
               </a>
             ) : (
-              <span>{pickup.zone || "Adresse à demander au vendeur"}</span>
+              <span>{pickup.zone || (pickup.relay ? "Adresse à demander à la plateforme" : "Adresse à demander au vendeur")}</span>
             )}
           </p>
           {pickup.whatsapp && (
@@ -566,7 +567,7 @@ function DeliveryCard({ order, myZone, currency, children }) {
               rel="noopener noreferrer"
               className="flex w-fit items-center gap-1.5 font-semibold text-brand-600 dark:text-brand-400"
             >
-              <WhatsAppIcon size={14} /> Contacter le vendeur
+              <WhatsAppIcon size={14} /> {pickup.relay ? "Contacter la plateforme" : "Contacter le vendeur"}
             </a>
           )}
         </div>

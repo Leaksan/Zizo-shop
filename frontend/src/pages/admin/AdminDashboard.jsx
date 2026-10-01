@@ -11,6 +11,7 @@ import {
   Flag,
   PackageOpen,
   ShieldCheck,
+  Ship,
   Store,
 } from "lucide-react";
 import { api } from "../../api";
@@ -43,6 +44,13 @@ export function statusLabel(status, method = "delivery") {
 const TODO = [
   { key: "pending_shops", icon: Store, to: "/admin/shops", one: "boutique à valider", many: "boutiques à valider" },
   { key: "open_reports", icon: Flag, to: "/admin/reports", one: "contenu signalé", many: "contenus signalés" },
+  {
+    key: "to_ship",
+    icon: Ship,
+    to: "/admin/orders?statut=pending",
+    one: "colis à envoyer vers une autre ville",
+    many: "colis à envoyer vers une autre ville",
+  },
   {
     key: "waiting_courier",
     icon: Bike,

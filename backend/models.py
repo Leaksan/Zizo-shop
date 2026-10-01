@@ -281,6 +281,8 @@ class Shop(db.Model):
             "name": self.name,
             "logo_url": self.logo_url or "",
             "official": self.official,
+            # Ville de la boutique : un colis pour une autre ville voyage (frais et délai d'envoi)
+            "city": zone_city(self.zone),
         }
         if private:
             data["status"] = self.status
@@ -518,6 +520,11 @@ class Order(db.Model):
     shop_id = db.Column(db.Integer, db.ForeignKey("shops.id"), nullable=True)
     shop = db.relationship("Shop")
     ready_at = db.Column(db.DateTime, nullable=True)
+    # Envoi entre villes (boutique de Libreville, client de Port-Gentil…) : le colis voyage, puis
+    # un livreur de la ville d'arrivée le livre une fois arrivé (arrived_at, posé par l'admin)
+    from_city = db.Column(db.String(60), nullable=True)
+    to_city = db.Column(db.String(60), nullable=True)
+    arrived_at = db.Column(db.DateTime, nullable=True)
     # Compte du client s'il était connecté : ses commandes le suivent d'un téléphone à l'autre
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     courier_rating = db.Column(db.Integer, nullable=True)
@@ -526,6 +533,11 @@ class Order(db.Model):
     accepted_at = db.Column(db.DateTime, nullable=True)
     delivered_at = db.Column(db.DateTime, nullable=True)
     items = db.relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+
+    @property
+    def intercity(self):
+        """Commande livrée dans une autre ville que celle de la boutique."""
+        return bool(self.from_city and self.to_city and self.from_city != self.to_city)
 
     def to_dict(self, with_items=True, with_courier=False):
         data = {
@@ -555,6 +567,10 @@ class Order(db.Model):
             "accepted_at": self.accepted_at.isoformat() if self.accepted_at else None,
             "delivered_at": self.delivered_at.isoformat() if self.delivered_at else None,
             "ready_at": self.ready_at.isoformat() if self.ready_at else None,
+            "from_city": self.from_city,
+            "to_city": self.to_city,
+            "intercity": self.intercity,
+            "arrived_at": self.arrived_at.isoformat() if self.arrived_at else None,
             "shop": self.shop.summary() if self.shop else None,
             # Retrait en boutique : le client (qui a la référence) doit savoir où aller
             "pickup_address": (
@@ -615,6 +631,35 @@ class Setting(db.Model):
     value = db.Column(db.Text, default="")
 
 
+# Villes livrées : un quartier s'écrit « Ville · Quartier », sauf à Libreville (ville d'origine)
+HOME_CITY = "Libreville"
+CITY_SEP = " · "
+
+
+def zone_city(zone):
+    """« Port-Gentil · Balise » -> « Port-Gentil » ; un quartier sans ville est à Libreville."""
+    if zone and CITY_SEP in zone:
+        return zone.split(CITY_SEP, 1)[0].strip() or HOME_CITY
+    return HOME_CITY
+
+
+PORT_GENTIL_ZONES = [
+    f"Port-Gentil{CITY_SEP}{quartier}"
+    for quartier in (
+        "Centre-ville",
+        "Balise",
+        "Bac Aviation",
+        "Château",
+        "Chic",
+        "Grand Village",
+        "Matanda",
+        "Ntchengué",
+        "Salsa",
+        "Quartier Sud",
+        "Cap Lopez",
+    )
+]
+
 LIBREVILLE_ZONES = [
     "Centre-ville",
     "Mont-Bouët",
@@ -644,7 +689,12 @@ DEFAULT_SETTINGS = {
     "delivery_fee": "2000",
     "free_shipping_threshold": "30000",
     "delivery_commission": "2000",
-    "zones": json.dumps(LIBREVILLE_ZONES, ensure_ascii=False),
+    "zones": json.dumps(LIBREVILLE_ZONES + PORT_GENTIL_ZONES, ensure_ascii=False),
+    # Envoi entre villes : frais ajoutés à la livraison, délai annoncé au client, et lieu où
+    # le livreur de la ville d'arrivée récupère le colis ({"Port-Gentil": "adresse…"})
+    "intercity_fee": "3000",
+    "intercity_delay": "2 à 4 jours",
+    "relay_points": "{}",
     # Frais par zone ({"Owendo": 3000, ...}) ; une zone absente = delivery_fee
     "zone_fees": "{}",
     # Sons du site coupés pour tout le monde par l'admin (liste JSON de SOUND_KEYS)

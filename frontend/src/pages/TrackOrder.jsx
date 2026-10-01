@@ -16,6 +16,7 @@ import {
   Package,
   PackageCheck,
   Phone,
+  Ship,
   Search,
   ShoppingBag,
   Store,
@@ -329,14 +330,23 @@ function MyOrdersList({ orders, currency, onOpen }) {
 }
 
 function OrderTracking({ order, currency, onRefresh }) {
-  const { pickupAddress: platformPickup } = useShop();
+  const { pickupAddress: platformPickup, intercityDelay } = useShop();
   // Retrait chez le vendeur de la commande (adresse de sa boutique)
   const pickupAddress = order.pickup_address || platformPickup;
   const isPickup = order.delivery_method === "pickup";
   const preparing = !isPickup && order.status === "pending" && !order.ready_at;
+  // Colis envoyé d'une autre ville : prêt, mais pas encore arrivé dans la ville du client
+  const travelling = order.intercity && order.status === "pending" && order.ready_at && !order.arrived_at;
   const info = preparing
     ? PREPARING_INFO
-    : (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] || STATUS_INFO.pending;
+    : travelling
+      ? {
+          icon: Ship,
+          title: `En route vers ${order.to_city}`,
+          sub: `Votre colis voyage depuis ${order.from_city}${intercityDelay ? ` (comptez ${intercityDelay})` : ""}, puis un livreur vous l'apporte.`,
+          cls: STATUS_INFO.pending.cls,
+        }
+      : (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] || STATUS_INFO.pending;
   const rank = { pending: 1, delivering: 2, delivered: 3 }[order.status] || 0;
   // Lieux ouverts dans Google Maps : l'adresse de livraison, le livreur, la boutique (retrait)
   const destination = {
@@ -367,6 +377,16 @@ function OrderTracking({ order, currency, onRefresh }) {
           icon: ShoppingBag,
           done: Boolean(order.ready_at) || rank >= 2,
         },
+        ...(order.intercity
+          ? [
+              {
+                label: `Arrivée à ${order.to_city}`,
+                date: order.arrived_at,
+                icon: Ship,
+                done: Boolean(order.arrived_at) || rank >= 2,
+              },
+            ]
+          : []),
         {
           label: "Prise en charge par un livreur",
           date: order.accepted_at,

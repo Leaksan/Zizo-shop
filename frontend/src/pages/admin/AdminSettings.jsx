@@ -3,6 +3,7 @@ import { Plus, Volume2, X } from "lucide-react";
 import { api } from "../../api";
 import { useShop } from "../../context/ShopContext";
 import Switch from "../../components/Switch";
+import { citiesOf } from "../../cities";
 import { play, SOUNDS } from "../../sounds";
 
 export default function AdminSettings() {
@@ -16,7 +17,11 @@ export default function AdminSettings() {
     delivery_fee: "",
     free_shipping_threshold: "",
     delivery_commission: "",
+    intercity_fee: "",
+    intercity_delay: "",
   });
+  // Point relais de chaque ville : où arrive un colis envoyé d'une autre ville
+  const [relayPoints, setRelayPoints] = useState({});
   // [{ name, fee }] — fee vide = frais de livraison par défaut
   const [zoneRows, setZoneRows] = useState([]);
   // Sons coupés pour tout le site (chaque visiteur peut aussi couper les siens)
@@ -31,6 +36,7 @@ export default function AdminSettings() {
       .then((s) => {
         setForm(s);
         setSoundsOff(s.sounds_off || []);
+        setRelayPoints(s.relay_points || {});
         setZoneRows(
           (s.zones || []).map((name) => ({
             name,
@@ -56,6 +62,9 @@ export default function AdminSettings() {
         delivery_fee: form.delivery_fee,
         free_shipping_threshold: form.free_shipping_threshold,
         delivery_commission: form.delivery_commission,
+        intercity_fee: form.intercity_fee,
+        intercity_delay: form.intercity_delay,
+        relay_points: relayPoints,
         zones: zoneRows.map((z) => z.name.trim()).filter(Boolean),
         zone_fees: Object.fromEntries(
           zoneRows.filter((z) => z.name.trim()).map((z) => [z.name.trim(), z.fee])
@@ -164,8 +173,9 @@ export default function AdminSettings() {
         <div>
           <span className="label">Zones de livraison et frais</span>
           <p className="mb-2 text-xs muted">
-            Laissez les frais vides pour appliquer les frais par défaut. Vous pouvez ajouter
-            d'autres villes (ex. Port-Gentil) comme des zones.
+            Laissez les frais vides pour appliquer les frais par défaut. Pour un quartier d'une autre
+            ville, écrivez « Ville · Quartier » (ex. Port-Gentil · Balise) ; un quartier sans ville est
+            à Libreville.
           </p>
           <div className="flex flex-col gap-2">
             {zoneRows.map((z, i) => (
@@ -175,8 +185,8 @@ export default function AdminSettings() {
                   onChange={(e) =>
                     setZoneRows(zoneRows.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))
                   }
-                  className="input flex-1"
-                  placeholder="Nom de la zone"
+                  className="input min-w-0 flex-1"
+                  placeholder="Quartier, ou « Ville · Quartier »"
                 />
                 <input
                   type="number"
@@ -185,7 +195,7 @@ export default function AdminSettings() {
                   onChange={(e) =>
                     setZoneRows(zoneRows.map((r, j) => (j === i ? { ...r, fee: e.target.value } : r)))
                   }
-                  className="input w-32"
+                  className="input w-24 shrink-0"
                   placeholder={form.delivery_fee ? `${form.delivery_fee}` : "Défaut"}
                 />
                 <button
@@ -206,6 +216,51 @@ export default function AdminSettings() {
           >
             <Plus size={15} /> Ajouter une zone
           </button>
+        </div>
+
+        <hr className="border-gray-200 dark:border-slate-700" />
+        <h2 className="font-semibold">Envoi entre villes</h2>
+        <p className="-mt-2 text-xs muted">
+          Quand la boutique et le client ne sont pas dans la même ville (ex. boutique de Libreville,
+          client de Port-Gentil) : le colis voyage, puis un livreur de la ville du client le livre une
+          fois que vous l'avez marqué « Arrivé » dans Commandes.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="label">Frais d'envoi (ajoutés à la livraison)</span>
+            <input
+              type="number"
+              min="0"
+              value={form.intercity_fee}
+              onChange={set("intercity_fee")}
+              className="input"
+            />
+          </label>
+          <label className="block">
+            <span className="label">Délai annoncé au client</span>
+            <input
+              value={form.intercity_delay}
+              onChange={set("intercity_delay")}
+              className="input"
+              placeholder="Ex. 2 à 4 jours"
+            />
+          </label>
+        </div>
+        <div>
+          <span className="label">Points relais : où le livreur récupère un colis arrivé</span>
+          <div className="flex flex-col gap-2">
+            {citiesOf(zoneRows.map((z) => z.name.trim()).filter(Boolean)).map((city) => (
+              <label key={city} className="flex items-center gap-2">
+                <span className="w-28 shrink-0 text-sm font-medium">{city}</span>
+                <input
+                  value={relayPoints[city] || ""}
+                  onChange={(e) => setRelayPoints({ ...relayPoints, [city]: e.target.value })}
+                  className="input flex-1"
+                  placeholder={`Adresse à ${city}`}
+                />
+              </label>
+            ))}
+          </div>
         </div>
 
         <hr className="border-gray-200 dark:border-slate-700" />

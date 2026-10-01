@@ -23,7 +23,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from models import (
     GABON_TZ,
+    HOME_CITY,
     MAX_POST_IMAGES,
+    PORT_GENTIL_ZONES,
     REPORT_REASONS,
     REPORT_TARGETS,
     SHOP_STATUSES,
@@ -47,6 +49,7 @@ from models import (
     db,
     normalize_phone,
     slugify,
+    zone_city,
     get_number,
     get_setting,
     get_zone_fees,
@@ -85,6 +88,8 @@ def notify_whatsapp_order(order):
             if order.delivery_method == "pickup":
                 lines.append("🛍️ *RETRAIT EN BOUTIQUE*")
             else:
+                if order.intercity:
+                    lines.append(f"🚢 *ENVOI {order.from_city.upper()} → {order.to_city.upper()}*")
                 lines.append(f"📍 {order.customer_address} ({order.zone})")
                 if order.landmark:
                     lines.append(f"🧭 Repère : {order.landmark}")
@@ -289,6 +294,18 @@ def create_app():
         data = order.to_dict()
         data.pop("delivery_code", None)
         shop = order.shop
+        if order.intercity:
+            # Colis venu d'une autre ville : il attend au point relais de la ville d'arrivée
+            data["pickup"] = {
+                "relay": True,
+                "name": f"Point relais {order.to_city}",
+                "address": relay_points().get(order.to_city, ""),
+                "zone": "",
+                "whatsapp": get_setting("shop_phone"),
+                "latitude": None,
+                "longitude": None,
+            }
+            return data
         data["pickup"] = (
             {
                 "name": shop.name,
@@ -302,6 +319,23 @@ def create_app():
             else None
         )
         return data
+
+    def relay_points():
+        """Lieux où arrivent les colis envoyés d'une autre ville : {ville: adresse}. Libreville :
+        l'adresse de retrait de la boutique officielle, si rien d'autre n'est indiqué."""
+        try:
+            points = _json_std.loads(get_setting("relay_points") or "{}")
+        except ValueError:
+            points = {}
+        points = {str(k): str(v) for k, v in points.items()} if isinstance(points, dict) else {}
+        if not points.get(HOME_CITY):
+            points[HOME_CITY] = get_setting("pickup_address")
+        return points
+
+    def available_for(order, courier):
+        """Course qu'un livreur peut prendre : dans sa ville, et arrivée si elle vient d'ailleurs."""
+        city = order.to_city or zone_city(order.zone)
+        return city == zone_city(courier.zone) and (not order.intercity or order.arrived_at is not None)
 
     # Ce que le vendeur n'a pas à connaître : le code confirme la remise par le livreur. Il voit
     # l'adresse et la position du client (à ouvrir dans Google Maps), comme le livreur.
@@ -346,6 +380,7 @@ def create_app():
                 "delivering": f"Votre commande {ref} ({shop_name}) est en route : le livreur arrive.",
                 "delivered": f"Commande {ref} livrée. Donnez votre avis sur vos articles !",
                 "cancelled": f"Votre commande {ref} ({shop_name}) a été annulée.",
+                "arrived": f"Votre colis {ref} est arrivé à {order.to_city} : un livreur va vous l'apporter.",
             }.get(event)
             if text:
                 notify(order.user_id, "order", text, f"/suivi?ref={ref}")
@@ -386,7 +421,11 @@ def create_app():
 
     GEO_CACHE = {}
     GEO_CACHE_MAX = 500
-    LBV_BBOX = "9.28,0.18,9.80,0.72"
+    # Centre et cadre de recherche des adresses, par ville livrée
+    CITY_GEO = {
+        "Libreville": {"lat": 0.4162, "lon": 9.4673, "bbox": "9.28,0.18,9.80,0.72"},
+        "Port-Gentil": {"lat": -0.7193, "lon": 8.7815, "bbox": "8.62,-0.86,8.95,-0.55"},
+    }
 
     GEO_LOCK = threading.Lock()
 
@@ -412,17 +451,19 @@ def create_app():
         q = (request.args.get("q") or "").strip()
         if len(q) < 2:
             return jsonify([])
+        city = request.args.get("city") if request.args.get("city") in CITY_GEO else HOME_CITY
+        geo = CITY_GEO[city]
 
         def compute():
             results = []
             try:
                 params = urlencode(
                     {
-                        "q": f"{q}, Libreville, Gabon",
+                        "q": f"{q}, {city}, Gabon",
                         "limit": 6,
-                        "lat": 0.4162,
-                        "lon": 9.4673,
-                        "bbox": LBV_BBOX,
+                        "lat": geo["lat"],
+                        "lon": geo["lon"],
+                        "bbox": geo["bbox"],
                     }
                 )
                 data = _http_json(f"https://photon.komoot.io/api/?{params}")
@@ -453,7 +494,7 @@ def create_app():
                 results = []
             return results
 
-        return jsonify(_geo_cache(q.lower(), compute))
+        return jsonify(_geo_cache(f"{city}|{q.lower()}", compute))
 
     @app.get("/api/geocode/reverse")
     def geocode_reverse():
@@ -552,6 +593,8 @@ def create_app():
                 # Le lien « Liquidation » n'est affiché que s'il y a quelque chose à voir
                 "clearance_count": public_products().filter(Product.clearance.is_(True)).count(),
                 "sounds_off": sounds_off(),
+                "intercity_fee": get_number("intercity_fee"),
+                "intercity_delay": get_setting("intercity_delay"),
             }
         )
 
@@ -667,6 +710,8 @@ def create_app():
             ), 400
         threshold = get_number("free_shipping_threshold")
         fee = zone_delivery_fee(zone)
+        intercity_fee = get_number("intercity_fee")
+        to_city = zone_city(zone) if delivery_method == "delivery" else None
         orders = []
         for group in groups.values():
             shop = group["shop"]
@@ -689,10 +734,17 @@ def create_app():
                 if delivery_method == "pickup" or free_ship or (threshold and base >= threshold)
                 else fee
             )
+            # Boutique d'une autre ville : le colis voyage (frais d'envoi toujours dus, même
+            # quand la livraison sur place est offerte)
+            from_city = zone_city(shop.zone)
+            if to_city and from_city != to_city:
+                delivery_fee += intercity_fee
             order = Order(
                 reference=generate_reference(),
                 shop=shop,  # la relation (pas seulement shop_id) : utilisée avant l'enregistrement
                 user_id=buyer.id if buyer else None,
+                from_city=from_city,
+                to_city=to_city,
                 customer_name=name,
                 customer_email=email,
                 customer_phone=phone,
@@ -947,6 +999,7 @@ def create_app():
                 .order_by(Order.created_at.desc())
                 .all()
             )
+            available = [o for o in available if available_for(o, courier)]
         else:
             available = []
         available.sort(key=lambda o: (o.zone != courier.zone, -o.created_at.timestamp()))
@@ -996,6 +1049,9 @@ def create_app():
             ), 403
         if not courier.available:
             return jsonify({"error": "Passez en ligne pour accepter une course"}), 400
+        wanted = db.session.get(Order, order_id)
+        if wanted and not available_for(wanted, courier):
+            return jsonify({"error": "Cette course n'est pas disponible dans votre ville"}), 400
         result = db.session.execute(
             sa_update(Order)
             .where(
@@ -1912,6 +1968,12 @@ def create_app():
 
     # ---------------- Admin : stats ----------------
 
+    def intercity_filter():
+        """Condition SQL : commande livrée dans une autre ville que celle de la boutique."""
+        return db.and_(
+            Order.from_city.isnot(None), Order.to_city.isnot(None), Order.from_city != Order.to_city
+        )
+
     @app.get("/api/admin/stats")
     @admin_required
     def admin_stats():
@@ -1949,11 +2011,16 @@ def create_app():
                 .count(),
                 "couriers_to_verify": DeliveryPerson.query.filter_by(verified=False).count(),
                 "stock_requests": db.session.query(StockRequest.variant_id).distinct().count(),
-                # Colis prêts qu'aucun livreur n'a encore pris
+                # Colis prêts qu'aucun livreur n'a encore pris (arrivés, s'ils viennent d'ailleurs)
                 "waiting_courier": pending.filter(
                     Order.delivery_method == "delivery",
                     Order.ready_at.isnot(None),
                     Order.courier_id.is_(None),
+                    db.or_(db.not_(intercity_filter()), Order.arrived_at.isnot(None)),
+                ).count(),
+                # Colis prêts à envoyer vers une autre ville (pas encore arrivés)
+                "to_ship": pending.filter(
+                    intercity_filter(), Order.ready_at.isnot(None), Order.arrived_at.is_(None)
                 ).count(),
                 # Commandes que les vendeurs doivent encore préparer
                 "preparing": pending.filter(Order.ready_at.is_(None)).count(),
@@ -2404,6 +2471,15 @@ def create_app():
         if not order:
             return jsonify({"error": "Commande introuvable"}), 404
         data = request.get_json(force=True)
+        if data.get("arrived"):
+            # Colis envoyé d'une autre ville, arrivé : les livreurs de la ville le voient
+            if not order.intercity or order.status != "pending" or not order.ready_at:
+                return jsonify({"error": "Ce colis n'attend pas d'arrivée"}), 400
+            if not order.arrived_at:
+                order.arrived_at = utcnow()
+                order_event(order, "arrived")
+            db.session.commit()
+            return jsonify(order.to_dict())
         if data.get("ready"):
             # L'admin peut signaler un colis prêt à la place du vendeur
             order.ready_at = order.ready_at or utcnow()
@@ -2460,6 +2536,8 @@ def create_app():
         "delivery_fee",
         "free_shipping_threshold",
         "delivery_commission",
+        "intercity_fee",
+        "intercity_delay",
     ]
 
     NUMERIC_SETTINGS = [
@@ -2467,6 +2545,7 @@ def create_app():
         "delivery_fee",
         "free_shipping_threshold",
         "delivery_commission",
+        "intercity_fee",
     ]
 
     @app.get("/api/admin/settings")
@@ -2476,6 +2555,7 @@ def create_app():
         data["zones"] = get_zones()
         data["zone_fees"] = get_zone_fees()
         data["sounds_off"] = sounds_off()
+        data["relay_points"] = relay_points()
         return jsonify(data)
 
     @app.put("/api/admin/settings")
@@ -2508,6 +2588,12 @@ def create_app():
         if "sounds_off" in data:
             keys = [k for k in (data["sounds_off"] or []) if k in SOUND_KEYS]
             set_setting("sounds_off", _json.dumps(keys))
+        if "relay_points" in data:
+            points = data["relay_points"] if isinstance(data["relay_points"], dict) else {}
+            set_setting(
+                "relay_points",
+                _json.dumps({str(k): str(v or "").strip() for k, v in points.items()}, ensure_ascii=False),
+            )
         if "zone_fees" in data:
             fees = {}
             for zone_name, value in (data["zone_fees"] or {}).items():
@@ -2549,8 +2635,8 @@ def create_app():
             (WhatsApp, Facebook…) : ces robots ne lisent pas le JavaScript."""
             shop = get_setting("shop_name") or "Boutique"
             meta = {
-                "title": f"{shop} — Livraison à Libreville",
-                "description": "Commandez en ligne et faites-vous livrer à Libreville. "
+                "title": f"{shop} — Livraison à Libreville et Port-Gentil",
+                "description": "Commandez en ligne et faites-vous livrer à Libreville et Port-Gentil. "
                 "Paiement à la livraison, suivi du livreur en temps réel.",
                 "image": request.url_root.rstrip("/") + "/og-image.png",
                 "type": "website",
@@ -2566,7 +2652,7 @@ def create_app():
                 meta["description"] = (
                     (desc[:180] + "…")
                     if len(desc) > 180
-                    else desc or f"Découvrez la boutique {seller.name} sur {shop} : livraison à Libreville."
+                    else desc or f"Découvrez la boutique {seller.name} sur {shop} : livraison à Libreville et Port-Gentil."
                 )
                 image = seller.cover_url or seller.logo_url
                 if image:
@@ -2630,6 +2716,16 @@ def create_app():
             set_setting("zones", _json.dumps(LIBREVILLE_ZONES, ensure_ascii=False))
         if get_setting("currency") == "XOF":
             set_setting("currency", "XAF")
+        if get_setting("port_gentil_zones") != "1":
+            # Une seule fois : l'admin peut ensuite retirer ou renommer ces quartiers
+            current = get_zones()
+            import json as _json
+
+            set_setting(
+                "zones",
+                _json.dumps(current + [z for z in PORT_GENTIL_ZONES if z not in current], ensure_ascii=False),
+            )
+            set_setting("port_gentil_zones", "1")
         # Boutique officielle de la plateforme : reçoit les produits d'avant le hub
         official = Shop.query.filter_by(official=True).first()
         if not official:
@@ -2686,6 +2782,9 @@ def _migrate_schema():
         ("orders", "shop_id", "shop_id INTEGER REFERENCES shops(id)"),
         ("orders", "ready_at", "ready_at DATETIME"),
         ("orders", "user_id", "user_id INTEGER REFERENCES users(id)"),
+        ("orders", "from_city", "from_city VARCHAR(60)"),
+        ("orders", "to_city", "to_city VARCHAR(60)"),
+        ("orders", "arrived_at", "arrived_at DATETIME"),
     ]
     for table, column, ddl in additions:
         cols = [r[1] for r in db.session.execute(db.text(f"PRAGMA table_info({table})"))]

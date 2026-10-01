@@ -31,6 +31,21 @@ export const LIBREVILLE_PLACES = [
   { name: "Front de mer, Libreville", zone: "La Sablière", lat: 0.405, lng: 9.435 },
 ];
 
+// Port-Gentil : ses quartiers (zones « Port-Gentil · … »), proposés pendant la saisie
+export const PORT_GENTIL_PLACES = [
+  "Centre-ville",
+  "Balise",
+  "Bac Aviation",
+  "Château",
+  "Chic",
+  "Grand Village",
+  "Matanda",
+  "Ntchengué",
+  "Salsa",
+  "Quartier Sud",
+  "Cap Lopez",
+].map((quartier) => ({ name: `${quartier}, Port-Gentil`, zone: `Port-Gentil · ${quartier}` }));
+
 export function normalize(text) {
   return (text || "")
     .toLowerCase()
@@ -38,8 +53,9 @@ export function normalize(text) {
     .replace(/\p{Diacritic}/gu, "");
 }
 
-export function searchPlaces(query, limit = 6) {
+export function searchPlaces(query, city = "Libreville", limit = 6) {
   const q = normalize(query).trim();
   if (q.length < 2) return [];
-  return LIBREVILLE_PLACES.filter((p) => normalize(p.name).includes(q)).slice(0, limit);
+  const places = city === "Port-Gentil" ? PORT_GENTIL_PLACES : city === "Libreville" ? LIBREVILLE_PLACES : [];
+  return places.filter((p) => normalize(p.name).includes(q)).slice(0, limit);
 }

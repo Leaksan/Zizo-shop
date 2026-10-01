@@ -2,11 +2,14 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { BadgeCheck, Store, Truck, Users } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { useShop } from "../context/ShopContext";
+import { citiesLabel } from "../cities";
 import ShopForm from "../components/ShopForm";
 
 // « Ouvrir ma boutique » : la boutique est créée en attente de validation par l'admin
 export default function OpenShop() {
   const { user, loading, refresh } = useAuth();
+  const { zones } = useShop();
   const navigate = useNavigate();
 
   if (loading) return <div className="skeleton mx-auto h-72 max-w-lg" />;
@@ -15,7 +18,7 @@ export default function OpenShop() {
 
   const perks = [
     { icon: Users, text: "Vos nouveautés en tête de l'Explorer, votre page dans l'annuaire" },
-    { icon: Truck, text: "Livraison partout à Libreville par nos livreurs, paiement à la livraison" },
+    { icon: Truck, text: `Livraison à ${citiesLabel(zones)} par nos livreurs, paiement à la livraison` },
     { icon: BadgeCheck, text: "Boutique vérifiée par notre équipe avant sa mise en ligne" },
   ];
 

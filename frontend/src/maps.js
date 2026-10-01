@@ -1,17 +1,20 @@
 // Tous les lieux s'ouvrent dans Google Maps (l'appli sur téléphone, le site sur ordinateur) :
 // pas de carte dans le site. Les positions GPS viennent du téléphone, avec l'autorisation
 // de la personne (« Utiliser ma position »).
+import { zoneCity, zoneName } from "./cities";
+
 const BASE = "https://www.google.com/maps";
 
 export function hasCoords(place) {
   return place?.latitude != null && place?.longitude != null;
 }
 
-// Un point : la position GPS si on l'a, sinon l'adresse écrite (cherchée à Libreville)
+// Un point : la position GPS si on l'a, sinon l'adresse écrite, cherchée dans la ville du
+// quartier (« Port-Gentil · Balise » -> « …, Balise, Port-Gentil, Gabon »)
 function point(place) {
   if (hasCoords(place)) return `${place.latitude},${place.longitude}`;
-  const text = [place?.address, place?.zone].filter(Boolean).join(", ");
-  return text ? `${text}, Libreville, Gabon` : "";
+  const text = [place?.address, zoneName(place?.zone)].filter(Boolean).join(", ");
+  return text ? `${text}, ${zoneCity(place?.zone)}, Gabon` : "";
 }
 
 // Lien « voir sur Google Maps » (null s'il n'y a ni position ni adresse)

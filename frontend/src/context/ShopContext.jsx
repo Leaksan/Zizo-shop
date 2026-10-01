@@ -40,6 +40,9 @@ export function ShopProvider({ children }) {
     zoneFees: settings.zone_fees || {},
     clearanceCount: Number(settings.clearance_count) || 0,
     lowStockThreshold: Number(settings.low_stock_threshold) || 5,
+    // Envoi entre villes : frais ajoutés à la livraison, délai annoncé
+    intercityFee: Number(settings.intercity_fee) || 0,
+    intercityDelay: settings.intercity_delay || "",
     siteSoundsOff: settings.sounds_off || [],
     reload,
   };

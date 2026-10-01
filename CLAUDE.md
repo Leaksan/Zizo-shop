@@ -106,6 +106,21 @@ base, réglage `admin_password` ; un ancien mot de passe en clair est chiffré �
   des Paramètres = adresse de la boutique officielle.
 - Dates : l'API les envoie en UTC **sans fuseau** ; côté site, toujours `parseDate` / `formatDate`
   (`src/format.js`), jamais `new Date(iso)` directement (1 h de décalage à Libreville sinon).
+- **Villes livrées : Libreville et Port-Gentil** (choix du propriétaire, 2026-10-01). Un quartier
+  s'écrit « Ville · Quartier » (« Port-Gentil · Balise ») ; sans ville, il est à Libreville.
+  Règles : `zone_city` (backend/models.py), `zoneCity` / `zoneName` / `citiesOf` (`src/cities.js`),
+  listes de quartiers rangées par ville avec `ZoneOptions`. La ville d'une boutique est celle de son
+  quartier (`Shop.summary()["city"]`) ; un livreur ne voit que les courses de sa ville. Les
+  quartiers de Port-Gentil sont ajoutés une fois aux bases existantes (réglage
+  `port_gentil_zones`) : liste à vérifier et compléter dans Admin > Paramètres.
+- **Envoi entre villes** (boutique de Libreville, client de Port-Gentil, ou l'inverse) : la
+  commande garde `from_city` / `to_city` ; frais d'envoi `intercity_fee` ajoutés à la livraison,
+  même quand la livraison sur place est offerte (calcul identique dans `create_order` et
+  `computeCart`) ; délai annoncé `intercity_delay`. Le vendeur prépare (« Colis prêt »), la
+  plateforme envoie le colis, l'admin le marque « Arrivé à … » (`arrived_at`) : alors seulement
+  les livreurs de la ville d'arrivée le voient, à récupérer au point relais de la ville
+  (`relay_points` ; Libreville : l'adresse de retrait par défaut). Tableau de bord : « colis à
+  envoyer ».
 - Devise : **XAF** (franc CFA d'Afrique centrale), jamais XOF. Montants en FCFA sans décimales.
 - Le calcul des totaux existe côté serveur (`create_order`) ET côté client (`src/cartMath.js`) :
   les garder identiques (remise, seuil de livraison offerte, frais par zone).

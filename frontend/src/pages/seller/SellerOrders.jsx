@@ -21,6 +21,9 @@ function sellerStep(o) {
   if (o.status === "delivering") {
     return { tab: "ongoing", label: pickup ? "Prête à retirer" : "En livraison", cls: ONGOING };
   }
+  if (!pickup && o.ready_at && o.intercity && !o.arrived_at) {
+    return { tab: "ongoing", label: `Envoi vers ${o.to_city}`, cls: ONGOING };
+  }
   if (!pickup && o.ready_at) return { tab: "ongoing", label: "Attend un livreur", cls: ONGOING };
   return { tab: "todo", label: "À préparer", cls: TODO };
 }
@@ -205,8 +208,9 @@ function OrderCard({ order: o, currency, busy, onAction }) {
         {!pickup && step.tab === "todo" && (
           <p className="flex items-start gap-1.5 text-xs muted">
             <MapPin size={13} className="mt-0.5 shrink-0" />
-            Préparez le colis puis indiquez qu'il est prêt : un livreur viendra le chercher à votre adresse
-            de retrait.
+            {o.intercity
+              ? `Client à ${o.to_city} : préparez le colis et indiquez qu'il est prêt, la plateforme le récupère pour l'envoyer.`
+              : "Préparez le colis puis indiquez qu'il est prêt : un livreur viendra le chercher à votre adresse de retrait."}
           </p>
         )}
       </div>

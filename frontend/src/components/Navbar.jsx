@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { api } from "../api";
 import { categoryIcon } from "../categoryIcons";
+import { citiesLabel } from "../cities";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
@@ -173,7 +174,7 @@ let categoriesCache = null;
 function MobileMenu({ onClose }) {
   const { theme, toggle } = useTheme();
   const { user } = useAuth();
-  const { shopPhone, clearanceCount, freeShippingThreshold, currency } = useShop();
+  const { shopPhone, clearanceCount, freeShippingThreshold, currency, zones } = useShop();
   const { pathname, search } = useLocation();
   const [categories, setCategories] = useState(categoriesCache);
   const activeCat = pathname === "/boutique" ? new URLSearchParams(search).get("cat") : null;
@@ -321,7 +322,7 @@ function MobileMenu({ onClose }) {
             </span>
             {freeShippingThreshold > 0
               ? `Livraison offerte dès ${formatPrice(freeShippingThreshold, currency)}`
-              : "Livraison partout à Libreville"}
+              : `Livraison à ${citiesLabel(zones)}`}
           </p>
           <p className="flex items-center gap-3 px-3 py-2 text-sm muted">
             <span className="flex w-8 shrink-0 justify-center">

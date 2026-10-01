@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Banknote, Bike, Check, ChevronDown, ChevronUp, Clock, Compass, Search, StickyNote, Store } from "lucide-react";
+import { Banknote, Bike, Check, ChevronDown, ChevronUp, Clock, Compass, Search, Ship, StickyNote, Store } from "lucide-react";
 import { api } from "../../api";
 import { formatDate, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
@@ -137,6 +137,11 @@ export default function AdminOrders() {
                     {o.shop.name}
                   </span>
                 )}
+                {o.intercity && (
+                  <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+                    <Ship size={11} /> {o.from_city} → {o.to_city}
+                  </span>
+                )}
                 {o.delivery_method === "pickup" ? (
                   <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300">
                     <Store size={11} /> Retrait
@@ -250,9 +255,22 @@ export default function AdminOrders() {
                     {/* Hub : le vendeur prépare le colis, puis il est proposé aux livreurs */}
                     {o.delivery_method === "delivery" && o.status === "pending" && (
                       <div className="flex flex-wrap items-center gap-2 text-sm">
-                        {o.ready_at ? (
+                        {o.ready_at && o.intercity && !o.arrived_at ? (
+                          <>
+                            <span className="flex items-center gap-1.5 text-blue-800 dark:text-blue-200">
+                              <Ship size={15} /> Colis prêt ({formatDate(o.ready_at)}) : à envoyer à {o.to_city}
+                            </span>
+                            <button
+                              onClick={() => updateOrder(o, { arrived: true })}
+                              className="btn-outline px-3 py-1.5 text-xs"
+                            >
+                              Arrivé à {o.to_city}
+                            </button>
+                          </>
+                        ) : o.ready_at ? (
                           <span className="flex items-center gap-1.5 text-green-700 dark:text-green-300">
                             <Check size={15} /> Colis prêt ({formatDate(o.ready_at)}) : visible des livreurs
+                            {o.intercity ? ` de ${o.to_city}` : ""}
                           </span>
                         ) : (
                           <>

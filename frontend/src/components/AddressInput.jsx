@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 import { api } from "../api";
-import { searchPlaces } from "../libreville";
+import { normalize, searchPlaces } from "../libreville";
 
 export default function AddressInput({
   value,
@@ -9,29 +9,32 @@ export default function AddressInput({
   onPick,
   required = true,
   placeholder = "Ex. Glass, Akébé, Marché Mont-Bouët…",
+  city = "Libreville",
 }) {
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(-1);
   // Résultats du serveur, gardés avec la saisie qui les a demandés : ceux d'une saisie
   // précédente ne s'affichent pas pendant que la nouvelle recherche est en cours
-  const [remote, setRemote] = useState({ query: "", places: [] });
+  const [remote, setRemote] = useState({ query: "", city: "", places: [] });
   const boxRef = useRef(null);
 
   const query = value.trim();
-  const local = searchPlaces(value);
-  const fresh = remote.query === query ? remote.places : [];
-  const suggestions = fresh.length > 0 ? fresh : local;
+  const local = searchPlaces(value, city);
+  const fresh = remote.query === query && remote.city === city ? remote.places : [];
+  // Quartiers connus d'abord, puis les lieux trouvés par la recherche (sans doublon)
+  const known = new Set(local.map((p) => normalize(p.name)));
+  const suggestions = [...local, ...fresh.filter((p) => !known.has(normalize(p.name)))].slice(0, 6);
 
   useEffect(() => {
     if (query.length < 3) return undefined;
     const timer = setTimeout(() => {
       api
-        .get(`/geocode/search?q=${encodeURIComponent(query)}`)
-        .then((places) => setRemote({ query, places }))
-        .catch(() => setRemote({ query, places: [] }));
+        .get(`/geocode/search?q=${encodeURIComponent(query)}&city=${encodeURIComponent(city)}`)
+        .then((places) => setRemote({ query, city, places }))
+        .catch(() => setRemote({ query, city, places: [] }));
     }, 350);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, city]);
 
   useEffect(() => {
     const close = (e) => {

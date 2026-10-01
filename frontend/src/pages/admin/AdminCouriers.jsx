@@ -5,6 +5,7 @@ import { formatPhone, formatPrice } from "../../format";
 import { useShop } from "../../context/ShopContext";
 import { usePolling } from "../../hooks";
 import { whatsappUrl, WhatsAppIcon } from "../../whatsapp";
+import ZoneOptions from "../../components/ZoneOptions";
 
 const FILTERS = [
   { key: "", label: "Tous" },
@@ -163,9 +164,7 @@ export default function AdminCouriers() {
                 <span className="muted">Zone</span>
                 <select value={c.zone} onChange={(e) => update(c, { zone: e.target.value })} className="input flex-1 py-1.5">
                   {!zones.includes(c.zone) && c.zone && <option>{c.zone}</option>}
-                  {zones.map((z) => (
-                    <option key={z}>{z}</option>
-                  ))}
+                  <ZoneOptions zones={zones} />
                 </select>
               </label>
 

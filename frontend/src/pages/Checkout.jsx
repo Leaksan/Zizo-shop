@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Banknote, Bike, CheckCircle2, ChevronDown, MapPin, Package, Store } from "lucide-react";
+import { ArrowLeft, Banknote, Bike, CheckCircle2, ChevronDown, MapPin, Package, Ship, Store } from "lucide-react";
 import { api } from "../api";
 import { play } from "../sounds";
 import { formatPrice } from "../format";
@@ -9,6 +9,7 @@ import { useCart } from "../context/CartContext";
 import { useShop } from "../context/ShopContext";
 import AddressInput from "../components/AddressInput";
 import LocationPicker from "../components/LocationPicker";
+import { citiesOf, nearestCity, zoneCity, zoneName, zonesOf } from "../cities";
 import ShopAvatar from "../components/ShopAvatar";
 import { normalize } from "../libreville";
 import { rememberOrder } from "../myOrders";
@@ -19,7 +20,7 @@ const STORAGE_KEY = "shop_client";
 export default function Checkout() {
   const { items, promo, clearCart } = useCart();
   const shop = useShop();
-  const { currency, zones, shopPhone, pickupAddress } = shop;
+  const { currency, zones, shopPhone, pickupAddress, intercityFee, intercityDelay } = shop;
   const navigate = useNavigate();
   const [position, setPosition] = useState(null);
   const [deliveryMethod, setDeliveryMethod] = useState("delivery");
@@ -55,13 +56,19 @@ export default function Checkout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zones.length]);
 
+  // Ville de livraison : celle du quartier choisi (Libreville, Port-Gentil…)
+  const cities = citiesOf(zones);
+  const city = zoneCity(form.zone);
+  const chooseCity = (next) =>
+    setForm((f) => ({ ...f, zone: zoneCity(f.zone) === next ? f.zone : zonesOf(zones, next)[0] || f.zone }));
+
   // Une commande par boutique, chacune avec ses frais (même calcul que le serveur)
   const cart = computeCart(
     items,
     promo,
     deliveryMethod === "pickup"
       ? { deliveryFee: 0, freeShippingThreshold: 0 }
-      : { ...shop, deliveryFee: feeForZone(shop, form.zone) }
+      : { ...shop, deliveryFee: feeForZone(shop, form.zone), deliveryCity: city, intercityFee }
   );
   // Un code sans effet (pas de produit officiel, minimum non atteint) n'est pas envoyé :
   // le serveur refuserait toute la commande
@@ -81,13 +88,15 @@ export default function Checkout() {
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
-  const matchZone = (zoneText) => {
+  // Quartier d'après un nom de lieu (suggestion, adresse trouvée), dans la ville donnée
+  const matchZone = (zoneText, inCity = city) => {
     if (!zoneText) return null;
     const n = normalize(zoneText).trim();
     if (!n) return null;
+    const candidates = zonesOf(zones, inCity);
     return (
-      zones.find((z) => normalize(z) === n) ||
-      zones.find((z) => n.includes(normalize(z)) || normalize(z).includes(n)) ||
+      candidates.find((z) => normalize(zoneName(z)) === n) ||
+      candidates.find((z) => n.includes(normalize(zoneName(z))) || normalize(zoneName(z)).includes(n)) ||
       null
     );
   };
@@ -102,17 +111,21 @@ export default function Checkout() {
     }));
   };
 
-  // Position du téléphone : si l'adresse est encore vide, on propose celle du lieu
+  // Position du téléphone : on reconnaît la ville, et si l'adresse est encore vide, on
+  // propose celle du lieu
   const pickPosition = async (pos) => {
     setPosition(pos);
-    if (!pos || form.customer_address.trim()) return;
+    if (!pos) return;
+    const near = nearestCity(pos, cities) || city;
+    if (near !== city) chooseCity(near);
+    if (form.customer_address.trim()) return;
     try {
       const result = await api.get(`/geocode/reverse?lat=${pos.latitude}&lng=${pos.longitude}`);
       if (result.name) {
         setForm((f) => ({
           ...f,
           customer_address: f.customer_address.trim() ? f.customer_address : result.name,
-          zone: matchZone(result.zone) || f.zone,
+          zone: matchZone(result.zone, near) || f.zone,
         }));
       }
     } catch {
@@ -182,7 +195,7 @@ export default function Checkout() {
             <span className="label">Comment souhaitez-vous récupérer votre commande ? *</span>
             <div className="grid gap-2 sm:grid-cols-2">
               {[
-                { value: "delivery", icon: Bike, label: "Livraison à domicile", sub: "Partout à Libreville" },
+                { value: "delivery", icon: Bike, label: "Livraison à domicile", sub: cities.join(" et ") || "Libreville" },
                 { value: "pickup", icon: Store, label: "Retrait en boutique", sub: "Gratuit" },
               ].map((m) => (
                 <label
@@ -240,16 +253,39 @@ export default function Checkout() {
             </div>
           ) : (
             <>
+              {cities.length > 1 && (
+                <div>
+                  <span className="label">Ville de livraison *</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {cities.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => chooseCity(c)}
+                        className={`rounded-lg border-2 px-3 py-2.5 text-sm font-semibold transition ${
+                          city === c
+                            ? "border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300"
+                            : "border-gray-200 text-gray-600 dark:border-slate-600 dark:text-slate-300"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <label className="block">
-                <span className="label">Adresse de livraison * (Libreville)</span>
+                <span className="label">Adresse de livraison * ({city})</span>
                 <AddressInput
                   value={form.customer_address}
                   onChange={(v) => setForm({ ...form, customer_address: v })}
                   onPick={handlePickPlace}
                   required={deliveryMethod === "delivery"}
+                  city={city}
+                  placeholder={city === "Libreville" ? "Ex. Glass, Akébé, Marché Mont-Bouët…" : `Ex. quartier, rue, bâtiment à ${city}`}
                 />
                 <span className="mt-1 block text-xs muted">
-                  Commencez à taper pour voir des suggestions de quartiers et lieux de Libreville.
+                  Commencez à taper pour voir des suggestions de quartiers et lieux de {city}.
                 </span>
               </label>
               <div>
@@ -261,12 +297,12 @@ export default function Checkout() {
                 />
               </div>
               <label className="block">
-                <span className="label">Quartier / zone de livraison *</span>
+                <span className="label">Quartier de livraison *</span>
                 <select value={form.zone} onChange={set("zone")} className="input">
                   {zones.length === 0 && <option value="">—</option>}
-                  {zones.map((z) => (
+                  {zonesOf(zones, city).map((z) => (
                     <option key={z} value={z}>
-                      {z} — {formatPrice(feeForZone(shop, z), currency)}
+                      {zoneName(z)} — {formatPrice(feeForZone(shop, z), currency)}
                     </option>
                   ))}
                 </select>
@@ -374,6 +410,17 @@ export default function Checkout() {
                   </span>
                   <span className="font-normal muted">
                     Livraison : {group.deliveryFee === 0 ? "offerte" : formatPrice(group.deliveryFee, currency)}
+                  </span>
+                </p>
+              )}
+              {/* Boutique d'une autre ville : le colis voyage avant d'être livré */}
+              {group.intercity && (
+                <p className="mb-1 flex items-start gap-1.5 rounded-lg bg-accent-50 p-2 text-xs text-accent-900 dark:bg-accent-950 dark:text-accent-200">
+                  <Ship size={14} className="mt-0.5 shrink-0" />
+                  <span>
+                    {group.shop?.name ? `${group.shop.name} est à ${group.fromCity}` : `Envoi depuis ${group.fromCity}`} : le
+                    colis est envoyé à {city} (+{formatPrice(intercityFee, currency)} de frais d'envoi
+                    {intercityDelay ? `, comptez ${intercityDelay}` : ""}).
                   </span>
                 </p>
               )}

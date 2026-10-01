@@ -6,13 +6,14 @@ import { categoryIcon } from "../categoryIcons";
 import Logo, { LogoMark } from "../components/Logo";
 import ProductVisual from "../components/ProductVisual";
 import { useShop } from "../context/ShopContext";
+import { citiesLabel } from "../cities";
 import { formatPrice } from "../format";
 import { markWelcomeSeen } from "../welcome";
 
 // Page d'arrivée « à vue unique » : un seul écran de bienvenue à la première visite,
 // sans barre de navigation. Ensuite l'adresse / mène directement à la boutique (App.jsx).
 export default function Landing() {
-  const { freeShippingThreshold, currency } = useShop();
+  const { freeShippingThreshold, currency, zones } = useShop();
   const [categories, setCategories] = useState([]);
   const [spotlight, setSpotlight] = useState([]);
 
@@ -39,8 +40,8 @@ export default function Landing() {
       title: "Livraison rapide",
       sub:
         freeShippingThreshold > 0
-          ? `Partout à Libreville, offerte dès ${formatPrice(freeShippingThreshold, currency)}`
-          : "Partout à Libreville, 7j/7",
+          ? `${citiesLabel(zones)}, offerte dès ${formatPrice(freeShippingThreshold, currency)}`
+          : `${citiesLabel(zones)}, 7j/7`,
     },
     { icon: Banknote, title: "Paiement à la livraison", sub: "Vous payez à la réception du colis" },
     { icon: MapPin, title: "Suivi en temps réel", sub: "Votre livreur sur la carte jusqu'à votre porte" },

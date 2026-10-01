@@ -1,3 +1,5 @@
+import { HOME_CITY } from "./cities";
+
 // Doit rester identique au calcul du serveur (backend/app.py, create_order).
 export function computeTotals(subtotal, promo, { deliveryFee, freeShippingThreshold }) {
   let discount = 0;
@@ -22,10 +24,19 @@ export function computeTotals(subtotal, promo, { deliveryFee, freeShippingThresh
 // Hub : une commande par boutique (le livreur passe chez chaque vendeur). Chaque boutique a
 // ses frais de livraison et son seuil de livraison offerte ; le code promo de la plateforme
 // ne s'applique qu'à la boutique officielle. Doit rester identique au serveur (create_order).
+// Envoi entre villes (boutique de Libreville, livraison à Port-Gentil…) : frais d'envoi en plus,
+// dus même quand la livraison sur place est offerte. settings.deliveryCity : ville de livraison.
 export function computeCart(items, promo, settings) {
   const groups = groupByShop(items).map((g) => {
     const subtotal = g.items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
-    return { ...g, ...computeTotals(subtotal, g.shop?.official ? promo : null, settings) };
+    const totals = computeTotals(subtotal, g.shop?.official ? promo : null, settings);
+    const fromCity = g.shop?.city || HOME_CITY;
+    const intercity = Boolean(settings.deliveryCity) && fromCity !== settings.deliveryCity;
+    if (intercity) {
+      totals.deliveryFee = round2(totals.deliveryFee + (settings.intercityFee || 0));
+      totals.total = round2(totals.total + (settings.intercityFee || 0));
+    }
+    return { ...g, ...totals, fromCity, intercity };
   });
   const sum = (key) => round2(groups.reduce((total, g) => total + g[key], 0));
   const official = groups.find((g) => g.shop?.official);

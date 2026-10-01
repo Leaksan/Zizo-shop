@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, Flame, Gift, Heart, Info, MapPin, Package, Truck } from "lucide-react";
 import { useShop } from "../context/ShopContext";
+import { citiesLabel } from "../cities";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 import Logo from "./Logo";
 
 export default function Footer() {
-  const { shopName, shopPhone, freeShippingThreshold, currency, clearanceCount } = useShop();
+  const { shopName, shopPhone, freeShippingThreshold, currency, clearanceCount, zones } = useShop();
   const [open, setOpen] = useState(false);
 
   return (
@@ -34,7 +35,7 @@ export default function Footer() {
               <Logo />
               <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">
                 Votre boutique de proximité en ligne. Des produits de qualité, livrés rapidement
-                chez vous à Libreville.
+                chez vous à {citiesLabel(zones)}.
               </p>
             </div>
             <div>

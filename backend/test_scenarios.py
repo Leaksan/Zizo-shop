@@ -59,6 +59,7 @@ def run():
     phase3_orders()
     phase4_notifications_reviews_reports()
     admin_section()
+    cities_port_gentil()
     login_rate_limit()
 
 
@@ -408,6 +409,66 @@ def phase4_notifications_reviews_reports():
                                                 "action": "suspend_shop"}).status_code == 400)
     r = admin.put("/api/admin/reports", json={"target": "shop", "target_id": official["id"], "action": "dismiss"})
     check("signalement classé sans suite", r.get_json()["resolved"] == 1)
+
+
+def cities_port_gentil():
+    admin = new_admin()
+    public = app.test_client()
+    settings = public.get("/api/settings/public").get_json()
+    check("quartiers de Port-Gentil livrés", "Port-Gentil · Balise" in settings["zones"], settings["zones"])
+    check("frais d'envoi entre villes publics", settings["intercity_fee"] == 3000 and settings["intercity_delay"])
+
+    def seen(courier):
+        return {o["reference"] for o in courier.get("/api/courier/deliveries").get_json()["available"]}
+
+    # --- Boutique de Libreville, client de Port-Gentil : le colis voyage ---
+    lbv_seller, _ = open_shop("077 30 30 30", "Boutique de Glass", admin)
+    lbv_seller.put("/api/my/shop", json={"zone": "Glass"})
+    product = new_product(lbv_seller, "Sac à main", price=10000, stock=5)
+    check("ville de la boutique", product["shop"]["city"] == "Libreville", product["shop"])
+    order = place_order(public, [(product["variants"][0]["id"], 1)], zone="Port-Gentil · Balise").get_json()["orders"][0]
+    check("commande envoyée entre villes",
+          order["intercity"] and order["from_city"] == "Libreville" and order["to_city"] == "Port-Gentil", order)
+    check("frais d'envoi ajoutés à la livraison", order["delivery_fee"] == 2000 + 3000, order["delivery_fee"])
+    lbv_seller.put(f"/api/my/orders/{order['id']}", json={"action": "ready"})
+
+    lbv_courier = app.test_client()
+    lbv_courier.post("/api/courier/login", json={"phone": "0698765432", "password": "livre123"})
+    pg_courier = app.test_client()
+    pg_courier.post("/api/courier/register", json={
+        "name": "Livreur PG", "phone": "066404040", "password": "secret1", "vehicle": "Moto",
+        "zone": "Port-Gentil · Balise"})
+    pg_id = next(c["id"] for c in admin.get("/api/admin/couriers").get_json() if c["phone"] == "066404040")
+    admin.put(f"/api/admin/couriers/{pg_id}", json={"verified": True})
+
+    check("livreur de Libreville : pas les courses de Port-Gentil", order["reference"] not in seen(lbv_courier))
+    check("livreur de Port-Gentil : pas avant l'arrivée du colis", order["reference"] not in seen(pg_courier))
+    check("course refusée avant l'arrivée",
+          pg_courier.post(f"/api/courier/deliveries/{order['id']}/accept").status_code == 400)
+    check("colis à envoyer au tableau de bord", admin.get("/api/admin/stats").get_json()["to_ship"] >= 1)
+    r = admin.put(f"/api/admin/orders/{order['id']}", json={"arrived": True})
+    check("colis arrivé à Port-Gentil", r.status_code == 200 and r.get_json()["arrived_at"], r.get_json())
+    course = next((o for o in pg_courier.get("/api/courier/deliveries").get_json()["available"]
+                   if o["reference"] == order["reference"]), None)
+    check("livreur de Port-Gentil : course visible une fois arrivée", course is not None)
+    check("récupération au point relais de la ville", course and course["pickup"]["name"] == "Point relais Port-Gentil")
+    check("livreur de Libreville : toujours pas", order["reference"] not in seen(lbv_courier))
+    check("le livreur de Libreville ne peut pas la prendre",
+          lbv_courier.post(f"/api/courier/deliveries/{order['id']}/accept").status_code == 400)
+    check("course acceptée à Port-Gentil",
+          pg_courier.post(f"/api/courier/deliveries/{order['id']}/accept").status_code == 200)
+
+    # --- Boutique de Port-Gentil, client de Port-Gentil : livraison sur place ---
+    pg_seller, _ = open_shop("077 50 50 50", "Boutique de Salsa", admin)
+    pg_seller.put("/api/my/shop", json={"zone": "Port-Gentil · Salsa"})
+    pg_product = new_product(pg_seller, "Pagne de Port-Gentil", price=12000, stock=3)
+    local = place_order(public, [(pg_product["variants"][0]["id"], 1)], zone="Port-Gentil · Matanda").get_json()["orders"][0]
+    check("livraison sur place à Port-Gentil, sans frais d'envoi",
+          not local["intercity"] and local["delivery_fee"] == 2000, local)
+    pg_seller.put(f"/api/my/orders/{local['id']}", json={"action": "ready"})
+    check("course locale visible du livreur de Port-Gentil dès qu'elle est prête", local["reference"] in seen(pg_courier))
+    check("pas d'« arrivée » pour une course locale",
+          admin.put(f"/api/admin/orders/{local['id']}", json={"arrived": True}).status_code == 400)
 
 
 def admin_section():

@@ -3,6 +3,7 @@ import { ImagePlus } from "lucide-react";
 import { api } from "../api";
 import { useShop } from "../context/ShopContext";
 import LocationPicker from "./LocationPicker";
+import ZoneOptions from "./ZoneOptions";
 import CropFileInput from "./CropFileInput";
 import ShopAvatar from "./ShopAvatar";
 
@@ -115,11 +116,7 @@ export default function ShopForm({ initial, submitLabel, onSubmit, onPhotoChange
           <span className="label">Quartier</span>
           <select value={form.zone} onChange={set("zone")} className="input">
             <option value="">Choisir…</option>
-            {zones.map((z) => (
-              <option key={z} value={z}>
-                {z}
-              </option>
-            ))}
+            <ZoneOptions zones={zones} />
           </select>
         </label>
       </div>

@@ -7,6 +7,7 @@ import { api } from "../api";
 import { formatPrice } from "../format";
 import { useCart } from "../context/CartContext";
 import { useShop } from "../context/ShopContext";
+import { citiesLabel } from "../cities";
 import { useFavorites } from "../context/FavoritesContext";
 import ProductVisual from "../components/ProductVisual";
 import Rating from "../components/Rating";
@@ -365,7 +366,7 @@ function Guarantees({ shop, product }) {
     { icon: Banknote, title: "Paiement à la livraison", sub: "Vous payez à la réception du colis" },
     {
       icon: Truck,
-      title: `Livraison à Libreville dès ${formatPrice(min, currency)}`,
+      title: `Livraison à ${citiesLabel(shop.zones)} dès ${formatPrice(min, currency)}`,
       sub:
         freeShippingThreshold > 0
           ? `Offerte dès ${formatPrice(freeShippingThreshold, currency)} d'achat · retrait en boutique gratuit`
