@@ -1315,6 +1315,12 @@ def create_app():
         for field in SHOP_FIELDS:
             if field in data:
                 setattr(shop, field, str(data[field] or "").strip())
+        # Logo et couverture : photos envoyées sur la plateforme (pas d'image d'un autre site,
+        # qui pourrait pister les visiteurs de la boutique)
+        for field in ("logo_url", "cover_url"):
+            value = getattr(shop, field) or ""
+            if field in data and value and not value.startswith("/uploads/"):
+                return "Photo invalide : envoyez-la depuis le site"
         if not 2 <= len(shop.name or "") <= 80:
             return "Nom de boutique requis (2 à 80 caractères)"
         if len(shop.description or "") > 1500:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BadgeCheck, Check, Eye, MapPin, Plus, Share2, Store } from "lucide-react";
+import { BadgeCheck, Camera, Check, Eye, MapPin, Plus, Share2, Store } from "lucide-react";
 import { api } from "../api";
 import { useAuth } from "../context/AuthContext";
 import { useShop } from "../context/ShopContext";
@@ -11,6 +11,7 @@ import ProductVisual from "../components/ProductVisual";
 import Rating from "../components/Rating";
 import ReportButton from "../components/ReportButton";
 import ShopAvatar from "../components/ShopAvatar";
+import ShopPhotoButton from "../components/ShopPhotoButton";
 import { SHOP_STATUS } from "../shopStatus";
 import { whatsappUrl, WhatsAppIcon } from "../whatsapp";
 
@@ -22,7 +23,7 @@ export default function ShopPage() {
   const [searchParams] = useSearchParams();
   const onglet = searchParams.get("onglet");
   const tabFromUrl = TABS.includes(onglet) ? onglet : "produits";
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const { shopName } = useShop();
   const navigate = useNavigate();
   const [shop, setShop] = useState(null);
@@ -112,6 +113,12 @@ export default function ShopPage() {
     }
   };
 
+  // Photo changée depuis la page : affichée tout de suite (et dans le compte du vendeur)
+  const photoSaved = (updated) => {
+    setShop((s) => ({ ...s, logo_url: updated.logo_url, cover_url: updated.cover_url }));
+    refresh();
+  };
+
   const share = async () => {
     const url = window.location.href;
     if (navigator.share) {
@@ -129,10 +136,23 @@ export default function ShopPage() {
 
   return (
     <div className="-mx-4 -mt-8">
-      {/* Couverture */}
-      <div className="h-36 bg-gradient-to-br from-brand-200 via-brand-100 to-accent-100 sm:h-56 dark:from-brand-950 dark:via-slate-800 dark:to-slate-900">
-        {shop.cover_url && <img src={shop.cover_url} alt="" className="h-full w-full object-cover" />}
-      </div>
+      {/* Couverture (le vendeur la touche pour la changer) */}
+      {shop.is_owner ? (
+        <ShopPhotoButton
+          kind="cover"
+          onSaved={photoSaved}
+          className="relative block h-36 bg-gradient-to-br from-brand-200 via-brand-100 to-accent-100 sm:h-56 dark:from-brand-950 dark:via-slate-800 dark:to-slate-900"
+        >
+          {shop.cover_url && <img src={shop.cover_url} alt="" className="h-full w-full object-cover" />}
+          <span className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow dark:bg-slate-800/90 dark:text-slate-200">
+            <Camera size={14} /> {shop.cover_url ? "Changer la couverture" : "Ajouter une couverture"}
+          </span>
+        </ShopPhotoButton>
+      ) : (
+        <div className="h-36 bg-gradient-to-br from-brand-200 via-brand-100 to-accent-100 sm:h-56 dark:from-brand-950 dark:via-slate-800 dark:to-slate-900">
+          {shop.cover_url && <img src={shop.cover_url} alt="" className="h-full w-full object-cover" />}
+        </div>
+      )}
 
       <div className="mx-auto max-w-5xl px-4">
         {shop.status && shop.status !== "active" && (
@@ -143,10 +163,22 @@ export default function ShopPage() {
         )}
 
         <div className="flex items-end gap-3">
-          <ShopAvatar
-            shop={shop}
-            className="-mt-10 h-20 w-20 text-3xl ring-4 ring-gray-50 sm:-mt-12 sm:h-24 sm:w-24 dark:ring-slate-900"
-          />
+          {shop.is_owner ? (
+            <ShopPhotoButton kind="logo" onSaved={photoSaved} className="relative -mt-10 shrink-0 rounded-full sm:-mt-12">
+              <ShopAvatar
+                shop={shop}
+                className="h-20 w-20 text-3xl ring-4 ring-gray-50 sm:h-24 sm:w-24 dark:ring-slate-900"
+              />
+              <span className="absolute right-0 bottom-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white shadow ring-2 ring-gray-50 dark:ring-slate-900">
+                <Camera size={14} />
+              </span>
+            </ShopPhotoButton>
+          ) : (
+            <ShopAvatar
+              shop={shop}
+              className="-mt-10 h-20 w-20 text-3xl ring-4 ring-gray-50 sm:-mt-12 sm:h-24 sm:w-24 dark:ring-slate-900"
+            />
+          )}
           <div className="min-w-0 flex-1 pb-1">
             <h1 className="flex items-center gap-1.5 text-xl font-extrabold sm:text-2xl">
               <span className="truncate">{shop.name}</span>

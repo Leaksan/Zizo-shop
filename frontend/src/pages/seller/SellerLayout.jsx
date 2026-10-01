@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet } from "react-router-dom";
 import {
   Ban,
+  Camera,
   Clock,
   ExternalLink,
   LayoutDashboard,
@@ -14,6 +15,7 @@ import {
 import { api } from "../../api";
 import { useAuth } from "../../context/AuthContext";
 import ShopAvatar from "../../components/ShopAvatar";
+import ShopPhotoButton from "../../components/ShopPhotoButton";
 import { SHOP_STATUS } from "../../shopStatus";
 import { usePolling } from "../../hooks";
 
@@ -27,7 +29,7 @@ const TABS = [
 
 // Espace vendeur : sa boutique et ses produits (la boutique peut être en attente de validation)
 export default function SellerLayout() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const [shop, setShop] = useState(null);
   const [counts, setCounts] = useState({});
 
@@ -65,7 +67,16 @@ export default function SellerLayout() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <div className="flex items-center gap-3">
-        <ShopAvatar shop={shop} className="h-12 w-12 text-lg" />
+        <ShopPhotoButton
+          kind="logo"
+          onSaved={() => Promise.all([reload(), refresh()])}
+          className="relative shrink-0 rounded-full"
+        >
+          <ShopAvatar shop={shop} className="h-12 w-12 text-lg" />
+          <span className="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white shadow ring-2 ring-gray-50 dark:ring-slate-900">
+            <Camera size={11} />
+          </span>
+        </ShopPhotoButton>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-xl font-bold">{shop.name}</h1>
           <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${status.cls}`}>

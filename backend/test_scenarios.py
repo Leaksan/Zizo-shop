@@ -296,6 +296,10 @@ def phase4_notifications_reviews_reports():
     admin = new_admin()
     seller, shop = open_shop("077 88 99 00", "Robes de Nzeng", admin)
     check("vendeur prévenu de la validation", any("est validée" in t for t in texts(seller)), texts(seller))
+    r = seller.put("/api/my/shop", json={"logo_url": "/uploads/logo.jpg"})
+    check("logo changé en un geste", r.status_code == 200 and r.get_json()["logo_url"] == "/uploads/logo.jpg", r.get_json())
+    check("logo venant d'un autre site refusé",
+          seller.put("/api/my/shop", json={"cover_url": "https://pistage.example/pixel.png"}).status_code == 400)
     check("compteur de notifications", seller.get("/api/me/notifications/count").get_json()["unread"] >= 1)
     check("notifications privées", app.test_client().get("/api/me/notifications").status_code == 401)
     product = new_product(seller, "Robe pagne", price=20000, stock=5)

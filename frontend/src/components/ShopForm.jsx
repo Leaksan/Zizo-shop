@@ -7,8 +7,9 @@ import AddressInput from "./AddressInput";
 import CropFileInput from "./CropFileInput";
 import ShopAvatar from "./ShopAvatar";
 
-// Informations d'une boutique : création (« Ouvrir ma boutique ») et modification (espace vendeur)
-export default function ShopForm({ initial, submitLabel, onSubmit }) {
+// Informations d'une boutique : création (« Ouvrir ma boutique ») et modification (espace vendeur).
+// onPhotoChange(champ, url) : en modification, la photo est enregistrée dès qu'elle est choisie.
+export default function ShopForm({ initial, submitLabel, onSubmit, onPhotoChange }) {
   const { zones } = useShop();
   const [form, setForm] = useState({
     name: initial?.name || "",
@@ -27,15 +28,21 @@ export default function ShopForm({ initial, submitLabel, onSubmit }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState("");
+  const [photoSaved, setPhotoSaved] = useState(false);
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
 
   // Photo déjà recadrée par CropFileInput
   const upload = (key) => async ([file]) => {
     setUploading(key);
     setError("");
+    setPhotoSaved(false);
     try {
       const res = await api.upload(`/me/upload${key === "cover_url" ? "?kind=cover" : ""}`, file);
       setForm((f) => ({ ...f, [key]: res.url }));
+      if (onPhotoChange) {
+        await onPhotoChange(key, res.url);
+        setPhotoSaved(true);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -77,7 +84,13 @@ export default function ShopForm({ initial, submitLabel, onSubmit }) {
             <CropFileInput aspect={1} round maxWidth={600} onCropped={upload("logo_url")} />
           </label>
           <p className="pt-2 text-xs muted">
-            {uploading === "logo_url" ? "Envoi du logo…" : "Touchez les images pour ajouter votre logo et une couverture."}
+            {uploading
+              ? "Envoi de la photo…"
+              : photoSaved
+                ? "Photo enregistrée."
+                : onPhotoChange
+                  ? "Touchez une image pour la changer : elle est enregistrée tout de suite."
+                  : "Touchez les images pour ajouter votre logo et une couverture."}
           </p>
         </div>
       </div>

@@ -55,7 +55,7 @@ export default function SellerDashboard() {
       icon: Users,
       label: "Abonnés",
       value: stats.followers,
-      sub: stats.new_followers > 0 ? `+${stats.new_followers} ce mois-ci` : "Ils voient vos articles en premier",
+      sub: stats.new_followers > 0 ? `+${stats.new_followers} ce mois-ci` : "Ils vous voient en premier",
     },
   ];
 

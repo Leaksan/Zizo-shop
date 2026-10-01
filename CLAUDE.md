@@ -80,6 +80,10 @@ réglage `admin_password`). Mot de passe oublié : `.venv\Scripts\python backend
   dézoomer garde toute la photo avec des bords blancs), puis le site envoie un JPEG déjà réduit.
   Produits, publications et avis : carré ; logo de boutique : carré avec aperçu rond ;
   couverture de boutique : 3:1 (1600 px). Plusieurs photos : recadrées l'une après l'autre.
+  Le vendeur change son logo ou sa couverture d'un geste (`ShopPhotoButton` : sur la page de sa
+  boutique et dans l'en-tête de l'espace vendeur), enregistré tout de suite ; dans « Ma boutique »
+  aussi, une photo changée est enregistrée sans attendre « Enregistrer ». Logo et couverture :
+  uniquement des photos envoyées sur la plateforme (`/uploads/…`).
 - Dates : l'API les envoie en UTC **sans fuseau** ; côté site, toujours `parseDate` / `formatDate`
   (`src/format.js`), jamais `new Date(iso)` directement (1 h de décalage à Libreville sinon).
 - Devise : **XAF** (franc CFA d'Afrique centrale), jamais XOF. Montants en FCFA sans décimales.

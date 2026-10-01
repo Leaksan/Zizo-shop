@@ -20,6 +20,10 @@ export default function SellerShopEdit() {
       <ShopForm
         initial={shop}
         submitLabel="Enregistrer"
+        onPhotoChange={async (key, url) => {
+          await api.put("/my/shop", { [key]: url });
+          await Promise.all([reload(), refresh()]);
+        }}
         onSubmit={async (form) => {
           setSaved(false);
           await api.put("/my/shop", form);
