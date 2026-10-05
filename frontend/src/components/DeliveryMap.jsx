@@ -15,7 +15,8 @@ export default function DeliveryMap({ position, onPick }) {
     if (mapRef.current) return;
     const map = L.map(containerRef.current).setView(LIBREVILLE_CENTER, 12);
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
     map.on("click", (e) => onPickRef.current?.(e.latlng.lat, e.latlng.lng));
@@ -23,6 +24,7 @@ export default function DeliveryMap({ position, onPick }) {
     return () => {
       map.remove();
       mapRef.current = null;
+      markerRef.current = null;
     };
   }, []);
 
@@ -31,8 +33,14 @@ export default function DeliveryMap({ position, onPick }) {
     if (!map) return;
     if (position) {
       if (markerRef.current) markerRef.current.setLatLng(position);
-      else markerRef.current = L.marker(position, { icon: destinationIcon(36) }).addTo(map);
+      else
+        markerRef.current = L.marker(position, {
+          icon: destinationIcon(36),
+        }).addTo(map);
       map.flyTo(position, Math.max(map.getZoom(), 15), { duration: 0.8 });
+    } else if (markerRef.current) {
+      markerRef.current.remove();
+      markerRef.current = null;
     }
   }, [position]);
 

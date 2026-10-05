@@ -1,16 +1,30 @@
-# React + Vite
+# Interface boutique
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Parcours client : **Boutique → Produit → Panier → Commande → Suivi**.
+La boutique est accessible directement depuis `/`. Les fonctions secondaires se trouvent dans « Plus », « Affiner » ou les sections repliées des pages.
 
-Currently, two official plugins are available:
+## Développement
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Depuis ce dossier :
 
-## React Compiler
+```sh
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Le serveur Vite transmet `/api` et `/uploads` au backend local sur le port 5000.
 
-## Expanding the Oxlint configuration
+## Vérifications
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```sh
+npm run build
+npm run lint
+npx playwright install chromium
+npm run test:e2e
+```
+
+Les tests navigateur compilent l’application et ouvrent sa version de production sur le port 4173, en format mobile et ordinateur. Les réponses API sont contrôlées : aucune commande réelle n’est créée et aucun message WhatsApp n’est envoyé.
+
+Ils couvrent l’achat complet, le choix des variantes, les promotions et frais par quartier, le retrait, les ruptures, les erreurs API, le préremplissage, les liens partagés, les favoris, le thème et la navigation clavier. Les traces des échecs sont disponibles dans `test-results/`.
+
+Le formulaire exige nom, téléphone et adresse en livraison, ainsi qu’un quartier lorsque la boutique configure des zones. Carte, email et précisions sont facultatifs. Les API et le stockage existants restent compatibles.

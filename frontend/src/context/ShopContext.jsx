@@ -15,17 +15,28 @@ const DEFAULTS = {
 
 export function ShopProvider({ children }) {
   const [settings, setSettings] = useState(DEFAULTS);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const reload = () => {
+    setLoading(true);
+    setError("");
     api
       .get("/settings/public")
       .then((s) => setSettings({ ...DEFAULTS, ...s }))
-      .catch(() => {});
+      .catch(() =>
+        setError(
+          "Les informations de livraison ne sont pas disponibles. Réessayez.",
+        ),
+      )
+      .finally(() => setLoading(false));
   };
 
   useEffect(reload, []);
 
   const value = {
+    loading,
+    error,
     shopName: settings.shop_name,
     shopPhone: settings.shop_phone || "",
     pickupAddress: settings.pickup_address || "",

@@ -38,14 +38,14 @@ export default function OrderConfirmation() {
             <MapPin size={15} className="shrink-0" />
             {pickupAddress}
           </p>
-          <p className="mt-1 text-xs opacity-80">
+          <p className="mt-1 text-xs">
             Présentez ce numéro au comptoir pour récupérer votre commande.
           </p>
         </div>
       ) : (
         <p className="mt-4 text-sm muted">
-          Un livreur va très vite prendre en charge votre colis. Vous pourrez suivre sa position en
-          temps réel.
+          Votre commande est enregistrée. Suivez sa prise en charge et sa
+          livraison depuis le suivi.
         </p>
       )}
       <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
@@ -56,7 +56,10 @@ export default function OrderConfirmation() {
           <MapPin size={17} />
           Suivre ma commande
         </Link>
-        <Link to="/boutique" className="btn-outline w-full px-6 py-2.5 text-center text-sm sm:w-auto">
+        <Link
+          to="/boutique"
+          className="w-full px-6 py-2.5 text-center text-sm text-brand-700 hover:underline sm:w-auto dark:text-brand-300"
+        >
           Continuer mes achats
         </Link>
       </div>

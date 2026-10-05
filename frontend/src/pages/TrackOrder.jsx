@@ -28,7 +28,10 @@ import { formatDate, formatPrice } from "../format";
 import { getMyOrders, rememberOrder } from "../myOrders";
 import { useShop } from "../context/ShopContext";
 import TrackingMap from "../components/TrackingMap";
-import { CourierRatingForm, ProductReviewForm } from "../components/ReviewForms";
+import {
+  CourierRatingForm,
+  ProductReviewForm,
+} from "../components/ReviewForms";
 
 const STATUS_INFO = {
   pending: {
@@ -81,10 +84,26 @@ const PICKUP_STATUS_INFO = {
 
 // Statut en un mot, pour la liste « Mes commandes »
 const STATUS_CHIP = {
-  pending: { delivery: "En attente", pickup: "En préparation", cls: STATUS_INFO.pending.cls },
-  delivering: { delivery: "En route", pickup: "Prête", cls: STATUS_INFO.delivering.cls },
-  delivered: { delivery: "Livrée", pickup: "Récupérée", cls: STATUS_INFO.delivered.cls },
-  cancelled: { delivery: "Annulée", pickup: "Annulée", cls: STATUS_INFO.cancelled.cls },
+  pending: {
+    delivery: "En attente",
+    pickup: "En préparation",
+    cls: STATUS_INFO.pending.cls,
+  },
+  delivering: {
+    delivery: "En route",
+    pickup: "Prête",
+    cls: STATUS_INFO.delivering.cls,
+  },
+  delivered: {
+    delivery: "Livrée",
+    pickup: "Récupérée",
+    cls: STATUS_INFO.delivered.cls,
+  },
+  cancelled: {
+    delivery: "Annulée",
+    pickup: "Annulée",
+    cls: STATUS_INFO.cancelled.cls,
+  },
 };
 
 export default function TrackOrder() {
@@ -120,7 +139,7 @@ export default function TrackOrder() {
         if (!silent) setLoading(false);
       }
     },
-    [ref]
+    [ref],
   );
 
   // L'adresse (?ref=) décide de ce qui est affiché : le bouton retour du
@@ -139,6 +158,7 @@ export default function TrackOrder() {
   useEffect(() => {
     if (!order) return;
     const shouldPoll =
+      order.status === "pending" ||
       order.status === "delivering" ||
       (order.delivery_method === "pickup" && order.status === "pending");
     if (!shouldPoll) return;
@@ -158,7 +178,7 @@ export default function TrackOrder() {
       <div className="mx-auto max-w-2xl">
         <button
           onClick={() => setSearchParams({})}
-          className="mb-4 flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
+          className="mb-4 flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-400"
         >
           <ChevronLeft size={18} />
           {myOrders.length > 0 ? "Mes commandes" : "Suivre une autre commande"}
@@ -166,7 +186,11 @@ export default function TrackOrder() {
         {loading ? (
           <div className="skeleton h-64" />
         ) : (
-          <OrderTracking order={order} currency={currency} onRefresh={() => search(order.reference, true)} />
+          <OrderTracking
+            order={order}
+            currency={currency}
+            onRefresh={() => search(order.reference, true)}
+          />
         )}
       </div>
     );
@@ -176,7 +200,7 @@ export default function TrackOrder() {
     <div className="mx-auto max-w-2xl">
       <div className="mb-6 text-center">
         <h1 className="flex items-center justify-center gap-2 text-2xl font-bold">
-          <Package size={24} className="text-brand-600 dark:text-brand-400" />
+          <Package size={24} className="text-brand-700 dark:text-brand-400" />
           {myOrders.length > 0 ? "Mes commandes" : "Suivre ma commande"}
         </h1>
         <p className="mt-1 text-sm muted">
@@ -201,7 +225,10 @@ export default function TrackOrder() {
         className="mb-8 flex gap-2"
       >
         <div className="relative flex-1">
-          <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400" />
+          <Search
+            size={16}
+            className="absolute top-1/2 left-3 -translate-y-1/2 text-gray-400"
+          />
           <input
             value={ref}
             onChange={(e) => setRef(e.target.value.toUpperCase())}
@@ -217,9 +244,15 @@ export default function TrackOrder() {
 
       {error && (
         <div className="card p-8 text-center">
-          <Search size={40} className="mx-auto text-gray-300 dark:text-slate-600" strokeWidth={1.2} />
+          <Search
+            size={40}
+            className="mx-auto text-gray-300 dark:text-slate-600"
+            strokeWidth={1.2}
+          />
           <h3 className="mt-3 font-bold">Commande introuvable</h3>
-          <p className="mt-1 text-sm muted">Vérifiez le numéro saisi (ex. CMD-AB12CD).</p>
+          <p role="alert" className="mt-1 text-sm muted">
+            {error}
+          </p>
         </div>
       )}
     </div>
@@ -227,7 +260,11 @@ export default function TrackOrder() {
 }
 
 function shortDate(iso) {
-  return iso ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(iso)) : "";
+  return iso
+    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(
+        new Date(iso),
+      )
+    : "";
 }
 
 function MyOrdersList({ orders, currency, onOpen }) {
@@ -238,8 +275,10 @@ function MyOrdersList({ orders, currency, onOpen }) {
     orders.forEach((o) =>
       api
         .get(`/orders/track/${o.reference}`)
-        .then((full) => setStatuses((s) => ({ ...s, [o.reference]: full.status })))
-        .catch(() => {})
+        .then((full) =>
+          setStatuses((s) => ({ ...s, [o.reference]: full.status })),
+        )
+        .catch(() => {}),
     );
   }, [orders]);
 
@@ -256,18 +295,25 @@ function MyOrdersList({ orders, currency, onOpen }) {
               onClick={() => onOpen(o.reference)}
               className="card flex w-full items-center gap-3 p-3 text-left transition hover:border-brand-300 dark:hover:border-brand-700"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
-                {method === "pickup" ? <Store size={20} /> : <Package size={20} />}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-400">
+                {method === "pickup" ? (
+                  <Store size={20} />
+                ) : (
+                  <Package size={20} />
+                )}
               </span>
               <span className="min-w-0 flex-1">
                 <b className="block text-sm tracking-wide">{o.reference}</b>
                 <small className="block truncate text-xs muted">
-                  {shortDate(o.created_at)} · {o.items_count} article{o.items_count > 1 ? "s" : ""}
+                  {shortDate(o.created_at)} · {o.items_count} article
+                  {o.items_count > 1 ? "s" : ""}
                 </small>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">
                 {chip && (
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${chip.cls}`}>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${chip.cls}`}
+                  >
                     {chip[method]}
                   </span>
                 )}
@@ -285,70 +331,121 @@ function MyOrdersList({ orders, currency, onOpen }) {
 function OrderTracking({ order, currency, onRefresh }) {
   const { pickupAddress } = useShop();
   const isPickup = order.delivery_method === "pickup";
-  const info = (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] || STATUS_INFO.pending;
+  const info =
+    (isPickup ? PICKUP_STATUS_INFO : STATUS_INFO)[order.status] ||
+    STATUS_INFO.pending;
   const rank = { pending: 1, delivering: 2, delivered: 3 }[order.status] || 0;
   const destPos =
-    order.latitude != null && order.longitude != null ? [order.latitude, order.longitude] : null;
+    order.latitude != null && order.longitude != null
+      ? [order.latitude, order.longitude]
+      : null;
   const courierPos =
     order.courier?.lat != null && order.courier?.lng != null
       ? [order.courier.lat, order.courier.lng]
       : null;
   const steps = isPickup
     ? [
-        { label: "Commande confirmée", date: order.created_at, icon: Check, done: rank >= 1 },
-        { label: "Prête en boutique", date: order.accepted_at, icon: ShoppingBag, done: rank >= 2 },
-        { label: "Commande récupérée", date: order.delivered_at, icon: Hand, done: rank >= 3 },
+        {
+          label: "Commande confirmée",
+          date: order.created_at,
+          icon: Check,
+          done: rank >= 1,
+        },
+        {
+          label: "Prête en boutique",
+          date: order.accepted_at,
+          icon: ShoppingBag,
+          done: rank >= 2,
+        },
+        {
+          label: "Commande récupérée",
+          date: order.delivered_at,
+          icon: Hand,
+          done: rank >= 3,
+        },
       ]
     : [
-        { label: "Commande confirmée", date: order.created_at, icon: Check, done: rank >= 1 },
+        {
+          label: "Commande confirmée",
+          date: order.created_at,
+          icon: Check,
+          done: rank >= 1,
+        },
         {
           label: "Prise en charge par un livreur",
           date: order.accepted_at,
           icon: Bike,
           done: rank >= 2,
-          extra: order.courier ? `${order.courier.name} (${order.courier.vehicle})` : "",
+          extra: order.courier
+            ? `${order.courier.name} (${order.courier.vehicle})`
+            : "",
         },
-        { label: "Commande livrée", date: order.delivered_at, icon: PackageCheck, done: rank >= 3 },
+        {
+          label: "Commande livrée",
+          date: order.delivered_at,
+          icon: PackageCheck,
+          done: rank >= 3,
+        },
       ];
 
   return (
     <div className="card p-6">
-      <div className={`mb-6 flex items-center gap-3 rounded-xl p-4 font-semibold ${info.cls}`}>
+      <div
+        className={`mb-6 flex items-center gap-3 rounded-xl p-4 font-semibold ${info.cls}`}
+      >
         <info.icon size={26} />
         <div>
-          <p>
-            {info.title} — {order.reference}
-          </p>
+          <h1 className="text-lg font-bold">{info.title}</h1>
+          <p className="text-sm">{order.reference}</p>
           <p className="text-sm font-normal opacity-80">{info.sub}</p>
         </div>
       </div>
 
-      {isPickup && order.status !== "delivered" && order.status !== "cancelled" && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border-2 border-dashed border-green-300 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/50">
-          <Store size={24} className="shrink-0 text-green-600 dark:text-green-400" />
-          <div>
-            <p className="font-bold">Retrait en boutique</p>
-            <p className="flex items-start gap-1.5 text-sm">
-              <MapPin size={15} className="mt-0.5 shrink-0" />
-              {pickupAddress}
-            </p>
-            <p className="mt-1 text-xs muted">
-              Présentez votre numéro de commande <b>{order.reference}</b> au comptoir pour récupérer
-              votre article.
-            </p>
+      {isPickup &&
+        order.status !== "delivered" &&
+        order.status !== "cancelled" && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border-2 border-dashed border-green-300 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/50">
+            <Store
+              size={24}
+              className="shrink-0 text-green-700 dark:text-green-400"
+            />
+            <div>
+              <p className="font-bold">Retrait en boutique</p>
+              <p className="flex items-start gap-1.5 text-sm">
+                <MapPin size={15} className="mt-0.5 shrink-0" />
+                {pickupAddress}
+              </p>
+              <p className="mt-1 text-xs muted">
+                Présentez votre numéro de commande <b>{order.reference}</b> au
+                comptoir pour récupérer votre article.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {!isPickup && order.status !== "delivered" && order.status !== "cancelled" && order.delivery_code && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-950/50">
-          <KeyRound size={24} className="shrink-0 text-brand-600 dark:text-brand-400" />
-          <div>
-            <p className="font-bold">Code de livraison : <span className="text-xl tracking-[0.3em]">{order.delivery_code}</span></p>
-            <p className="text-xs muted">Communiquez ce code au livreur uniquement à la réception de votre colis. C'est lui qui confirme la livraison.</p>
+      {!isPickup &&
+        order.status !== "delivered" &&
+        order.status !== "cancelled" &&
+        order.delivery_code && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-950/50">
+            <KeyRound
+              size={24}
+              className="shrink-0 text-brand-700 dark:text-brand-400"
+            />
+            <div>
+              <p className="font-bold">
+                Code de livraison :{" "}
+                <span className="text-xl tracking-[0.3em]">
+                  {order.delivery_code}
+                </span>
+              </p>
+              <p className="text-xs muted">
+                Communiquez ce code au livreur uniquement à la réception de
+                votre colis. C'est lui qui confirme la livraison.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       <div className="mb-6 ml-2 flex flex-col">
         {steps.map((s, i) => (
@@ -367,10 +464,16 @@ function OrderTracking({ order, currency, onRefresh }) {
                   : "border-gray-300 bg-gray-50 text-gray-400 dark:border-slate-600 dark:bg-slate-800"
               }`}
             >
-              {s.done ? <s.icon size={18} strokeWidth={2.4} /> : <Circle size={10} />}
+              {s.done ? (
+                <s.icon size={18} strokeWidth={2.4} />
+              ) : (
+                <Circle size={10} />
+              )}
             </span>
             <div>
-              <p className={`font-semibold ${s.done ? "" : "muted"}`}>{s.label}</p>
+              <p className={`font-semibold ${s.done ? "" : "muted"}`}>
+                {s.label}
+              </p>
               <p className="text-xs muted">
                 {s.date ? formatDate(s.date) : "En attente…"}
                 {s.extra ? ` · ${s.extra}` : ""}
@@ -380,7 +483,7 @@ function OrderTracking({ order, currency, onRefresh }) {
         ))}
       </div>
 
-      {order.status === "delivering" && (courierPos || destPos) && (
+      {!isPickup && order.status === "delivering" && courierPos && (
         <div className="mb-6">
           <TrackingMap courierPos={courierPos} destPos={destPos} />
           <p className="mt-2 text-center text-xs muted">
@@ -392,11 +495,13 @@ function OrderTracking({ order, currency, onRefresh }) {
       {order.courier && (
         <div className="mb-6 flex items-center gap-4 rounded-xl bg-brand-50 p-4 dark:bg-brand-950">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-slate-800">
-            <Bike size={24} className="text-brand-600 dark:text-brand-400" />
+            <Bike size={24} className="text-brand-700 dark:text-brand-400" />
           </span>
           <div>
             <p className="font-bold">{order.courier.name}</p>
-            <p className="text-sm muted">Votre livreur · Zone {order.courier.zone}</p>
+            <p className="text-sm muted">
+              Votre livreur · Zone {order.courier.zone}
+            </p>
           </div>
           <a
             href={`tel:${order.courier.phone.replace(/\s/g, "")}`}
@@ -407,73 +512,96 @@ function OrderTracking({ order, currency, onRefresh }) {
         </div>
       )}
 
-      <div className="flex flex-col gap-2 border-t border-gray-200 pt-4 text-sm dark:border-slate-700">
-        <div className="flex justify-between gap-3">
-          <span className="flex items-center gap-1.5 muted">
-            {isPickup ? <Store size={14} /> : <MapPin size={14} />}
-            {isPickup ? "Retrait" : "Livraison"}
-          </span>
-          <span className="text-right font-medium">
-            {isPickup ? (
-              pickupAddress
-            ) : (
-              <>
-                {order.latitude != null && order.longitude != null ? (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-brand-600 hover:underline dark:text-brand-400"
-                  >
-                    {order.customer_address}
-                    <ExternalLink size={13} className="ml-1 inline align-[-2px]" />
-                  </a>
-                ) : (
-                  order.customer_address
-                )}{" "}
-                ({order.zone})
-                {order.landmark && (
-                  <span className="mt-0.5 flex items-center justify-end gap-1 text-xs muted">
-                    <Compass size={12} />
-                    {order.landmark}
-                  </span>
-                )}
-              </>
-            )}
-          </span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span className="flex items-center gap-1.5 muted">
-            <Package size={14} /> Articles
-          </span>
-          <span className="text-right">
-            {order.items.map((a) => `${a.product_name} (${a.variant_name}) ×${a.quantity}`).join(" · ")}
-          </span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span className="flex items-center gap-1.5 muted">
-            <User size={14} /> Paiement
-          </span>
-          <span>{order.payment_method === "livraison" ? (isPickup ? "Au retrait" : "À la livraison") : "Carte bancaire (à régler)"}</span>
-        </div>
-        {order.discount > 0 && (
-          <div className="flex justify-between gap-3 text-green-600">
-            <span>Remise ({order.promo_code})</span>
-            <span>−{formatPrice(order.discount, currency)}</span>
+      <details className="border-t border-gray-200 pt-4 dark:border-slate-700">
+        <summary className="cursor-pointer text-sm font-medium">
+          Détails de ma commande
+        </summary>
+        <div className="mt-4 flex flex-col gap-3 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="flex items-center gap-1.5 muted">
+              {isPickup ? <Store size={14} /> : <MapPin size={14} />}
+              {isPickup ? "Retrait" : "Livraison"}
+            </span>
+            <span className="text-right font-medium">
+              {isPickup ? (
+                pickupAddress
+              ) : (
+                <>
+                  {order.latitude != null && order.longitude != null ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${order.latitude},${order.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand-700 hover:underline dark:text-brand-400"
+                    >
+                      {order.customer_address}
+                      <ExternalLink
+                        size={13}
+                        className="ml-1 inline align-[-2px]"
+                      />
+                    </a>
+                  ) : (
+                    order.customer_address
+                  )}{" "}
+                  ({order.zone})
+                  {order.landmark && (
+                    <span className="mt-0.5 flex items-center justify-end gap-1 text-xs muted">
+                      <Compass size={12} />
+                      {order.landmark}
+                    </span>
+                  )}
+                </>
+              )}
+            </span>
           </div>
-        )}
-        <div className="flex justify-between gap-3">
-          <span className="flex items-center gap-1.5 muted">
-            <Wallet size={14} /> Total
-          </span>
-          <span className="font-bold">{formatPrice(order.total, currency)}</span>
+          <div className="flex justify-between gap-3">
+            <span className="flex items-center gap-1.5 muted">
+              <Package size={14} /> Articles
+            </span>
+            <span className="text-right">
+              {order.items
+                .map(
+                  (a) => `${a.product_name} (${a.variant_name}) ×${a.quantity}`,
+                )
+                .join(" · ")}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="flex items-center gap-1.5 muted">
+              <User size={14} /> Paiement
+            </span>
+            <span>
+              {order.payment_method === "livraison"
+                ? isPickup
+                  ? "Au retrait"
+                  : "À la livraison"
+                : "Carte bancaire (à régler)"}
+            </span>
+          </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between gap-3 text-green-700">
+              <span>Remise ({order.promo_code})</span>
+              <span>−{formatPrice(order.discount, currency)}</span>
+            </div>
+          )}
+          <div className="flex justify-between gap-3">
+            <span className="flex items-center gap-1.5 muted">
+              <Wallet size={14} /> Total
+            </span>
+            <span className="font-bold">
+              {formatPrice(order.total, currency)}
+            </span>
+          </div>
         </div>
-      </div>
+      </details>
 
       {order.status === "delivered" && (
         <div className="mt-6 border-t border-gray-200 pt-5 dark:border-slate-700">
           <h3 className="mb-3 flex items-center gap-2 font-bold">
-            <MessageSquarePlus size={18} className="text-brand-600 dark:text-brand-400" />
+            <MessageSquarePlus
+              size={18}
+              className="text-brand-700 dark:text-brand-400"
+            />
             Votre avis compte
           </h3>
           {!isPickup && order.courier && (
@@ -484,15 +612,27 @@ function OrderTracking({ order, currency, onRefresh }) {
               Notez vos produits (avec photo si vous voulez) :
             </p>
             {order.items
-              .filter((i) => i.product_id && !order.reviewed_product_ids?.includes(i.product_id))
+              .filter(
+                (i) =>
+                  i.product_id &&
+                  !order.reviewed_product_ids?.includes(i.product_id),
+              )
               .map((i) => (
-                <ProductReviewForm key={i.id} order={order} item={i} onDone={onRefresh} />
+                <ProductReviewForm
+                  key={i.id}
+                  order={order}
+                  item={i}
+                  onDone={onRefresh}
+                />
               ))}
             {order.items.every(
-              (i) => !i.product_id || order.reviewed_product_ids?.includes(i.product_id)
+              (i) =>
+                !i.product_id ||
+                order.reviewed_product_ids?.includes(i.product_id),
             ) && (
-              <p className="flex items-center gap-2 text-sm text-green-600">
-                <Package size={15} /> Merci, vous avez déjà noté tous vos produits.
+              <p className="flex items-center gap-2 text-sm text-green-700">
+                <Package size={15} /> Merci, vous avez déjà noté tous vos
+                produits.
               </p>
             )}
           </div>

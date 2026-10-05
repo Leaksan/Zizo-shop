@@ -1,6 +1,11 @@
 import { Star, StarHalf } from "lucide-react";
 
-export default function Rating({ value = 0, count, size = 14, className = "" }) {
+export default function Rating({
+  value = 0,
+  count,
+  size = 14,
+  className = "",
+}) {
   const full = Math.floor(value);
   const half = value - full >= 0.5;
   return (
@@ -8,7 +13,12 @@ export default function Rating({ value = 0, count, size = 14, className = "" }) 
       {Array.from({ length: 5 }, (_, i) => {
         if (i < full)
           return (
-            <Star key={i} size={size} className="fill-amber-400 text-amber-400" strokeWidth={1.5} />
+            <Star
+              key={i}
+              size={size}
+              className="fill-amber-400 text-amber-400"
+              strokeWidth={1.5}
+            />
           );
         if (i === full && half)
           return (
@@ -21,10 +31,17 @@ export default function Rating({ value = 0, count, size = 14, className = "" }) 
               />
             </span>
           );
-        return <Star key={i} size={size} className="text-gray-300 dark:text-slate-600" strokeWidth={1.5} />;
+        return (
+          <Star
+            key={i}
+            size={size}
+            className="text-gray-300 dark:text-slate-600"
+            strokeWidth={1.5}
+          />
+        );
       })}
       {count != null && (
-        <span className="ml-1 text-xs text-gray-400 dark:text-slate-500">
+        <span className="ml-1 text-xs text-gray-600 dark:text-slate-300">
           {value.toFixed(1).replace(".", ",")} ({count} avis)
         </span>
       )}

@@ -1,7 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Heart, Package, ShoppingCart, Store } from "lucide-react";
+import { Package, ShoppingCart, Store } from "lucide-react";
 import { useCart } from "../context/CartContext";
-import { useFavorites } from "../context/FavoritesContext";
 
 // Pages qui ont leur propre barre d'action en bas, ou qu'on garde sans distraction
 const HIDDEN_ON = [/^\/products\//, /^\/checkout/, /^\/livreur/];
@@ -10,13 +9,11 @@ const HIDDEN_ON = [/^\/products\//, /^\/checkout/, /^\/livreur/];
 export default function BottomNav() {
   const { pathname } = useLocation();
   const { count } = useCart();
-  const { count: favCount } = useFavorites();
   if (HIDDEN_ON.some((r) => r.test(pathname))) return null;
 
-  // Pas d'onglet « Accueil » : l'accueil n'est vu qu'une fois, la boutique est la page principale
+  // Trois destinations : découvrir, acheter et suivre sa commande.
   const tabs = [
     { to: "/boutique", icon: Store, label: "Boutique" },
-    { to: "/favoris", icon: Heart, label: "Favoris", badge: favCount },
     { to: "/cart", icon: ShoppingCart, label: "Panier", badge: count },
     { to: "/suivi", icon: Package, label: "Commandes" },
   ];
@@ -26,7 +23,7 @@ export default function BottomNav() {
       <div className="h-16 md:hidden" aria-hidden="true" />
       <nav
         aria-label="Navigation principale"
-        className="bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95"
+        className="bottom-nav fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95"
       >
         {tabs.map((t) => (
           <NavLink
@@ -34,7 +31,9 @@ export default function BottomNav() {
             to={t.to}
             className={({ isActive }) =>
               `flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition ${
-                isActive ? "text-brand-600 dark:text-brand-400" : "text-gray-500 dark:text-slate-400"
+                isActive
+                  ? "text-brand-700 dark:text-brand-400"
+                  : "text-gray-500 dark:text-slate-400"
               }`
             }
           >

@@ -154,14 +154,6 @@ body {
   }
 }
 
-/* Sur mobile, relever le bouton WhatsApp au-dessus de la barre d'onglets
-   (il est masqué sur les pages à barre d'achat fixe : voir FloatingWhatsApp) */
-@media (max-width: 767px) {
-  body:has(.bottom-nav) .whatsapp-fab {
-    bottom: calc(4.75rem + env(safe-area-inset-bottom));
-  }
-}
-
 /* Accessibilité : désactiver les animations quand l'utilisateur le demande */
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
@@ -172,4 +164,45 @@ body {
   .animate-pop {
     animation: none;
   }
+}
+
+/* Parcours client : espace, actions tactiles et contraste des textes secondaires. */
+.customer-shell .input {
+  min-height: 44px;
+}
+.customer-shell .muted {
+  color: var(--color-gray-600);
+}
+.dark .customer-shell .muted {
+  color: var(--color-slate-300);
+}
+.customer-shell summary {
+  min-height: 44px;
+  align-content: center;
+}
+.customer-shell button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.customer-shell .card {
+  box-shadow: none;
+}
+.customer-shell main {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+.customer-shell :where(summary):focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 3px;
+}
+
+.customer-shell .btn-primary {
+  background-color: var(--color-brand-700);
+}
+.customer-shell .btn-primary:hover {
+  background-color: var(--color-brand-800);
+}
+.customer-shell button {
+  min-height: 44px;
+  min-width: 44px;
 }

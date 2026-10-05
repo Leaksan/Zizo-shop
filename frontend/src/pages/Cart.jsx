@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Gift, ShoppingCart, Tag, Truck, X, XCircle } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Gift,
+  ShoppingCart,
+  Truck,
+  X,
+  XCircle,
+} from "lucide-react";
 import { formatPrice } from "../format";
 import { computeTotals, feeRange } from "../cartMath";
 import { useCart } from "../context/CartContext";
@@ -8,7 +16,15 @@ import { useShop } from "../context/ShopContext";
 import ProductVisual from "../components/ProductVisual";
 
 export default function Cart() {
-  const { items, updateQuantity, removeItem, subtotal, promo, applyPromo, clearPromo } = useCart();
+  const {
+    items,
+    updateQuantity,
+    removeItem,
+    subtotal,
+    promo,
+    applyPromo,
+    clearPromo,
+  } = useCart();
   const shop = useShop();
   const { currency } = shop;
   const [code, setCode] = useState(promo?.code || "");
@@ -19,16 +35,21 @@ export default function Cart() {
   // et on l'indique (« dès … ») quand les tarifs varient selon le quartier.
   const range = feeRange(shop);
   const feeVaries = range.min !== range.max;
-  const totals = computeTotals(subtotal, promo, { ...shop, deliveryFee: range.min });
+  const totals = computeTotals(subtotal, promo, {
+    ...shop,
+    deliveryFee: range.min,
+  });
   // Offerte quel que soit le quartier (seuil atteint ou code « livraison offerte »)
   const freeForAll =
-    computeTotals(subtotal, promo, { ...shop, deliveryFee: range.max }).deliveryFee === 0;
+    computeTotals(subtotal, promo, { ...shop, deliveryFee: range.max })
+      .deliveryFee === 0;
 
   // Progression vers la livraison offerte (montant après remise, comme le serveur)
   const threshold = shop.freeShippingThreshold;
   const afterDiscount = totals.subtotal - totals.discount;
   const missing = threshold > 0 ? Math.max(0, threshold - afterDiscount) : 0;
-  const progress = threshold > 0 ? Math.min(100, (afterDiscount / threshold) * 100) : 0;
+  const progress =
+    threshold > 0 ? Math.min(100, (afterDiscount / threshold) * 100) : 0;
 
   const handleApply = async () => {
     if (!code.trim()) return;
@@ -48,9 +69,18 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
-        <ShoppingCart size={56} className="mx-auto text-gray-300 dark:text-slate-600" strokeWidth={1.2} />
-        <p className="mt-4 text-lg text-gray-600 dark:text-slate-300">Votre panier est vide.</p>
-        <Link to="/boutique" className="btn-primary mt-6 inline-block px-6 py-2.5">
+        <ShoppingCart
+          size={56}
+          className="mx-auto text-gray-300 dark:text-slate-600"
+          strokeWidth={1.2}
+        />
+        <p className="mt-4 text-lg text-gray-600 dark:text-slate-300">
+          Votre panier est vide.
+        </p>
+        <Link
+          to="/boutique"
+          className="btn-primary mt-6 inline-block px-6 py-2.5"
+        >
           Découvrir la boutique
         </Link>
       </div>
@@ -60,7 +90,10 @@ export default function Cart() {
   return (
     <div className="mx-auto max-w-3xl pb-20 md:pb-0">
       <h1 className="mb-6 flex items-center gap-2 text-2xl font-bold">
-        <ShoppingCart size={24} className="text-brand-600 dark:text-brand-400" />
+        <ShoppingCart
+          size={24}
+          className="text-brand-700 dark:text-brand-400"
+        />
         Mon panier
       </h1>
       {threshold > 0 && (
@@ -68,16 +101,24 @@ export default function Cart() {
           <p className="flex items-center gap-2 text-sm font-semibold">
             {missing > 0 ? (
               <>
-                <Truck size={17} className="text-brand-600 dark:text-brand-400" />
+                <Truck
+                  size={17}
+                  className="text-brand-700 dark:text-brand-400"
+                />
                 <span>
-                  Plus que <b className="text-brand-600 dark:text-brand-400">{formatPrice(missing, currency)}</b>{" "}
+                  Plus que{" "}
+                  <b className="text-brand-700 dark:text-brand-400">
+                    {formatPrice(missing, currency)}
+                  </b>{" "}
                   pour la livraison offerte
                 </span>
               </>
             ) : (
               <>
-                <Gift size={17} className="text-green-600" />
-                <span className="text-green-700 dark:text-green-400">Livraison offerte !</span>
+                <Gift size={17} className="text-green-700" />
+                <span className="text-green-700 dark:text-green-400">
+                  Livraison offerte !
+                </span>
               </>
             )}
           </p>
@@ -101,23 +142,40 @@ export default function Cart() {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{item.product_name}</p>
               <p className="text-sm muted">{item.variant_name}</p>
+              {(item.stock <= 0 || item.quantity > item.stock) && (
+                <p
+                  role="alert"
+                  className="text-xs text-red-700 dark:text-red-300"
+                >
+                  {item.stock <= 0
+                    ? "Article épuisé : retirez-le pour continuer."
+                    : `Seulement ${item.stock} disponible(s). Réduisez la quantité.`}
+                </p>
+              )}
               <p className="text-sm font-medium text-gray-700 dark:text-slate-300">
                 {formatPrice(item.unit_price, currency)} / unité
               </p>
             </div>
             <div className="col-span-2 col-start-1 row-start-2 flex items-center justify-self-start rounded-lg border border-gray-300 sm:col-auto sm:row-auto dark:border-slate-600">
               <button
-                onClick={() => updateQuantity(item.variant_id, item.quantity - 1)}
-                className="px-3 py-1.5 font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
+                onClick={() =>
+                  updateQuantity(item.variant_id, item.quantity - 1)
+                }
+                aria-label={`Diminuer la quantité de ${item.product_name}`}
+                className="min-h-11 px-3 py-1.5 font-bold text-gray-600 hover:text-brand-700 dark:text-slate-300"
               >
                 −
               </button>
-              <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+              <span className="w-8 text-center text-sm font-semibold">
+                {item.quantity}
+              </span>
               <button
                 onClick={() =>
-                  updateQuantity(item.variant_id, Math.min(item.stock, item.quantity + 1))
+                  updateQuantity(item.variant_id, item.quantity + 1)
                 }
-                className="px-3 py-1.5 font-bold text-gray-600 hover:text-brand-600 dark:text-slate-300"
+                disabled={item.quantity >= item.stock}
+                aria-label={`Augmenter la quantité de ${item.product_name}`}
+                className="px-3 py-1.5 font-bold text-gray-600 hover:text-brand-700 dark:text-slate-300"
               >
                 +
               </button>
@@ -128,7 +186,7 @@ export default function Cart() {
             <button
               onClick={() => removeItem(item.variant_id)}
               className="col-start-3 row-start-1 text-gray-400 transition hover:scale-110 hover:text-red-600 sm:col-auto sm:row-auto"
-              title="Retirer"
+              aria-label={`Retirer ${item.product_name}`}
             >
               <X size={18} />
             </button>
@@ -137,30 +195,53 @@ export default function Cart() {
       </div>
 
       <div className="card mt-6 flex flex-col gap-3 p-4">
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="CODE PROMO"
-            className="input flex-1 font-semibold uppercase"
-          />
-          <button onClick={handleApply} disabled={checking} className="btn-outline px-4 py-2">
-            {checking ? "…" : "Appliquer"}
-          </button>
-        </div>
-        {promoMsg && (
-          <p
-            className={`flex items-center gap-1.5 text-sm font-medium ${promoMsg.ok ? "text-green-600" : "text-red-600"}`}
-          >
-            {promoMsg.ok ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-            {promoMsg.text}
-          </p>
-        )}
-        {!promo && !promoMsg && (
-          <p className="flex items-center gap-1.5 text-xs muted">
-            <Tag size={13} /> Essayez BIENVENUE10 pour -10 %
-          </p>
-        )}
+        <details open={promo ? true : undefined}>
+          <summary className="cursor-pointer text-sm font-medium">
+            J’ai un code promo
+          </summary>
+          <div className="mt-3 space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="CODE PROMO"
+                aria-label="Code promotionnel"
+                className="input flex-1 font-semibold uppercase"
+              />
+              <button
+                onClick={handleApply}
+                disabled={checking}
+                className="btn-outline px-4 py-2"
+              >
+                {checking ? "…" : "Appliquer"}
+              </button>
+            </div>
+            {promoMsg && (
+              <p
+                className={`flex items-center gap-1.5 text-sm font-medium ${promoMsg.ok ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"}`}
+              >
+                {promoMsg.ok ? (
+                  <CheckCircle2 size={16} />
+                ) : (
+                  <XCircle size={16} />
+                )}
+                {promoMsg.text}
+              </p>
+            )}
+            {promo && (
+              <button
+                onClick={() => {
+                  clearPromo();
+                  setCode("");
+                  setPromoMsg(null);
+                }}
+                className="text-sm muted hover:underline"
+              >
+                Retirer le code
+              </button>
+            )}
+          </div>
+        </details>
 
         <div className="flex flex-col gap-1 border-t border-gray-200 pt-3 text-sm dark:border-slate-700">
           <div className="flex justify-between muted">
@@ -168,21 +249,30 @@ export default function Cart() {
             <span>{formatPrice(totals.subtotal, currency)}</span>
           </div>
           {totals.promoBlocked && (
-            <p className="text-xs text-amber-600">
-              Code {promo.code} : valable dès {formatPrice(promo.min_order, currency)} d'achat.
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Code {promo.code} : valable dès{" "}
+              {formatPrice(promo.min_order, currency)} d'achat.
             </p>
           )}
           {totals.discount > 0 && (
-            <div className="flex justify-between font-semibold text-green-600">
+            <div className="flex justify-between font-semibold text-green-700 dark:text-green-300">
               <span>Remise ({promo.code})</span>
               <span>−{formatPrice(totals.discount, currency)}</span>
             </div>
           )}
           <div className="flex justify-between muted">
-            <span>Livraison</span>
-            <span className={freeForAll ? "flex items-center gap-1 font-semibold text-green-600" : ""}>
+            <span>Livraison estimée</span>
+            <span
+              className={
+                freeForAll
+                  ? "flex items-center gap-1 font-semibold text-green-700 dark:text-green-300"
+                  : ""
+              }
+            >
               {freeForAll ? (
-                <><Gift size={14} /> Offerte</>
+                <>
+                  <Gift size={14} /> Offerte
+                </>
               ) : feeVaries ? (
                 `Dès ${formatPrice(range.min, currency)}`
               ) : (
@@ -191,12 +281,21 @@ export default function Cart() {
             </span>
           </div>
           <div className="flex justify-between border-t border-dashed border-gray-300 pt-2 text-lg font-bold dark:border-slate-600">
-            <span>{feeVaries && !freeForAll ? "Total estimé" : "Total"}</span>
+            <span>{!freeForAll ? "Total estimé" : "Total"}</span>
             <span>{formatPrice(totals.total, currency)}</span>
           </div>
         </div>
-        <Link to="/checkout" className="btn-primary mt-2 flex items-center justify-center gap-2 py-3">
-          Passer la commande
+        {!freeForAll && (
+          <p className="text-xs muted">
+            Les frais définitifs seront calculés selon votre quartier avant
+            confirmation.
+          </p>
+        )}
+        <Link
+          to="/checkout"
+          className="btn-primary mt-2 hidden items-center justify-center gap-2 py-3 md:flex"
+        >
+          Passer commande
           <ArrowRight size={18} />
         </Link>
       </div>
@@ -204,11 +303,18 @@ export default function Cart() {
       {/* Mobile : total et bouton de commande toujours visibles, au-dessus des onglets */}
       <div className="cart-cta fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-3 border-t border-gray-200 bg-white/95 px-4 py-3 backdrop-blur md:hidden dark:border-slate-700 dark:bg-slate-900/95">
         <div className="min-w-0 flex-1">
-          <p className="text-xs muted">{feeVaries && !freeForAll ? "Total estimé" : "Total"}</p>
-          <p className="text-lg leading-tight font-extrabold">{formatPrice(totals.total, currency)}</p>
+          <p className="text-xs muted">
+            {!freeForAll ? "Total estimé" : "Total"}
+          </p>
+          <p className="text-lg leading-tight font-extrabold">
+            {formatPrice(totals.total, currency)}
+          </p>
         </div>
-        <Link to="/checkout" className="btn-primary shrink-0 px-6 py-3 text-base">
-          Commander
+        <Link
+          to="/checkout"
+          className="btn-primary shrink-0 px-6 py-3 text-base"
+        >
+          Passer commande
         </Link>
       </div>
     </div>

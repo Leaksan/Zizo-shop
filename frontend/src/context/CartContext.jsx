@@ -35,7 +35,8 @@ export function CartProvider({ children }) {
       .get("/products")
       .then((products) => {
         const variants = new Map();
-        for (const p of products) for (const v of p.variants) variants.set(v.id, { p, v });
+        for (const p of products)
+          for (const v of p.variants) variants.set(v.id, { p, v });
         setItems((prev) =>
           prev
             .filter((i) => variants.has(i.variant_id))
@@ -49,7 +50,7 @@ export function CartProvider({ children }) {
                 image_url: p.image_url,
                 stock: v.stock,
               };
-            })
+            }),
         );
       })
       .catch(() => {});
@@ -62,11 +63,19 @@ export function CartProvider({ children }) {
   }, [promo]);
 
   const addItem = (product, variant, quantity = 1) => {
+    if (variant.stock <= 0 || quantity < 1) return;
     setItems((prev) => {
       const existing = prev.find((i) => i.variant_id === variant.id);
       if (existing) {
         return prev.map((i) =>
-          i.variant_id === variant.id ? { ...i, quantity: i.quantity + quantity } : i
+          i.variant_id === variant.id
+            ? {
+                ...i,
+                stock: variant.stock,
+                unit_price: variant.price,
+                quantity: Math.min(variant.stock, i.quantity + quantity),
+              }
+            : i,
         );
       }
       return [
@@ -80,7 +89,7 @@ export function CartProvider({ children }) {
           image_url: product.image_url,
           emoji: product.emoji,
           stock: variant.stock,
-          quantity,
+          quantity: Math.min(variant.stock, quantity),
         },
       ];
     });
@@ -90,7 +99,11 @@ export function CartProvider({ children }) {
     setItems((prev) =>
       quantity <= 0
         ? prev.filter((i) => i.variant_id !== variantId)
-        : prev.map((i) => (i.variant_id === variantId ? { ...i, quantity } : i))
+        : prev.map((i) =>
+            i.variant_id === variantId
+              ? { ...i, quantity: Math.min(Math.max(1, i.stock), quantity) }
+              : i,
+          ),
     );
   };
 
@@ -103,17 +116,26 @@ export function CartProvider({ children }) {
   };
 
   const applyPromo = async (code) => {
-    const subtotalNow = items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
-    const result = await api.post("/promo/validate", { code, subtotal: subtotalNow });
+    const subtotalNow = items.reduce(
+      (sum, i) => sum + i.unit_price * i.quantity,
+      0,
+    );
+    const result = await api.post("/promo/validate", {
+      code,
+      subtotal: subtotalNow,
+    });
     setPromo(result);
     return result;
   };
 
   const subtotal = useMemo(
     () => items.reduce((sum, i) => sum + i.unit_price * i.quantity, 0),
-    [items]
+    [items],
   );
-  const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
+  const count = useMemo(
+    () => items.reduce((sum, i) => sum + i.quantity, 0),
+    [items],
+  );
 
   return (
     <CartContext.Provider

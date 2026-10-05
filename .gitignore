@@ -21,3 +21,7 @@ whatsapp-bridge/.env
 Thumbs.db
 .DS_Store
 *.log
+
+# Tests navigateur
+frontend/test-results/
+frontend/playwright-report/
